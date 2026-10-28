@@ -1,7 +1,16 @@
 """Register the ForgePDM Workbench with FreeCAD Gui."""
 
+import os
+import sys
+
 import FreeCADGui as Gui
 from FreeCADGui import Workbench
+
+# FreeCAD executes InitGui.py directly. Add the directory containing the
+# ForgePDM package so imports work whether Mod or Mod/ForgePDM is on sys.path.
+_package_parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _package_parent not in sys.path:
+    sys.path.insert(0, _package_parent)
 
 
 class ForgePDMWorkbench(Workbench):

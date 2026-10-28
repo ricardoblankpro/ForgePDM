@@ -4,7 +4,7 @@ This is a thin FreeCAD client for the ForgePDM HTTP API. It keeps authentication
 
 ## Install
 
-Copy the `ForgePDM` directory beside `InitGui.py` into FreeCAD's `Mod` folder, then restart FreeCAD:
+Copy the entire repository folder `clients/freecad/ForgePDM/` into FreeCAD's `Mod` folder as `Mod/ForgePDM/`. The installed folder must contain `InitGui.py`, `Init.py`, and the `ForgePDM` Python package files (`api.py`, `commands.py`, `session.py`, and `ui.py`). Restart FreeCAD after copying:
 
 - Linux: `~/.local/share/FreeCAD/Mod/ForgePDM/`
 - macOS: `~/Library/Application Support/FreeCAD/Mod/ForgePDM/`
