@@ -1,0 +1,31 @@
+import FreeCAD
+from FreeCAD import Console
+
+doc = FreeCAD.activeDocument()
+
+if doc is None:
+    Console.PrintError("No active document found\n")
+else:
+    # Get the selected object
+    if len(FreeCAD.Gui.Selection.getSelection()) == 0:
+        Console.PrintError("Please select an object first\n")
+    else:
+        obj = FreeCAD.Gui.Selection.getSelection()[0]
+        
+        # Clear the existing expression
+        try:
+            obj.setExpression('Volume', None)
+            Console.PrintMessage(f"Expression cleared for {obj.Name}.Volume\n")
+        except Exception as e:
+            Console.PrintMessage(f"Could not clear expression: {str(e)}\n")
+        
+        # Set the new expression
+        try:
+            obj.setExpression('Volume', '.Shape.Volume')
+            Console.PrintMessage(f"Expression set successfully for {obj.Name}.Volume\n")
+            
+            # Recompute to apply changes
+            doc.recompute()
+            Console.PrintMessage("Document recomputed\n")
+        except Exception as e:
+            Console.PrintError(f"Error setting expression: {str(e)}\n")

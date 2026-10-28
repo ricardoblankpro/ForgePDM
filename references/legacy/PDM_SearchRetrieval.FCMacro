@@ -1,0 +1,490 @@
+# -*- coding: utf-8 -*-
+"""
+PDM System - Search & Retrieval Macro
+Find parts and assemblies by number, description, project, or usage
+
+Based on section 10 of FreeCAD PDM System documentation:
+- Find by number
+- Find by description
+- Find by project
+- Find where-used (in which assemblies)
+"""
+
+import FreeCAD
+import FreeCADGui
+import json
+import os
+from PySide import QtGui, QtCore
+
+
+class PDMSearchConfig:
+    """Configuration for search"""
+    
+    PDM_ROOT = "/home/ricardoblank/CAD"
+    ADMIN_FOLDER = "_ADMIN"
+    PROJECTS_FOLDER = "PROJECTS"
+    
+    INDEX_FILE = "index.json"
+    RELATIONSHIPS_FILE = "relationships.json"
+    
+    @classmethod
+    def get_admin_path(cls):
+        return os.path.join(cls.PDM_ROOT, cls.ADMIN_FOLDER)
+    
+    @classmethod
+    def get_index_path(cls):
+        return os.path.join(cls.get_admin_path(), cls.INDEX_FILE)
+    
+    @classmethod
+    def get_relationships_path(cls):
+        return os.path.join(cls.get_admin_path(), cls.RELATIONSHIPS_FILE)
+    
+    @classmethod
+    def get_projects_path(cls):
+        return os.path.join(cls.PDM_ROOT, cls.PROJECTS_FOLDER)
+
+
+class PDMJsonHandler:
+    """Handles reading JSON files"""
+    
+    @staticmethod
+    def read_json(filepath):
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            QtGui.QMessageBox.critical(None, "Error", f"File not found: {filepath}")
+            return None
+        except json.JSONDecodeError as e:
+            QtGui.QMessageBox.critical(None, "Error", f"Invalid JSON in {filepath}: {e}")
+            return None
+
+
+class PDMSearch:
+    """Search and retrieval functionality"""
+    
+    def __init__(self):
+        self.index_data = None
+        self.relationships_data = None
+        self.load_data()
+    
+    def load_data(self):
+        """Load index and relationships data"""
+        self.index_data = PDMJsonHandler.read_json(PDMSearchConfig.get_index_path())
+        self.relationships_data = PDMJsonHandler.read_json(PDMSearchConfig.get_relationships_path())
+        
+        if not self.index_data:
+            self.index_data = {"parts": {}, "assemblies": {}}
+        
+        if not self.relationships_data:
+            self.relationships_data = {"assemblies": {}}
+    
+    def find_by_number(self, item_number):
+        """Find part or assembly by exact number"""
+        
+        # Search in parts
+        if item_number in self.index_data.get("parts", {}):
+            part_info = self.index_data["parts"][item_number]
+            return {
+                "type": "Part",
+                "number": item_number,
+                "description": part_info.get("description", "N/A"),
+                "project": part_info.get("project", "N/A"),
+                "status": part_info.get("status", "N/A"),
+                "revision": part_info.get("revision", "N/A"),
+                "filename": part_info.get("filename", "N/A")
+            }
+        
+        # Search in assemblies
+        if item_number in self.index_data.get("assemblies", {}):
+            asm_info = self.index_data["assemblies"][item_number]
+            return {
+                "type": "Assembly",
+                "number": item_number,
+                "description": asm_info.get("description", "N/A"),
+                "project": asm_info.get("project", "N/A"),
+                "status": asm_info.get("status", "N/A"),
+                "revision": asm_info.get("revision", "N/A"),
+                "filename": asm_info.get("filename", "N/A")
+            }
+        
+        return None
+    
+    def find_by_description(self, search_text):
+        """Find parts/assemblies by description (case-insensitive substring match)"""
+        
+        results = []
+        search_text_lower = search_text.lower()
+        
+        # Search in parts
+        for part_num, part_info in self.index_data.get("parts", {}).items():
+            if search_text_lower in part_info.get("description", "").lower():
+                results.append({
+                    "type": "Part",
+                    "number": part_num,
+                    "description": part_info.get("description", "N/A"),
+                    "project": part_info.get("project", "N/A"),
+                    "status": part_info.get("status", "N/A"),
+                    "revision": part_info.get("revision", "N/A"),
+                    "filename": part_info.get("filename", "N/A")
+                })
+        
+        # Search in assemblies
+        for asm_num, asm_info in self.index_data.get("assemblies", {}).items():
+            if search_text_lower in asm_info.get("description", "").lower():
+                results.append({
+                    "type": "Assembly",
+                    "number": asm_num,
+                    "description": asm_info.get("description", "N/A"),
+                    "project": asm_info.get("project", "N/A"),
+                    "status": asm_info.get("status", "N/A"),
+                    "revision": asm_info.get("revision", "N/A"),
+                    "filename": asm_info.get("filename", "N/A")
+                })
+        
+        return results
+    
+    def find_by_project(self, project_name):
+        """Find all parts and assemblies in a project"""
+        
+        results = []
+        
+        # Search in parts
+        for part_num, part_info in self.index_data.get("parts", {}).items():
+            if part_info.get("project") == project_name:
+                results.append({
+                    "type": "Part",
+                    "number": part_num,
+                    "description": part_info.get("description", "N/A"),
+                    "project": part_info.get("project", "N/A"),
+                    "status": part_info.get("status", "N/A"),
+                    "revision": part_info.get("revision", "N/A"),
+                    "filename": part_info.get("filename", "N/A")
+                })
+        
+        # Search in assemblies
+        for asm_num, asm_info in self.index_data.get("assemblies", {}).items():
+            if asm_info.get("project") == project_name:
+                results.append({
+                    "type": "Assembly",
+                    "number": asm_num,
+                    "description": asm_info.get("description", "N/A"),
+                    "project": asm_info.get("project", "N/A"),
+                    "status": asm_info.get("status", "N/A"),
+                    "revision": asm_info.get("revision", "N/A"),
+                    "filename": asm_info.get("filename", "N/A")
+                })
+        
+        return results
+    
+    def find_where_used(self, item_number):
+        """Find in which assemblies an item is used (item = P000001, A000001, etc)"""
+        
+        results = []
+        
+        # Search in relationships.json
+        for asm_num, asm_data in self.relationships_data.get("assemblies", {}).items():
+            for contained_item in asm_data.get("contains", []):
+                if contained_item.get("item") == item_number:
+                    asm_info = self.index_data.get("assemblies", {}).get(asm_num, {})
+                    results.append({
+                        "assembly_number": asm_num,
+                        "assembly_description": asm_info.get("description", "N/A"),
+                        "quantity": contained_item.get("qty", 1),
+                        "project": asm_info.get("project", "N/A"),
+                        "filename": asm_info.get("filename", "N/A")
+                    })
+        
+        return results
+    
+    def get_all_projects(self):
+        """Get list of all projects"""
+        
+        projects = set()
+        
+        for part_info in self.index_data.get("parts", {}).values():
+            project = part_info.get("project")
+            if project:
+                projects.add(project)
+        
+        for asm_info in self.index_data.get("assemblies", {}).values():
+            project = asm_info.get("project")
+            if project:
+                projects.add(project)
+        
+        return sorted(list(projects))
+
+
+class PDMSearchDialog(QtGui.QDialog):
+    """Dialog for searching and retrieving parts/assemblies"""
+    
+    def __init__(self, parent=None):
+        super(PDMSearchDialog, self).__init__(parent)
+        
+        self.search = PDMSearch()
+        self.current_results = []
+        
+        self.init_ui()
+    
+    def init_ui(self):
+        """Initialize user interface"""
+        
+        self.setWindowTitle("PDM - Search & Retrieval")
+        self.setMinimumWidth(900)
+        self.setMinimumHeight(600)
+        
+        layout = QtGui.QVBoxLayout()
+        
+        # Search section - Find by Number
+        number_group = QtGui.QGroupBox("1. Find by Number")
+        number_layout = QtGui.QHBoxLayout()
+        
+        self.txt_number = QtGui.QLineEdit()
+        self.txt_number.setPlaceholderText("e.g., P000001 or A000001")
+        number_layout.addWidget(QtGui.QLabel("Item Number:"))
+        number_layout.addWidget(self.txt_number)
+        
+        self.btn_find_number = QtGui.QPushButton("Search by Number")
+        self.btn_find_number.clicked.connect(self.search_by_number)
+        number_layout.addWidget(self.btn_find_number)
+        
+        number_group.setLayout(number_layout)
+        layout.addWidget(number_group)
+        
+        # Search section - Find by Description
+        desc_group = QtGui.QGroupBox("2. Find by Description")
+        desc_layout = QtGui.QHBoxLayout()
+        
+        self.txt_description = QtGui.QLineEdit()
+        self.txt_description.setPlaceholderText("e.g., Bracket or Chapa")
+        desc_layout.addWidget(QtGui.QLabel("Description:"))
+        desc_layout.addWidget(self.txt_description)
+        
+        self.btn_find_desc = QtGui.QPushButton("Search by Description")
+        self.btn_find_desc.clicked.connect(self.search_by_description)
+        desc_layout.addWidget(self.btn_find_desc)
+        
+        desc_group.setLayout(desc_layout)
+        layout.addWidget(desc_group)
+        
+        # Search section - Find by Project
+        project_group = QtGui.QGroupBox("3. Find by Project")
+        project_layout = QtGui.QHBoxLayout()
+        
+        self.combo_project = QtGui.QComboBox()
+        self.combo_project.addItem("-- Select Project --")
+        projects = self.search.get_all_projects()
+        self.combo_project.addItems(projects)
+        project_layout.addWidget(QtGui.QLabel("Project:"))
+        project_layout.addWidget(self.combo_project)
+        
+        self.btn_find_project = QtGui.QPushButton("Search by Project")
+        self.btn_find_project.clicked.connect(self.search_by_project)
+        project_layout.addWidget(self.btn_find_project)
+        
+        project_group.setLayout(project_layout)
+        layout.addWidget(project_group)
+        
+        # Search section - Find Where-Used
+        whereused_group = QtGui.QGroupBox("4. Find Where-Used (in which assemblies)")
+        whereused_layout = QtGui.QHBoxLayout()
+        
+        self.txt_whereused = QtGui.QLineEdit()
+        self.txt_whereused.setPlaceholderText("e.g., P000001 or A000001")
+        whereused_layout.addWidget(QtGui.QLabel("Item Number:"))
+        whereused_layout.addWidget(self.txt_whereused)
+        
+        self.btn_find_whereused = QtGui.QPushButton("Find Where-Used")
+        self.btn_find_whereused.clicked.connect(self.find_where_used)
+        whereused_layout.addWidget(self.btn_find_whereused)
+        
+        whereused_group.setLayout(whereused_layout)
+        layout.addWidget(whereused_group)
+        
+        # Results section
+        results_group = QtGui.QGroupBox("Search Results")
+        results_layout = QtGui.QVBoxLayout()
+        
+        self.table_results = QtGui.QTableWidget()
+        self.table_results.setColumnCount(6)
+        self.table_results.setHorizontalHeaderLabels([
+            "Type", "Number", "Description", "Project", "Status", "Revision"
+        ])
+        self.table_results.horizontalHeader().setStretchLastSection(True)
+        self.table_results.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        self.table_results.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        results_layout.addWidget(self.table_results)
+        
+        # Info display below table
+        self.lbl_info = QtGui.QLabel("")
+        self.lbl_info.setWordWrap(True)
+        self.lbl_info.setStyleSheet("background-color: #303030; color: white; padding: 5px; border: 1px solid #505050;")
+        results_layout.addWidget(self.lbl_info)
+        
+        results_group.setLayout(results_layout)
+        layout.addWidget(results_group, 1)
+        
+        # Buttons
+        button_layout = QtGui.QHBoxLayout()
+        
+        self.btn_close = QtGui.QPushButton("Close")
+        self.btn_close.clicked.connect(self.accept)
+        button_layout.addStretch()
+        button_layout.addWidget(self.btn_close)
+        
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout)
+    
+    def search_by_number(self):
+        """Search for a part/assembly by exact number"""
+        
+        number = self.txt_number.text().strip().upper()
+        
+        if not number:
+            QtGui.QMessageBox.warning(self, "Input Error", "Please enter an item number")
+            return
+        
+        result = self.search.find_by_number(number)
+        
+        self.table_results.setRowCount(0)
+        self.lbl_info.setText("")
+        
+        if result:
+            self.current_results = [result]
+            self.display_results()
+            self.lbl_info.setText(f"Found: {result['filename']}")
+        else:
+            QtGui.QMessageBox.information(self, "Not Found", f"Item {number} not found in index.json")
+    
+    def search_by_description(self):
+        """Search for parts/assemblies by description"""
+        
+        search_text = self.txt_description.text().strip()
+        
+        if not search_text:
+            QtGui.QMessageBox.warning(self, "Input Error", "Please enter search text")
+            return
+        
+        results = self.search.find_by_description(search_text)
+        
+        self.table_results.setRowCount(0)
+        self.lbl_info.setText("")
+        
+        if results:
+            self.current_results = results
+            self.display_results()
+            self.lbl_info.setText(f"Found {len(results)} item(s)")
+        else:
+            QtGui.QMessageBox.information(self, "No Results", 
+                f"No items found matching '{search_text}'")
+    
+    def search_by_project(self):
+        """Search for all parts/assemblies in a project"""
+        
+        project = self.combo_project.currentText()
+        
+        if project == "-- Select Project --":
+            QtGui.QMessageBox.warning(self, "Input Error", "Please select a project")
+            return
+        
+        results = self.search.find_by_project(project)
+        
+        self.table_results.setRowCount(0)
+        self.lbl_info.setText("")
+        
+        if results:
+            self.current_results = results
+            self.display_results()
+            self.lbl_info.setText(f"Found {len(results)} item(s) in project {project}")
+        else:
+            QtGui.QMessageBox.information(self, "No Results", 
+                f"No items found in project {project}")
+    
+    def find_where_used(self):
+        """Find in which assemblies an item is used"""
+        
+        item_number = self.txt_whereused.text().strip().upper()
+        
+        if not item_number:
+            QtGui.QMessageBox.warning(self, "Input Error", "Please enter an item number")
+            return
+        
+        # First check if item exists
+        item_check = self.search.find_by_number(item_number)
+        if not item_check:
+            QtGui.QMessageBox.warning(self, "Not Found", f"Item {item_number} not found")
+            return
+        
+        results = self.search.find_where_used(item_number)
+        
+        self.table_results.setRowCount(0)
+        self.lbl_info.setText("")
+        
+        if results:
+            # Display where-used results
+            self.table_results.setColumnCount(5)
+            self.table_results.setHorizontalHeaderLabels([
+                "Assembly", "Description", "Quantity", "Project", "Filename"
+            ])
+            
+            self.table_results.setRowCount(len(results))
+            
+            for row, result in enumerate(results):
+                for col, value in enumerate([
+                    result["assembly_number"],
+                    result["assembly_description"],
+                    str(result["quantity"]),
+                    result["project"],
+                    result["filename"]
+                ]):
+                    cell = QtGui.QTableWidgetItem(value)
+                    cell.setFlags(cell.flags() & ~QtCore.Qt.ItemIsEditable)
+                    self.table_results.setItem(row, col, cell)
+            
+            self.table_results.resizeColumnsToContents()
+            self.lbl_info.setText(f"Item {item_number} is used in {len(results)} assembly/assemblies")
+        else:
+            msg = f"Item {item_number} is not used in any assembly"
+            self.lbl_info.setText(msg)
+            QtGui.QMessageBox.information(self, "Where-Used Result", msg)
+    
+    def display_results(self):
+        """Display search results in table"""
+        
+        self.table_results.setColumnCount(6)
+        self.table_results.setHorizontalHeaderLabels([
+            "Type", "Number", "Description", "Project", "Status", "Revision"
+        ])
+        
+        self.table_results.setRowCount(len(self.current_results))
+        
+        for row, result in enumerate(self.current_results):
+            for col, key in enumerate(["type", "number", "description", "project", "status", "revision"]):
+                value = result.get(key, "N/A")
+                cell = QtGui.QTableWidgetItem(str(value))
+                cell.setFlags(cell.flags() & ~QtCore.Qt.ItemIsEditable)
+                self.table_results.setItem(row, col, cell)
+        
+        self.table_results.resizeColumnsToContents()
+
+
+def main():
+    """Main entry point"""
+    
+    if not os.path.exists(PDMSearchConfig.PDM_ROOT):
+        QtGui.QMessageBox.critical(None, "Configuration Error", 
+            f"PDM root folder not found:\n{PDMSearchConfig.PDM_ROOT}")
+        return
+    
+    if not os.path.exists(PDMSearchConfig.get_admin_path()):
+        QtGui.QMessageBox.critical(None, "Configuration Error", 
+            f"Admin folder not found:\n{PDMSearchConfig.get_admin_path()}")
+        return
+    
+    dialog = PDMSearchDialog(FreeCADGui.getMainWindow())
+    dialog.exec_()
+
+
+if __name__ == "__main__":
+    main()

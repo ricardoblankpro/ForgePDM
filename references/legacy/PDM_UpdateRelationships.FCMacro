@@ -1,0 +1,158 @@
+# -*- coding: utf-8 -*-
+"""
+PDM System - Update Relationships
+
+Updates the relationships.json file based on the current assembly structure.
+
+Behavior:
+- Reads the active assembly document
+- Extracts all linked objects (parts/sub-assemblies)
+- Updates relationships.json for this assembly with the current structure
+- Removes items that no longer exist in the assembly
+- Updates quantities based on actual linked objects
+
+This macro is useful after deleting or modifying parts in an assembly.
+"""
+
+import FreeCAD
+import FreeCADGui
+import os
+import json
+from PySide import QtGui
+from collections import defaultdict
+
+
+class Config:
+    PDM_ROOT = "/home/ricardoblank/CAD"
+    ADMIN = "_ADMIN"
+    REL = "relationships.json"
+
+    @classmethod
+    def admin_path(cls):
+        return os.path.join(cls.PDM_ROOT, cls.ADMIN)
+
+    @classmethod
+    def rel_path(cls):
+        return os.path.join(cls.admin_path(), cls.REL)
+
+
+def read_json(path):
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        return None
+
+
+def write_json(path, data):
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        return False
+
+
+def get_assembly_number_from_doc(doc):
+    """Extract assembly number from document label (e.g., A000001_Desc_RevA -> A000001)"""
+    label = getattr(doc, 'Label', None)
+    if not label:
+        return None
+    return label.split('_')[0]
+
+
+def extract_linked_objects(doc):
+    """Extract all linked objects (App::Link) from the assembly.
+    Returns dict: {item_number: count}
+    """
+    items = defaultdict(int)
+    
+    for obj in doc.Objects:
+        try:
+            # Only process App::Link objects (linked instances)
+            if not obj.TypeId == 'App::Link':
+                continue
+            
+            label = getattr(obj, 'Label', '').strip()  # Strip whitespace
+            # Extract item number from label (e.g., P000001_Desc_RevA -> P000001)
+            if label and '_' in label:
+                item_num = label.split('_')[0].strip()  # Strip whitespace
+                if item_num and (item_num.startswith('P') or item_num.startswith('A')):
+                    items[item_num] += 1
+        except Exception:
+            pass
+    
+    return dict(items)
+
+
+def main():
+    # Verify PDM root exists
+    if not os.path.exists(Config.PDM_ROOT):
+        QtGui.QMessageBox.critical(None, 'Error', f'PDM root not found: {Config.PDM_ROOT}')
+        return
+    
+    if not os.path.exists(Config.admin_path()):
+        QtGui.QMessageBox.critical(None, 'Error', f'Admin folder not found: {Config.admin_path()}')
+        return
+    
+    # Get active document
+    doc = FreeCAD.activeDocument()
+    if not doc:
+        QtGui.QMessageBox.critical(None, 'Error', 'No active document found')
+        return
+    
+    # Get assembly number
+    asm_num = get_assembly_number_from_doc(doc)
+    if not asm_num or not asm_num.startswith('A'):
+        QtGui.QMessageBox.critical(None, 'Error', f'Active document does not appear to be an assembly (expected label like A000001_...)')
+        return
+    
+    # Extract current linked objects from assembly
+    current_items = extract_linked_objects(doc)
+    if not current_items:
+        QtGui.QMessageBox.warning(None, 'Warning', f'No linked objects found in assembly {asm_num}')
+        return
+    
+    # Read relationships.json
+    rel_path = Config.rel_path()
+    relationships = read_json(rel_path)
+    if relationships is None:
+        QtGui.QMessageBox.critical(None, 'Error', f'Failed to read relationships.json at {rel_path}')
+        return
+    
+    # Update or create entry for this assembly
+    if asm_num not in relationships:
+        relationships[asm_num] = {}
+    
+    # Build new BOM structure in the correct format
+    new_bom = []
+    for item_num, qty in sorted(current_items.items()):
+        new_bom.append({'item': item_num, 'qty': qty})
+    
+    # Update the assembly entry in the correct nested structure
+    if 'assemblies' not in relationships:
+        relationships['assemblies'] = {}
+    
+    relationships['assemblies'][asm_num] = {'contains': new_bom}
+    
+    # Debug: print what we're about to write
+    print(f"DEBUG: Writing to relationships.json:")
+    print(f"Assembly: {asm_num}")
+    print(f"BOM: {new_bom}")
+    print(f"Full relationships: {relationships}")
+    
+    # Write back to relationships.json
+    if write_json(rel_path, relationships):
+        QtGui.QMessageBox.information(
+            None, 
+            'Success', 
+            f'Updated relationships.json for assembly {asm_num}\n\n'
+            f'Items in BOM: {len(new_bom)}\n'
+            f'Total parts: {sum(item["qty"] for item in new_bom)}'
+        )
+    else:
+        QtGui.QMessageBox.critical(None, 'Error', f'Failed to write relationships.json')
+
+
+if __name__ == '__main__':
+    main()

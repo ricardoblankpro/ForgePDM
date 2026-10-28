@@ -1,0 +1,747 @@
+# -*- coding: utf-8 -*-
+"""
+PDM System - New Part/Assembly Macro
+Creates a new part or assembly with proper properties.
+- Parts: PartDesign::Body
+- Assemblies: Assembly::AssemblyObject (FreeCAD 1.0 built-in)
+
+Filename format: {Number}_{Description}_Rev{Revision}.FCStd
+"""
+
+import FreeCAD
+import FreeCADGui
+import json
+import os
+import re
+from datetime import date
+from PySide import QtGui, QtCore
+
+# Import PDM Session
+try:
+    from PDM_Session import require_pdm_login, get_current_pdm_user
+except ImportError:
+    def require_pdm_login(config_path=None):
+        return None
+    def get_current_pdm_user():
+        return None
+
+
+class PDMConfig:
+    """Configuration for PDM system paths"""
+    
+    PDM_ROOT = "/home/ricardoblank/CAD"
+    
+    ADMIN_FOLDER = "_ADMIN"
+    PROJECTS_FOLDER = "PROJECTS"
+    TEMPLATES_FOLDER = "_TEMPLATES"
+    
+    INDEX_FILE = "index.json"
+    CHECKOUT_FILE = "checkout.json"
+    RELATIONSHIPS_FILE = "relationships.json"
+    CONFIG_FILE = "config.json"
+    
+    PARTS_SUBFOLDER = "parts"
+    ASSEMBLIES_SUBFOLDER = "assemblies"
+    
+    # Default values
+    DEFAULT_MATERIAL = "Aço 1020"
+    DEFAULT_DENSITY = "7850 kg/m^3"
+    DEFAULT_DENSITY_DISPLAY = "7850"
+    DEFAULT_CHANGE_NOTE = "Emissão inicial"
+    
+    # Date format
+    DATE_FORMAT = "%d/%m/%Y"
+    
+    @classmethod
+    def get_admin_path(cls):
+        return os.path.join(cls.PDM_ROOT, cls.ADMIN_FOLDER)
+    
+    @classmethod
+    def get_index_path(cls):
+        return os.path.join(cls.get_admin_path(), cls.INDEX_FILE)
+    
+    @classmethod
+    def get_config_path(cls):
+        return os.path.join(cls.get_admin_path(), cls.CONFIG_FILE)
+    
+    @classmethod
+    def get_relationships_path(cls):
+        return os.path.join(cls.get_admin_path(), cls.RELATIONSHIPS_FILE)
+    
+    @classmethod
+    def get_projects_path(cls):
+        return os.path.join(cls.PDM_ROOT, cls.PROJECTS_FOLDER)
+    
+    @classmethod
+    def get_today_formatted(cls):
+        return date.today().strftime(cls.DATE_FORMAT)
+
+
+class PDMFileNaming:
+    """Handles file naming conventions"""
+    
+    @staticmethod
+    def sanitize_description(description):
+        """
+        Sanitize description for use in filename.
+        - Replace spaces with underscores
+        - Remove special characters
+        - Remove multiple consecutive underscores
+        """
+        sanitized = description.replace(" ", "_")
+        sanitized = re.sub(r'[^a-zA-Z0-9_]', '', sanitized)
+        sanitized = re.sub(r'_+', '_', sanitized)
+        sanitized = sanitized.strip('_')
+        return sanitized
+    
+    @staticmethod
+    def generate_filename(item_number, description, revision):
+        """
+        Generate filename from number, description, and revision.
+        Format: {Number}_{Description}_Rev{Revision}.FCStd
+        """
+        sanitized_desc = PDMFileNaming.sanitize_description(description)
+        return f"{item_number}_{sanitized_desc}_Rev{revision}.FCStd"
+    
+    @staticmethod
+    def generate_label(item_number, description, revision):
+        """
+        Generate label (filename without extension).
+        Format: {Number}_{Description}_Rev{Revision}
+        """
+        sanitized_desc = PDMFileNaming.sanitize_description(description)
+        return f"{item_number}_{sanitized_desc}_Rev{revision}"
+
+
+class PDMJsonHandler:
+    """Handles reading and writing JSON files"""
+    
+    @staticmethod
+    def read_json(filepath):
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            QtGui.QMessageBox.critical(None, "Error", f"File not found: {filepath}")
+            return None
+        except json.JSONDecodeError as e:
+            QtGui.QMessageBox.critical(None, "Error", f"Invalid JSON in {filepath}: {e}")
+            return None
+    
+    @staticmethod
+    def write_json(filepath, data):
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception as e:
+            QtGui.QMessageBox.critical(None, "Error", f"Failed to write {filepath}: {e}")
+            return False
+
+
+class PDMStyles:
+    """UI Styles for PDM dialogs"""
+    
+    READONLY_FIELD = """
+        QLineEdit {
+            background-color: #505050;
+            color: white;
+            border: 1px solid #606060;
+            padding: 2px;
+        }
+    """
+    
+    FILENAME_PREVIEW = """
+        QLabel {
+            font-family: monospace;
+            font-size: 12px;
+            padding: 5px;
+            background-color: #505050;
+            color: white;
+            border: 1px solid #606060;
+        }
+    """
+
+
+class PDMNewItemDialog(QtGui.QDialog):
+    """Dialog for creating new part or assembly"""
+    
+    def __init__(self, current_user, parent=None):
+        super(PDMNewItemDialog, self).__init__(parent)
+        
+        self.current_user = current_user
+        self.config_data = None
+        self.index_data = None
+        self.projects = []
+        self.users = []
+        
+        self.load_system_data()
+        self.init_ui()
+    
+    def load_system_data(self):
+        """Load configuration and index data"""
+        
+        self.config_data = PDMJsonHandler.read_json(PDMConfig.get_config_path())
+        if self.config_data:
+            self.users = self.config_data.get("users", [])
+        
+        self.index_data = PDMJsonHandler.read_json(PDMConfig.get_index_path())
+        
+        projects_path = PDMConfig.get_projects_path()
+        if os.path.exists(projects_path):
+            self.projects = [d for d in os.listdir(projects_path) 
+                          if os.path.isdir(os.path.join(projects_path, d))]
+            self.projects.sort()
+    
+    def init_ui(self):
+        """Initialize the user interface"""
+        
+        self.setWindowTitle("PDM - New Part/Assembly")
+        self.setMinimumWidth(500)
+        
+        layout = QtGui.QVBoxLayout()
+        
+        # Current user display
+        user_layout = QtGui.QHBoxLayout()
+        user_label = QtGui.QLabel(f"Logged in as: <b>{self.current_user}</b>")
+        user_layout.addWidget(user_label)
+        user_layout.addStretch()
+        layout.addLayout(user_layout)
+        
+        # Separator
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken)
+        layout.addWidget(line)
+        
+        # Item Type Selection
+        type_group = QtGui.QGroupBox("Item Type")
+        type_layout = QtGui.QHBoxLayout()
+        
+        self.radio_part = QtGui.QRadioButton("Part")
+        self.radio_assembly = QtGui.QRadioButton("Assembly")
+        self.radio_part.setChecked(True)
+        
+        type_layout.addWidget(self.radio_part)
+        type_layout.addWidget(self.radio_assembly)
+        type_group.setLayout(type_layout)
+        layout.addWidget(type_group)
+        
+        # Form Layout for properties
+        form_group = QtGui.QGroupBox("Properties")
+        form_layout = QtGui.QFormLayout()
+        
+        # Number (read-only, auto-generated)
+        self.txt_number = QtGui.QLineEdit()
+        self.txt_number.setReadOnly(True)
+        self.txt_number.setStyleSheet(PDMStyles.READONLY_FIELD)
+        self.update_number_display()
+        form_layout.addRow("Number:", self.txt_number)
+        
+        # Description
+        self.txt_description = QtGui.QLineEdit()
+        self.txt_description.setPlaceholderText("Enter description...")
+        self.txt_description.textChanged.connect(self.update_filename_preview)
+        form_layout.addRow("Description:", self.txt_description)
+        
+        # Project
+        self.combo_project = QtGui.QComboBox()
+        self.combo_project.addItems(self.projects)
+        form_layout.addRow("Project:", self.combo_project)
+        
+        # Author (read-only, set to current user)
+        self.txt_author = QtGui.QLineEdit()
+        self.txt_author.setText(self.current_user)
+        self.txt_author.setReadOnly(True)
+        self.txt_author.setStyleSheet(PDMStyles.READONLY_FIELD)
+        form_layout.addRow("Author:", self.txt_author)
+        
+        # Material (with default) - only for parts
+        self.lbl_material = QtGui.QLabel("Material:")
+        self.txt_material = QtGui.QLineEdit()
+        self.txt_material.setText(PDMConfig.DEFAULT_MATERIAL)
+        self.txt_material.setPlaceholderText("e.g., Aço 1020")
+        form_layout.addRow(self.lbl_material, self.txt_material)
+        
+        # Density (with default) - only for parts
+        self.lbl_density = QtGui.QLabel("Density (kg/m³):")
+        self.txt_density = QtGui.QLineEdit()
+        self.txt_density.setText(PDMConfig.DEFAULT_DENSITY_DISPLAY)
+        self.txt_density.setPlaceholderText("kg/m³")
+        self.txt_density.setValidator(QtGui.QDoubleValidator(0, 100000, 4))
+        form_layout.addRow(self.lbl_density, self.txt_density)
+        
+        # Change Note (with default)
+        self.txt_change_note = QtGui.QLineEdit()
+        self.txt_change_note.setText(PDMConfig.DEFAULT_CHANGE_NOTE)
+        form_layout.addRow("Change Note:", self.txt_change_note)
+        
+        form_group.setLayout(form_layout)
+        layout.addWidget(form_group)
+        
+        # Filename Preview
+        preview_group = QtGui.QGroupBox("Filename Preview")
+        preview_layout = QtGui.QVBoxLayout()
+        
+        self.lbl_filename_preview = QtGui.QLabel("")
+        self.lbl_filename_preview.setStyleSheet(PDMStyles.FILENAME_PREVIEW)
+        preview_layout.addWidget(self.lbl_filename_preview)
+        
+        preview_group.setLayout(preview_layout)
+        layout.addWidget(preview_group)
+        
+        # Info display
+        info_group = QtGui.QGroupBox("Auto-Generated Properties")
+        info_layout = QtGui.QFormLayout()
+        
+        self.lbl_revision = QtGui.QLabel("A")
+        self.lbl_status = QtGui.QLabel("working")
+        self.lbl_date = QtGui.QLabel(PDMConfig.get_today_formatted())
+        
+        info_layout.addRow("Revision:", self.lbl_revision)
+        info_layout.addRow("Status:", self.lbl_status)
+        info_layout.addRow("Date:", self.lbl_date)
+        
+        info_group.setLayout(info_layout)
+        layout.addWidget(info_group)
+        
+        # Buttons
+        button_layout = QtGui.QHBoxLayout()
+        
+        self.btn_create = QtGui.QPushButton("Create")
+        self.btn_create.setDefault(True)
+        self.btn_cancel = QtGui.QPushButton("Cancel")
+        
+        button_layout.addStretch()
+        button_layout.addWidget(self.btn_create)
+        button_layout.addWidget(self.btn_cancel)
+        
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout)
+        
+        # Connect signals
+        self.radio_part.toggled.connect(self.update_number_display)
+        self.radio_part.toggled.connect(self.update_filename_preview)
+        self.radio_part.toggled.connect(self.update_material_visibility)
+        self.radio_assembly.toggled.connect(self.update_number_display)
+        self.radio_assembly.toggled.connect(self.update_filename_preview)
+        self.radio_assembly.toggled.connect(self.update_material_visibility)
+        self.btn_create.clicked.connect(self.create_item)
+        self.btn_cancel.clicked.connect(self.reject)
+        
+        # Initial updates
+        self.update_filename_preview()
+        self.update_material_visibility()
+    
+    def update_number_display(self):
+        """Update the number field based on item type selection"""
+        
+        if not self.index_data:
+            self.txt_number.setText("ERROR: Cannot read index.json")
+            return
+        
+        meta = self.index_data.get("meta", {})
+        
+        if self.radio_part.isChecked():
+            next_num = meta.get("next_part", 1)
+            prefix = "P"
+        else:
+            next_num = meta.get("next_assembly", 1)
+            prefix = "A"
+        
+        self.txt_number.setText(f"{prefix}{next_num:06d}")
+    
+    def update_filename_preview(self):
+        """Update the filename preview"""
+        
+        item_number = self.txt_number.text()
+        description = self.txt_description.text().strip()
+        revision = "A"
+        
+        if description:
+            filename = PDMFileNaming.generate_filename(item_number, description, revision)
+        else:
+            filename = f"{item_number}_[Description]_Rev{revision}.FCStd"
+        
+        self.lbl_filename_preview.setText(filename)
+    
+    def update_material_visibility(self):
+        """Show/hide material and density fields based on item type"""
+        
+        is_part = self.radio_part.isChecked()
+        
+        self.lbl_material.setVisible(is_part)
+        self.txt_material.setVisible(is_part)
+        self.lbl_density.setVisible(is_part)
+        self.txt_density.setVisible(is_part)
+    
+    def validate_input(self):
+        """Validate user input"""
+        
+        if not self.txt_description.text().strip():
+            QtGui.QMessageBox.warning(self, "Validation Error", "Description is required.")
+            self.txt_description.setFocus()
+            return False
+        
+        sanitized = PDMFileNaming.sanitize_description(self.txt_description.text().strip())
+        if not sanitized:
+            QtGui.QMessageBox.warning(self, "Validation Error", 
+                "Description must contain at least one alphanumeric character.")
+            self.txt_description.setFocus()
+            return False
+        
+        if self.combo_project.currentText() == "":
+            QtGui.QMessageBox.warning(self, "Validation Error", "Please select a project.")
+            return False
+        
+        if self.radio_part.isChecked():
+            density_text = self.txt_density.text().strip()
+            if density_text:
+                try:
+                    float(density_text)
+                except ValueError:
+                    QtGui.QMessageBox.warning(self, "Validation Error", "Invalid density value.")
+                    self.txt_density.setFocus()
+                    return False
+        
+        return True
+    
+    def close_existing_document(self, doc_name):
+        """Close document if it already exists"""
+        for doc in FreeCAD.listDocuments().values():
+            if doc.Name == doc_name or doc.Label == doc_name:
+                FreeCAD.closeDocument(doc.Name)
+                return True
+        return False
+    
+    def create_item(self):
+        """Create the new part or assembly"""
+        
+        if not self.validate_input():
+            return
+        
+        is_part = self.radio_part.isChecked()
+        item_number = self.txt_number.text()
+        description = self.txt_description.text().strip()
+        sanitized_description = PDMFileNaming.sanitize_description(description)
+        project = self.combo_project.currentText()
+        author = self.current_user
+        change_note = self.txt_change_note.text().strip()
+        today = PDMConfig.get_today_formatted()
+        revision = "A"
+        status = "working"
+        
+        if is_part:
+            material = self.txt_material.text().strip()
+            density_text = self.txt_density.text().strip()
+            density_with_units = f"{density_text} kg/m^3" if density_text else PDMConfig.DEFAULT_DENSITY
+        else:
+            material = ""
+            density_with_units = ""
+        
+        # Generate filename and label
+        filename = PDMFileNaming.generate_filename(item_number, description, revision)
+        label = PDMFileNaming.generate_label(item_number, description, revision)
+        
+        if is_part:
+            subfolder = PDMConfig.PARTS_SUBFOLDER
+        else:
+            subfolder = PDMConfig.ASSEMBLIES_SUBFOLDER
+        
+        file_dir = os.path.join(
+            PDMConfig.get_projects_path(),
+            project,
+            subfolder
+        )
+        
+        # Create directories
+        if not os.path.exists(file_dir):
+            try:
+                os.makedirs(file_dir)
+            except Exception as e:
+                QtGui.QMessageBox.critical(self, "Error", f"Failed to create directory: {e}")
+                return
+        
+        archive_dir = os.path.join(file_dir, "_archive")
+        if not os.path.exists(archive_dir):
+            try:
+                os.makedirs(archive_dir)
+            except Exception as e:
+                FreeCAD.Console.PrintWarning(f"Failed to create archive directory: {e}\n")
+        
+        file_path = os.path.join(file_dir, filename)
+        
+        # Check if file already exists
+        if os.path.exists(file_path):
+            QtGui.QMessageBox.critical(self, "Error", f"File already exists: {file_path}")
+            return
+        
+        # Close existing document with same name if open
+        self.close_existing_document(label)
+        
+        # Create new document
+        doc = FreeCAD.newDocument()
+        
+        # Create part body or assembly
+        if is_part:
+            obj = self.create_part_body(
+                doc, item_number, description, sanitized_description,
+                author, today, change_note, material, density_with_units, revision, status, label
+            )
+        else:
+            obj = self.create_assembly(
+                doc, item_number, description, sanitized_description,
+                author, today, change_note, revision, status, label
+            )
+        
+        if not obj:
+            FreeCAD.closeDocument(doc.Name)
+            return
+        
+        # Recompute
+        doc.recompute()
+        
+        # Save document
+        try:
+            doc.saveAs(file_path)
+        except Exception as e:
+            QtGui.QMessageBox.critical(self, "Error", f"Failed to save file: {e}")
+            FreeCAD.closeDocument(doc.Name)
+            return
+        
+        # Set document label to match filename (without extension)
+        doc.Label = label
+        
+        # Set active view
+        try:
+            FreeCADGui.ActiveDocument.setActiveObject(obj)
+        except:
+            pass
+        
+        # Update index.json
+        if not self.update_index(is_part, item_number, description, sanitized_description, 
+                                  project, today, author, change_note, filename, revision):
+            QtGui.QMessageBox.warning(self, "Warning", 
+                "File created but failed to update index.json")
+        
+        # Update relationships.json for assemblies
+        if not is_part:
+            if not self.update_relationships(item_number, today):
+                QtGui.QMessageBox.warning(self, "Warning", 
+                    "Item created but failed to update relationships.json")
+        
+        # Show success message
+        QtGui.QMessageBox.information(self, "Success", 
+            f"Created {item_number}\n\nFilename: {filename}\n\nPath: {file_path}")
+        
+        # Close dialog
+        self.accept()
+    
+    def create_part_body(self, doc, item_number, description, sanitized_description,
+                         author, today, change_note, material, density_with_units, revision, status, label):
+        """Create a PartDesign Body for a Part with all properties"""
+        
+        try:
+            body = doc.addObject("PartDesign::Body", "Body")
+            body.Label = label
+            body.Label2 = status
+        except Exception as e:
+            QtGui.QMessageBox.critical(self, "Error", f"Failed to create Body: {e}")
+            return None
+        
+        # String properties
+        string_properties = [
+            ("PartNumber", item_number),
+            ("Description", description),
+            ("SanitizedDescription", sanitized_description),
+            ("Revision", revision),
+            ("Status", status),
+            ("Author", author),
+            ("LastModifiedUser", author),
+            ("LastModified", today),
+            ("ChangeNote", change_note),
+        ]
+        
+        for prop_name, prop_value in string_properties:
+            try:
+                body.addProperty("App::PropertyString", prop_name, "PDM")
+                setattr(body, prop_name, prop_value)
+            except Exception as e:
+                FreeCAD.Console.PrintWarning(f"Failed to add property {prop_name}: {e}\n")
+        
+        # Material property
+        try:
+            body.addProperty("App::PropertyString", "Material", "PDM")
+            setattr(body, "Material", material)
+            try:
+                body.setExpression("Material", "ShapeMaterial.Name")
+            except:
+                FreeCAD.Console.PrintMessage("Material expression will be linked when ShapeMaterial is assigned.\n")
+        except Exception as e:
+            FreeCAD.Console.PrintWarning(f"Failed to add Material property: {e}\n")
+        
+        # Density property with units
+        try:
+            body.addProperty("App::PropertyDensity", "Density", "PDM")
+            body.Density = FreeCAD.Units.Quantity(density_with_units)
+        except Exception as e:
+            FreeCAD.Console.PrintWarning(f"Failed to add Density property: {e}\n")
+        
+        # Volume property with expression
+        try:
+            body.addProperty("App::PropertyVolume", "Volume", "PDM")
+            try:
+                body.setExpression("Volume", "Shape.Volume")
+            except:
+                FreeCAD.Console.PrintMessage("Volume expression will work after geometry is added.\n")
+        except Exception as e:
+            FreeCAD.Console.PrintWarning(f"Failed to add Volume property: {e}\n")
+        
+        # Weight property with expression
+        try:
+            body.addProperty("App::PropertyMass", "Weight", "PDM")
+            try:
+                body.setExpression("Weight", "Density * Volume")
+            except:
+                FreeCAD.Console.PrintMessage("Weight expression will work after geometry is added.\n")
+        except Exception as e:
+            FreeCAD.Console.PrintWarning(f"Failed to add Weight property: {e}\n")
+        
+        return body
+    
+    def create_assembly(self, doc, item_number, description, sanitized_description,
+                        author, today, change_note, revision, status, label):
+        """Create an Assembly object (FreeCAD 1.0 built-in Assembly workbench)"""
+        
+        try:
+            # Create Assembly object from built-in Assembly workbench (FreeCAD 1.0+)
+            assembly = doc.addObject("Assembly::AssemblyObject", "Assembly")
+            assembly.Label = label
+            assembly.Label2 = status
+        except Exception as e:
+            QtGui.QMessageBox.critical(self, "Error", f"Failed to create Assembly: {e}\n\nMake sure you're using FreeCAD 1.0 or later.")
+            return None
+        
+        # String properties
+        string_properties = [
+            ("AssemblyNumber", item_number),
+            ("Description", description),
+            ("SanitizedDescription", sanitized_description),
+            ("Revision", revision),
+            ("Status", status),
+            ("Author", author),
+            ("LastModifiedUser", author),
+            ("LastModified", today),
+            ("ChangeNote", change_note),
+        ]
+        
+        for prop_name, prop_value in string_properties:
+            try:
+                assembly.addProperty("App::PropertyString", prop_name, "PDM")
+                setattr(assembly, prop_name, prop_value)
+            except Exception as e:
+                FreeCAD.Console.PrintWarning(f"Failed to add property {prop_name}: {e}\n")
+        
+        # Weight property (default 0, will be updated by macro as sum of parts)
+        try:
+            assembly.addProperty("App::PropertyMass", "Weight", "PDM")
+            assembly.Weight = FreeCAD.Units.Quantity("0 kg")
+        except Exception as e:
+            FreeCAD.Console.PrintWarning(f"Failed to add Weight property: {e}\n")
+        
+        return assembly
+    
+    def update_index(self, is_part, item_number, description, sanitized_description,
+                     project, today, author, change_note, filename, revision):
+        """Update index.json with new item"""
+        
+        index_path = PDMConfig.get_index_path()
+        
+        # Re-read index to get latest data
+        index_data = PDMJsonHandler.read_json(index_path)
+        
+        if not index_data:
+            FreeCAD.Console.PrintError(f"Failed to read index.json from {index_path}\n")
+            return False
+        
+        new_entry = {
+            "description": description,
+            "sanitized_description": sanitized_description,
+            "project": project,
+            "revision": revision,
+            "status": "working",
+            "filename": filename,
+            "revision_history": []
+        }
+        
+        if is_part:
+            if "parts" not in index_data:
+                index_data["parts"] = {}
+            index_data["parts"][item_number] = new_entry
+            index_data["meta"]["next_part"] = index_data["meta"].get("next_part", 1) + 1
+        else:
+            if "assemblies" not in index_data:
+                index_data["assemblies"] = {}
+            index_data["assemblies"][item_number] = new_entry
+            index_data["meta"]["next_assembly"] = index_data["meta"].get("next_assembly", 1) + 1
+        
+        index_data["meta"]["last_updated"] = today
+        
+        result = PDMJsonHandler.write_json(index_path, index_data)
+        
+        if result:
+            FreeCAD.Console.PrintMessage(f"Successfully updated index.json for {item_number}\n")
+        else:
+            FreeCAD.Console.PrintError(f"Failed to write index.json\n")
+        
+        return result
+    
+    def update_relationships(self, item_number, today):
+        """Update relationships.json for new assembly"""
+        
+        rel_path = PDMConfig.get_relationships_path()
+        rel_data = PDMJsonHandler.read_json(rel_path)
+        
+        if not rel_data:
+            return False
+        
+        if "assemblies" not in rel_data:
+            rel_data["assemblies"] = {}
+        
+        rel_data["assemblies"][item_number] = {
+            "contains": []
+        }
+        
+        if "meta" not in rel_data:
+            rel_data["meta"] = {}
+        rel_data["meta"]["last_updated"] = today
+        
+        return PDMJsonHandler.write_json(rel_path, rel_data)
+
+
+def main():
+    """Main entry point"""
+    
+    if not os.path.exists(PDMConfig.PDM_ROOT):
+        QtGui.QMessageBox.critical(None, "Configuration Error", 
+            f"PDM root folder not found:\n{PDMConfig.PDM_ROOT}")
+        return
+    
+    if not os.path.exists(PDMConfig.get_admin_path()):
+        QtGui.QMessageBox.critical(None, "Configuration Error", 
+            f"Admin folder not found:\n{PDMConfig.get_admin_path()}")
+        return
+    
+    current_user = require_pdm_login(PDMConfig.get_config_path())
+    if not current_user:
+        QtGui.QMessageBox.warning(None, "Login Required", 
+            "You must be logged in to use this function.")
+        return
+    
+    dialog = PDMNewItemDialog(current_user, FreeCADGui.getMainWindow())
+    dialog.exec_()
+
+
+if __name__ == "__main__":
+    main()

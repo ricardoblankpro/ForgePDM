@@ -1,0 +1,40 @@
+# -*- coding: utf-8 -*-
+"""
+PDM Login/Logout Macro
+"""
+
+import os
+from PySide import QtGui
+
+try:
+    from PDM_Session import PDMSession, require_pdm_login, pdm_logout
+except ImportError:
+    QtGui.QMessageBox.critical(None, "Error", "PDM_Session.py not found")
+    raise
+
+
+PDM_ROOT = "/home/ricardoblank/CAD"
+CONFIG_PATH = os.path.join(PDM_ROOT, "_ADMIN", "config.json")
+
+
+def main():
+    if PDMSession.is_authenticated():
+        current_user = PDMSession.get_current_user()
+        result = QtGui.QMessageBox.question(
+            None,
+            "PDM Session",
+            f"Currently logged in as: {current_user}\n\nDo you want to logout?",
+            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
+            QtGui.QMessageBox.No
+        )
+        if result == QtGui.QMessageBox.Yes:
+            pdm_logout()
+            QtGui.QMessageBox.information(None, "PDM Session", "You have been logged out.")
+    else:
+        user = require_pdm_login(CONFIG_PATH)
+        if user:
+            QtGui.QMessageBox.information(None, "PDM Session", f"Logged in as: {user}")
+
+
+if __name__ == "__main__":
+    main()

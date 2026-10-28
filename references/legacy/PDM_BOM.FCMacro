@@ -1,0 +1,370 @@
+# -*- coding: utf-8 -*-
+"""
+PDM System - BOM Generator (Spreadsheet)
+
+Creates or updates a Spreadsheet named 'BOM' in the active FreeCAD document.
+
+Behavior:
+- If a `Spreadsheet::Sheet` with label `BOM` exists, it is updated.
+- Otherwise a new spreadsheet is created and labeled `BOM`.
+- Row 1: merged cell with text "LISTA DE MATERIAIS" (best-effort merge)
+- Row 2: headers: ID, Código, Revisão, Descrição, Qtde, Material, Peso
+- Rows: one line per unique item in relationships.json for the active assembly.
+
+Data sources and property fallback rules:
+- Assembly identification: takes the active document label prefix (e.g. A000001_...)
+- Uses `relationships.json` to find assembly contents (items + qty)
+- For each item it attempts to open the part/assembly file and read custom properties
+  (try PDM_PartNumber, PDM_Revision, PDM_Description, PDM_Material, PDM_Weight)
+- If a custom property is not present, falls back to the index.json values or the
+  item number and leaves empty where appropriate.
+
+This macro is focused on search & retrieval workflows and does not alter any JSON data.
+"""
+
+import FreeCAD
+import FreeCADGui
+import os
+import json
+from PySide import QtGui
+
+
+class Config:
+    PDM_ROOT = "/home/ricardoblank/CAD"
+    ADMIN = "_ADMIN"
+    PROJECTS = "PROJECTS"
+    INDEX = "index.json"
+    REL = "relationships.json"
+
+    @classmethod
+    def admin_path(cls):
+        return os.path.join(cls.PDM_ROOT, cls.ADMIN)
+
+    @classmethod
+    def index_path(cls):
+        return os.path.join(cls.admin_path(), cls.INDEX)
+
+    @classmethod
+    def rel_path(cls):
+        return os.path.join(cls.admin_path(), cls.REL)
+
+    @classmethod
+    def projects_path(cls):
+        return os.path.join(cls.PDM_ROOT, cls.PROJECTS)
+
+
+def read_json(path):
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def find_bom_sheet(doc):
+    for obj in doc.Objects:
+        try:
+            if obj.TypeId.startswith('Spreadsheet::') and (obj.Label == 'BOM' or obj.Name == 'BOM'):
+                return obj
+        except Exception:
+            pass
+    return None
+
+
+def try_merge(sheet, start='A1', end='G1'):
+    # Try a few merge methods depending on Spreadsheet implementation
+    try:
+        # Common: mergeCells(rangeStr)
+        sheet.mergeCells('%s:%s' % (start, end))
+        return True
+    except Exception:
+        pass
+    try:
+        # Some versions use (row1,col1,row2,col2) indexes
+        sheet.mergeCells(0, 0, 0, 6)
+        return True
+    except Exception:
+        pass
+    try:
+        # Some versions expose .MergeCells list
+        sheet.MergeCells = [(0, 0, 0, 6)]
+        return True
+    except Exception:
+        pass
+    return False
+
+
+def get_assembly_number_from_doc(doc):
+    # Label example: A000001_Desc_RevA  -> take prefix before first underscore
+    label = getattr(doc, 'Label', None)
+    if not label:
+        return None
+    return label.split('_')[0]
+
+
+def find_linked_object_in_doc(doc, item_number):
+    """Search active document for a linked object matching item_number in its label.
+    Returns the object if found, None otherwise.
+    """
+    if not doc:
+        return None
+    
+    for obj in doc.Objects:
+        try:
+            label = getattr(obj, 'Label', '')
+            if item_number in label:
+                return obj
+        except Exception:
+            pass
+    return None
+
+
+def read_item_properties(doc, idx_entry, item_number=None):
+    """Read item properties from linked object in active doc or index.json fallback.
+    doc: active FreeCAD document (to search for linked objects)
+    idx_entry: dict from index.json for the item (may be {} if missing)
+    Returns dict with keys: code, revision, description, material, weight
+    """
+    result = {
+        'code': '',
+        'revision': '',
+        'description': '',
+        'material': '',
+        'weight': ''
+    }
+
+    # Try to find linked object in active document and read properties from it
+    linked_obj = find_linked_object_in_doc(doc, item_number) if item_number else None
+    
+    if linked_obj:
+        # Read from linked object properties (no file opening)
+        try:
+            result['code'] = getattr(linked_obj, 'PartNumber', None) or getattr(linked_obj, 'AssemblyNumber', None) or item_number or ''
+        except Exception:
+            result['code'] = item_number or ''
+        
+        try:
+            result['revision'] = getattr(linked_obj, 'Revision', '') or ''
+        except Exception:
+            pass
+        
+        try:
+            result['description'] = getattr(linked_obj, 'Description', '') or ''
+        except Exception:
+            pass
+        
+        try:
+            mat = getattr(linked_obj, 'PDM_Material', None) or getattr(linked_obj, 'Material', None)
+            result['material'] = str(mat) if mat else ''
+        except Exception:
+            pass
+        
+        try:
+            weight = getattr(linked_obj, 'PDM_Weight', None) or getattr(linked_obj, 'Weight', None)
+            if weight:
+                # Handle Quantity objects
+                if hasattr(weight, 'Value'):
+                    result['weight'] = str(weight.Value)
+                else:
+                    result['weight'] = str(weight)
+        except Exception:
+            pass
+    
+    # Fallback to index.json if linked object properties are empty
+    if not idx_entry:
+        if not result['code'] and item_number:
+            result['code'] = item_number
+        return result
+
+    if not result['code']:
+        result['code'] = idx_entry.get('pdm_partnumber') or idx_entry.get('PDM_PartNumber') or idx_entry.get('partnumber') or idx_entry.get('PartNumber') or idx_entry.get('number') or idx_entry.get('filename') or item_number or ''
+    if not result['revision']:
+        result['revision'] = idx_entry.get('pdm_revision') or idx_entry.get('PDM_Revision') or idx_entry.get('revision', '')
+    if not result['description']:
+        result['description'] = idx_entry.get('pdm_description') or idx_entry.get('PDM_Description') or idx_entry.get('description', '')
+    if not result['material']:
+        result['material'] = idx_entry.get('pdm_material') or idx_entry.get('PDM_Material') or idx_entry.get('material', '')
+    if not result['weight']:
+        result['weight'] = idx_entry.get('pdm_weight') or idx_entry.get('PDM_Weight') or idx_entry.get('weight', '')
+
+    # Ensure code at least contains the item_number
+    if not result['code'] and item_number:
+        result['code'] = item_number
+
+    # Normalize numeric weight to string if numeric
+    try:
+        if isinstance(result['weight'], (int, float)):
+            result['weight'] = str(float(result['weight']))
+    except Exception:
+        pass
+
+    return result
+
+
+def create_or_update_bom():
+    doc = FreeCAD.ActiveDocument
+    if not doc:
+        QtGui.QMessageBox.critical(None, 'Error', 'No active FreeCAD document')
+        return
+
+    asm_num = get_assembly_number_from_doc(doc)
+    if not asm_num:
+        QtGui.QMessageBox.critical(None, 'Error', 'Cannot determine assembly number from document label')
+        return
+
+    index = read_json(Config.index_path()) or {}
+    rel = read_json(Config.rel_path()) or {}
+
+    assemblies = rel.get('assemblies', {})
+    asm_contents = assemblies.get(asm_num, {}).get('contains', [])
+
+    if not asm_contents:
+        QtGui.QMessageBox.information(None, 'BOM', f'No BOM data found for {asm_num} in relationships.json')
+        return
+
+    # Aggregate by item code (use PDM_PartNumber when available later)
+    aggregated = {}
+
+    for it in asm_contents:
+        item_num = it.get('item')
+        qty = int(it.get('qty', 1))
+
+        # read index entry for available metadata (do NOT open files)
+        idx_part = index.get('parts', {}).get(item_num) or index.get('assemblies', {}).get(item_num) or {}
+
+        props = read_item_properties(doc, idx_part, item_num)
+
+        code = props.get('code') or item_num
+        key = code
+
+        if key not in aggregated:
+            aggregated[key] = {
+                'code': code,
+                'revision': props.get('revision') or idx_part.get('revision', ''),
+                'description': props.get('description') or idx_part.get('description', ''),
+                'qty': qty,
+                'material': props.get('material', ''),
+                'weight': props.get('weight', '')
+            }
+        else:
+            aggregated[key]['qty'] += qty
+
+    # Create or update Spreadsheet
+    sheet = find_bom_sheet(doc)
+    if sheet is None:
+        try:
+            sheet = doc.addObject('Spreadsheet::Sheet', 'BOM')
+            sheet.Label = 'BOM'
+        except Exception as e:
+            QtGui.QMessageBox.critical(None, 'Error', f'Failed to create Spreadsheet BOM: {e}')
+            return
+
+    # Write header and data
+    try:
+        # Clear a reasonable area first
+        for r in range(1, 200):
+            for c in range(1, 10):
+                cell = '%s%d' % (chr(ord('A') + c - 1), r)
+                try:
+                    sheet.set(cell, '')
+                except Exception:
+                    pass
+
+        # Row 1 merged title (no extra quotes)
+        sheet.set('A1', 'LISTA DE MATERIAIS')
+        try:
+            sheet.setStyle('A1', 'align=center')
+        except Exception:
+            pass
+
+        merged = try_merge(sheet, 'A1', 'G1')
+
+        # Row 2 headers (no quotes) and center align
+        headers = ['ID', 'Código', 'Revisão', 'Descrição', 'Qtde', 'Material', 'Peso']
+        for i, h in enumerate(headers):
+            cell = '%s2' % chr(ord('A') + i)
+            sheet.set(cell, h)
+            try:
+                sheet.setStyle(cell, 'align=center; font-weight=bold')
+            except Exception:
+                try:
+                    sheet.setStyle(cell, 'align=center')
+                except Exception:
+                    pass
+
+        # Rows
+        row = 3
+        idx = 1
+        for key, data in sorted(aggregated.items()):
+            # format weight: round to 2 decimals and append ' Kg' if numeric
+            weight_val = data.get('weight', '')
+            if weight_val:
+                try:
+                    wf = float(str(weight_val))
+                    weight_str = f"{wf:.2f} Kg"
+                except Exception:
+                    weight_str = str(weight_val)
+            else:
+                weight_str = ''
+
+            values = [str(idx), data['code'], data['revision'], data['description'], str(data['qty']), data['material'], weight_str]
+            for i, v in enumerate(values):
+                cell = '%s%d' % (chr(ord('A') + i), row)
+                sheet.set(cell, v)
+                try:
+                    sheet.setStyle(cell, 'align=center')
+                except Exception:
+                    pass
+            row += 1
+            idx += 1
+
+        # Try to center-align the full range A1..G<last_row>
+        last_row = row - 1
+        
+        # Per-cell alignment with proper FreeCAD Spreadsheet API
+        for r in range(1, last_row + 1):
+            for c in range(0, 7):
+                cell = '%s%d' % (chr(ord('A') + c), r)
+                try:
+                    # Use alignment property for horizontal centering (this works)
+                    sheet.setAlignment(cell, 'center')
+                except Exception:
+                    pass
+                
+                try:
+                    # Try vertical center alignment through setStyle
+                    sheet.setStyle(cell, 'vertical-align=center')
+                except Exception:
+                    try:
+                        sheet.setStyle(cell, 'valign=center')
+                    except Exception:
+                        pass
+
+        # Try to recompute GUI
+        try:
+            doc.recompute()
+            try:
+                FreeCADGui.updateGui()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+        QtGui.QMessageBox.information(None, 'BOM', f'BOM updated for {asm_num} ({len(aggregated)} lines)')
+    except Exception as e:
+        QtGui.QMessageBox.critical(None, 'Error', f'Failed to write BOM: {e}')
+
+
+def main():
+    if not os.path.exists(Config.PDM_ROOT):
+        QtGui.QMessageBox.critical(None, 'Error', f'PDM root not found: {Config.PDM_ROOT}')
+        return
+    if not os.path.exists(Config.admin_path()):
+        QtGui.QMessageBox.critical(None, 'Error', f'Admin folder not found: {Config.admin_path()}')
+        return
+
+    create_or_update_bom()
+
+
+if __name__ == '__main__':
+    main()

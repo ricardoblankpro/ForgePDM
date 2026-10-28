@@ -1,0 +1,984 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FreeCAD PDM System</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h1 id="freecad-pdm-system">FreeCAD PDM System</h1>
+<h2 id="implementation-document">Implementation Document</h2>
+<hr>
+<h1 id="overview">1. Overview</h1>
+<h2 id="purpose">Purpose</h2>
+<p>A minimum Product Data Management (PDM) system for managing FreeCAD CAD files in a small team environment with multiple projects.</p>
+<h2 id="core-principles">Core Principles</h2>
+
+<table>
+<thead>
+<tr>
+<th>Principle</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simplicity</td>
+<td>Manual processes, no complex software</td>
+</tr>
+<tr>
+<td>Exclusive editing</td>
+<td>One person edits a file at a time</td>
+</tr>
+<tr>
+<td>Traceability</td>
+<td>Track revisions and changes</td>
+</tr>
+<tr>
+<td>Flexibility</td>
+<td>JSON-based, extensible for future automation</td>
+</tr>
+</tbody>
+</table><h2 id="system-components">System Components</h2>
+
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Storage</td>
+<td>Local folder or network drive</td>
+</tr>
+<tr>
+<td>Version control</td>
+<td>Manual revision tracking</td>
+</tr>
+<tr>
+<td>Locking mechanism</td>
+<td>checkout.json</td>
+</tr>
+<tr>
+<td>Metadata</td>
+<td>JSON files + FreeCAD properties</td>
+</tr>
+<tr>
+<td>Relationships</td>
+<td>relationships.json</td>
+</tr>
+</tbody>
+</table><hr>
+<h1 id="part-numbering">2. Part Numbering</h1>
+<h2 id="format">Format</h2>
+
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Prefix</th>
+<th>Digits</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Part</td>
+<td>P</td>
+<td>6</td>
+<td>P000001</td>
+</tr>
+<tr>
+<td>Assembly</td>
+<td>A</td>
+<td>6</td>
+<td>A000001</td>
+</tr>
+</tbody>
+</table><h2 id="rules">Rules</h2>
+<ul>
+<li>Numbers are sequential</li>
+<li>Numbers are never reused</li>
+<li>Drawings reside inside part/assembly files</li>
+<li>Capacity: 999,999 parts + 999,999 assemblies</li>
+</ul>
+<hr>
+<h1 id="file-naming-convention">3. File Naming Convention</h1>
+<h2 id="format-1">Format</h2>
+<pre><code>{Number}.FCStd
+</code></pre>
+<h2 id="examples">Examples</h2>
+<pre><code>P000001.FCStd
+P000002.FCStd
+A000001.FCStd
+</code></pre>
+<h2 id="rules-1">Rules</h2>
+<ul>
+<li>No description in filename</li>
+<li>No revision in filename</li>
+<li>Description and revision stored inside file and index.json</li>
+</ul>
+<h2 id="archive-naming">Archive Naming</h2>
+<pre><code>{Number}_Rev{Revision}.FCStd
+</code></pre>
+<h2 id="examples-1">Examples</h2>
+<pre><code>P000001_RevA.FCStd
+P000001_RevB.FCStd
+A000001_RevA.FCStd
+</code></pre>
+<hr>
+<h1 id="folder-structure">4. Folder Structure</h1>
+<pre><code>PDM_Root/
+│
+├── _ADMIN/
+│   ├── index.json
+│   ├── checkout.json
+│   ├── relationships.json
+│   └── config.json
+│
+├── _LIBRARY/
+│   ├── fasteners/
+│   ├── profiles/
+│   └── purchased_parts/
+│
+├── _TEMPLATES/
+│
+├── PROJECTS/
+│   ├── PRJ-001_ProjectName/
+│   │   ├── parts/
+│   │   │   ├── P000001.FCStd
+│   │   │   ├── P000002.FCStd
+│   │   │   └── _archive/
+│   │   │       ├── P000001_RevA.FCStd
+│   │   │       └── P000002_RevA.FCStd
+│   │   │
+│   │   ├── assemblies/
+│   │   │   ├── A000001.FCStd
+│   │   │   └── _archive/
+│   │   │       └── A000001_RevA.FCStd
+│   │   │
+│   │   └── exports/
+│   │
+│   ├── PRJ-002_ProjectName/
+│   │   └── ...
+│   │
+│   └── ...
+│
+└── ARCHIVE/
+</code></pre>
+<h2 id="folder-descriptions">Folder Descriptions</h2>
+
+<table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>_ADMIN</td>
+<td>System JSON files</td>
+</tr>
+<tr>
+<td>_LIBRARY</td>
+<td>Reusable standard parts</td>
+</tr>
+<tr>
+<td>_TEMPLATES</td>
+<td>Template files for new parts/assemblies</td>
+</tr>
+<tr>
+<td>PROJECTS</td>
+<td>Active project folders</td>
+</tr>
+<tr>
+<td>ARCHIVE</td>
+<td>Completed or cancelled projects</td>
+</tr>
+<tr>
+<td>parts</td>
+<td>Part files for a project</td>
+</tr>
+<tr>
+<td>assemblies</td>
+<td>Assembly files for a project</td>
+</tr>
+<tr>
+<td>exports</td>
+<td>STEP, PDF, STL exports</td>
+</tr>
+<tr>
+<td>_archive</td>
+<td>Archived old revisions</td>
+</tr>
+</tbody>
+</table><hr>
+<h1 id="freecad-custom-properties">5. FreeCAD Custom Properties</h1>
+<h2 id="required-properties">Required Properties</h2>
+
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PartNumber</td>
+<td>String</td>
+<td>Part number (or AssemblyNumber for assemblies)</td>
+<td>P000001</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>String</td>
+<td>Part/assembly description</td>
+<td>Motor Mount Bracket</td>
+</tr>
+<tr>
+<td>Revision</td>
+<td>String</td>
+<td>Current revision letter</td>
+<td>A</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>String</td>
+<td>Current status</td>
+<td>working</td>
+</tr>
+<tr>
+<td>Author</td>
+<td>String</td>
+<td>Original creator</td>
+<td>John</td>
+</tr>
+<tr>
+<td>LastModifiedUser</td>
+<td>String</td>
+<td>Last person to edit</td>
+<td>Mary</td>
+</tr>
+<tr>
+<td>LastModified</td>
+<td>String</td>
+<td>Date of last modification</td>
+<td>2024-01-15</td>
+</tr>
+<tr>
+<td>ChangeNote</td>
+<td>String</td>
+<td>Description of last change</td>
+<td>Added mounting holes</td>
+</tr>
+<tr>
+<td>Material</td>
+<td>String</td>
+<td>Material specification</td>
+<td>Aluminum 6061</td>
+</tr>
+<tr>
+<td>Density</td>
+<td>Float</td>
+<td>Material density (g/cm³)</td>
+<td>2.7</td>
+</tr>
+<tr>
+<td>Volume</td>
+<td>Float</td>
+<td>Part volume (cm³)</td>
+<td>125.5</td>
+</tr>
+<tr>
+<td>Weight</td>
+<td>Float</td>
+<td>Part weight (g)</td>
+<td>338.85</td>
+</tr>
+</tbody>
+</table><h2 id="notes">Notes</h2>
+<ul>
+<li>Use <code>PartNumber</code> for parts</li>
+<li>Use <code>AssemblyNumber</code> for assemblies</li>
+<li>Volume and Weight can be calculated by FreeCAD</li>
+</ul>
+<hr>
+<h1 id="status-flow">6. Status Flow</h1>
+<h2 id="statuses">Statuses</h2>
+
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>working</td>
+<td>Under development, can be modified freely</td>
+</tr>
+<tr>
+<td>released</td>
+<td>Approved for use, locked</td>
+</tr>
+<tr>
+<td>obsolete</td>
+<td>No longer used, kept for reference</td>
+</tr>
+</tbody>
+</table><h2 id="flow">Flow</h2>
+<pre><code>working → released → obsolete
+</code></pre>
+<h2 id="rules-2">Rules</h2>
+
+<table>
+<thead>
+<tr>
+<th>From</th>
+<th>To</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>working</td>
+<td>released</td>
+<td>Release approval</td>
+</tr>
+<tr>
+<td>released</td>
+<td>working</td>
+<td>Not allowed directly (create new revision)</td>
+</tr>
+<tr>
+<td>released</td>
+<td>obsolete</td>
+<td>Deprecate part</td>
+</tr>
+<tr>
+<td>obsolete</td>
+<td>-</td>
+<td>Terminal state</td>
+</tr>
+</tbody>
+</table><hr>
+<h1 id="revision-concept">7. Revision Concept</h1>
+<h2 id="key-rule">Key Rule</h2>
+<p><strong>Revision changes ONLY when a RELEASED part/assembly needs modification.</strong></p>
+<h2 id="revision-scheme">Revision Scheme</h2>
+<pre><code>A → B → C → D → ... → Z → AA → AB → ...
+</code></pre>
+<h2 id="lifecycle">Lifecycle</h2>
+<pre><code>1. Create new part
+   → Revision: A, Status: working
+   
+2. Work on it (multiple saves)
+   → Still Revision: A, Status: working
+   
+3. Release it
+   → Revision: A, Status: released
+   
+4. Need to modify?
+   → Archive current file
+   → Create new Revision: B, Status: working
+   
+5. Release new revision
+   → Revision: B, Status: released
+</code></pre>
+<h2 id="rules-3">Rules</h2>
+
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>New parts start at Rev A</td>
+<td>Always</td>
+</tr>
+<tr>
+<td>Working parts stay at current revision</td>
+<td>Multiple edits, same revision</td>
+</tr>
+<tr>
+<td>Revision increments on released modification</td>
+<td>Archive old, increment revision</td>
+</tr>
+<tr>
+<td>Archived files are read-only</td>
+<td>Never modify archived files</td>
+</tr>
+</tbody>
+</table><hr>
+<h1 id="json-files">8. JSON Files</h1>
+<h2 id="index.json">8.1 index.json</h2>
+<p>Master register of all parts and assemblies.</p>
+<pre class=" language-json"><code class="prism  language-json"><span class="token punctuation">{</span>
+  <span class="token string">"meta"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"version"</span><span class="token punctuation">:</span> <span class="token string">"1.0"</span><span class="token punctuation">,</span>
+    <span class="token string">"last_updated"</span><span class="token punctuation">:</span> <span class="token string">"2024-01-15"</span><span class="token punctuation">,</span>
+    <span class="token string">"next_part"</span><span class="token punctuation">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+    <span class="token string">"next_assembly"</span><span class="token punctuation">:</span> <span class="token number">2</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"parts"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"P000001"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+      <span class="token string">"description"</span><span class="token punctuation">:</span> <span class="token string">"Bracket"</span><span class="token punctuation">,</span>
+      <span class="token string">"project"</span><span class="token punctuation">:</span> <span class="token string">"PRJ-001"</span><span class="token punctuation">,</span>
+      <span class="token string">"revision"</span><span class="token punctuation">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
+      <span class="token string">"status"</span><span class="token punctuation">:</span> <span class="token string">"released"</span><span class="token punctuation">,</span>
+      <span class="token string">"revision_history"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span>
+          <span class="token string">"revision"</span><span class="token punctuation">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+          <span class="token string">"date"</span><span class="token punctuation">:</span> <span class="token string">"2024-01-10"</span><span class="token punctuation">,</span>
+          <span class="token string">"user"</span><span class="token punctuation">:</span> <span class="token string">"John"</span><span class="token punctuation">,</span>
+          <span class="token string">"note"</span><span class="token punctuation">:</span> <span class="token string">"Initial release"</span><span class="token punctuation">,</span>
+          <span class="token string">"archived"</span><span class="token punctuation">:</span> <span class="token string">"PROJECTS/PRJ-001_ProjectName/parts/_archive/P000001_RevA.FCStd"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token punctuation">{</span>
+          <span class="token string">"revision"</span><span class="token punctuation">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
+          <span class="token string">"date"</span><span class="token punctuation">:</span> <span class="token string">"2024-01-15"</span><span class="token punctuation">,</span>
+          <span class="token string">"user"</span><span class="token punctuation">:</span> <span class="token string">"Mary"</span><span class="token punctuation">,</span>
+          <span class="token string">"note"</span><span class="token punctuation">:</span> <span class="token string">"Added mounting holes"</span><span class="token punctuation">,</span>
+          <span class="token string">"archived"</span><span class="token punctuation">:</span> <span class="token keyword">null</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token string">"P000002"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+      <span class="token string">"description"</span><span class="token punctuation">:</span> <span class="token string">"Housing"</span><span class="token punctuation">,</span>
+      <span class="token string">"project"</span><span class="token punctuation">:</span> <span class="token string">"PRJ-001"</span><span class="token punctuation">,</span>
+      <span class="token string">"revision"</span><span class="token punctuation">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+      <span class="token string">"status"</span><span class="token punctuation">:</span> <span class="token string">"working"</span><span class="token punctuation">,</span>
+      <span class="token string">"revision_history"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"assemblies"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"A000001"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+      <span class="token string">"description"</span><span class="token punctuation">:</span> <span class="token string">"Motor Mount"</span><span class="token punctuation">,</span>
+      <span class="token string">"project"</span><span class="token punctuation">:</span> <span class="token string">"PRJ-001"</span><span class="token punctuation">,</span>
+      <span class="token string">"revision"</span><span class="token punctuation">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+      <span class="token string">"status"</span><span class="token punctuation">:</span> <span class="token string">"working"</span><span class="token punctuation">,</span>
+      <span class="token string">"revision_history"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="checkout.json">8.2 checkout.json</h2>
+<p>Tracks which files are currently being edited.</p>
+<pre class=" language-json"><code class="prism  language-json"><span class="token punctuation">{</span>
+  <span class="token string">"P000001"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"user"</span><span class="token punctuation">:</span> <span class="token string">"John"</span><span class="token punctuation">,</span>
+    <span class="token string">"date"</span><span class="token punctuation">:</span> <span class="token string">"2024-01-15"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Empty when no files are checked out:</p>
+<pre class=" language-json"><code class="prism  language-json"><span class="token punctuation">{</span><span class="token punctuation">}</span>
+</code></pre>
+<h2 id="relationships.json">8.3 relationships.json</h2>
+<p>Tracks assembly contents (BOM).</p>
+<pre class=" language-json"><code class="prism  language-json"><span class="token punctuation">{</span>
+  <span class="token string">"meta"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"version"</span><span class="token punctuation">:</span> <span class="token string">"1.0"</span><span class="token punctuation">,</span>
+    <span class="token string">"last_updated"</span><span class="token punctuation">:</span> <span class="token string">"2024-01-15"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"assemblies"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"A000001"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+      <span class="token string">"contains"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span><span class="token string">"item"</span><span class="token punctuation">:</span> <span class="token string">"P000001"</span><span class="token punctuation">,</span> <span class="token string">"qty"</span><span class="token punctuation">:</span> <span class="token number">2</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token punctuation">{</span><span class="token string">"item"</span><span class="token punctuation">:</span> <span class="token string">"P000002"</span><span class="token punctuation">,</span> <span class="token string">"qty"</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">}</span>
+      <span class="token punctuation">]</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token string">"A000002"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+      <span class="token string">"contains"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span><span class="token string">"item"</span><span class="token punctuation">:</span> <span class="token string">"P000003"</span><span class="token punctuation">,</span> <span class="token string">"qty"</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token punctuation">{</span><span class="token string">"item"</span><span class="token punctuation">:</span> <span class="token string">"A000001"</span><span class="token punctuation">,</span> <span class="token string">"qty"</span><span class="token punctuation">:</span> <span class="token number">2</span><span class="token punctuation">}</span>
+      <span class="token punctuation">]</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="config.json">8.4 config.json</h2>
+<p>System configuration settings.</p>
+<pre class=" language-json"><code class="prism  language-json"><span class="token punctuation">{</span>
+  <span class="token string">"system"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"version"</span><span class="token punctuation">:</span> <span class="token string">"1.0"</span><span class="token punctuation">,</span>
+    <span class="token string">"name"</span><span class="token punctuation">:</span> <span class="token string">"My PDM"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"numbering"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"part_prefix"</span><span class="token punctuation">:</span> <span class="token string">"P"</span><span class="token punctuation">,</span>
+    <span class="token string">"assembly_prefix"</span><span class="token punctuation">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+    <span class="token string">"digits"</span><span class="token punctuation">:</span> <span class="token number">6</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"status_values"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+    <span class="token string">"working"</span><span class="token punctuation">,</span>
+    <span class="token string">"released"</span><span class="token punctuation">,</span>
+    <span class="token string">"obsolete"</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token string">"revision_scheme"</span><span class="token punctuation">:</span> <span class="token string">"alpha"</span><span class="token punctuation">,</span>
+  <span class="token string">"users"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+    <span class="token string">"John"</span><span class="token punctuation">,</span>
+    <span class="token string">"Mary"</span><span class="token punctuation">,</span>
+    <span class="token string">"Bob"</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<hr>
+<h1 id="workflows">9. Workflows</h1>
+<h2 id="create-new-part">9.1 Create New Part</h2>
+<pre><code>1. Open index.json
+   → Get next_part number (e.g., 3)
+   → New part number: P000003
+
+2. Create new file from template
+   → Save as: PROJECTS/PRJ-001_ProjectName/parts/P000003.FCStd
+
+3. Set FreeCAD properties:
+   - PartNumber: P000003
+   - Description: [description]
+   - Revision: A
+   - Status: working
+   - Author: [your name]
+   - LastModifiedUser: [your name]
+   - LastModified: [today's date]
+   - ChangeNote: Initial creation
+   - Material: [if known]
+   - Density: [if known]
+   - Volume: [calculated]
+   - Weight: [calculated]
+
+4. Save file
+
+5. Update index.json:
+   - Add new entry under "parts"
+   - Increment next_part to 4
+   - Update last_updated
+
+6. Done
+</code></pre>
+<h2 id="create-new-assembly">9.2 Create New Assembly</h2>
+<pre><code>1. Open index.json
+   → Get next_assembly number (e.g., 2)
+   → New assembly number: A000002
+
+2. Create new file from template
+   → Save as: PROJECTS/PRJ-001_ProjectName/assemblies/A000002.FCStd
+
+3. Set FreeCAD properties:
+   - AssemblyNumber: A000002
+   - Description: [description]
+   - Revision: A
+   - Status: working
+   - Author: [your name]
+   - LastModifiedUser: [your name]
+   - LastModified: [today's date]
+   - ChangeNote: Initial creation
+
+4. Save file
+
+5. Update index.json:
+   - Add new entry under "assemblies"
+   - Increment next_assembly to 3
+   - Update last_updated
+
+6. Update relationships.json:
+   - Add assembly entry with empty contains list
+
+7. Done
+</code></pre>
+<h2 id="edit-working-partassembly">9.3 Edit Working Part/Assembly</h2>
+<pre><code>1. Check checkout.json
+   → Is file listed? → STOP, file is in use
+   → File not listed? → Continue
+
+2. Add entry to checkout.json:
+   {
+     "P000001": {
+       "user": "[your name]",
+       "date": "[today's date]"
+     }
+   }
+
+3. Open and edit file in FreeCAD
+
+4. Update properties:
+   - LastModifiedUser: [your name]
+   - LastModified: [today's date]
+   - ChangeNote: [what you changed]
+
+5. Save file
+
+6. Update index.json:
+   - Update last_updated
+
+7. Remove entry from checkout.json
+
+8. Done
+</code></pre>
+<h2 id="release-partassembly">9.4 Release Part/Assembly</h2>
+<pre><code>1. Verify part/assembly is complete and approved
+
+2. Open file in FreeCAD
+
+3. Update properties:
+   - Status: working → released
+   - LastModifiedUser: [your name]
+   - LastModified: [today's date]
+   - ChangeNote: Released
+
+4. Save file
+
+5. Update index.json:
+   - status: "released"
+   - Add entry to revision_history:
+     {
+       "revision": "A",
+       "date": "[today's date]",
+       "user": "[your name]",
+       "note": "Initial release",
+       "archived": null
+     }
+   - Update last_updated
+
+6. Done
+</code></pre>
+<h2 id="modify-released-partassembly-new-revision">9.5 Modify Released Part/Assembly (New Revision)</h2>
+<pre><code>1. Check checkout.json
+   → Ensure file is not in use
+
+2. Add entry to checkout.json
+
+3. Copy current file to archive:
+   P000001.FCStd → _archive/P000001_RevA.FCStd
+
+4. Open original file in FreeCAD
+
+5. Update properties:
+   - Revision: A → B
+   - Status: released → working
+   - LastModifiedUser: [your name]
+   - LastModified: [today's date]
+   - ChangeNote: [reason for new revision]
+
+6. Save file
+
+7. Update index.json:
+   - revision: "B"
+   - status: "working"
+   - Update previous revision_history entry:
+     - archived: "PROJECTS/PRJ-001_ProjectName/parts/_archive/P000001_RevA.FCStd"
+   - Add new revision_history entry:
+     {
+       "revision": "B",
+       "date": "[today's date]",
+       "user": "[your name]",
+       "note": "[reason for revision]",
+       "archived": null
+     }
+   - Update last_updated
+
+8. Make required changes
+
+9. When complete, follow Release workflow (9.4)
+
+10. Remove entry from checkout.json
+
+11. Done
+</code></pre>
+<h2 id="mark-partassembly-as-obsolete">9.6 Mark Part/Assembly as Obsolete</h2>
+<pre><code>1. Open file in FreeCAD
+
+2. Update properties:
+   - Status: released → obsolete
+   - LastModifiedUser: [your name]
+   - LastModified: [today's date]
+   - ChangeNote: Marked obsolete - [reason]
+
+3. Save file
+
+4. Update index.json:
+   - status: "obsolete"
+   - Update last_updated
+
+5. Done
+</code></pre>
+<h2 id="update-assembly-contents-bom">9.7 Update Assembly Contents (BOM)</h2>
+<pre><code>1. After modifying assembly contents in FreeCAD
+
+2. Update relationships.json:
+   "A000001": {
+     "contains": [
+       {"item": "P000001", "qty": 2},
+       {"item": "P000002", "qty": 1},
+       {"item": "P000005", "qty": 4}
+     ]
+   }
+
+3. Update meta.last_updated
+
+4. Done
+</code></pre>
+<hr>
+<h1 id="search--retrieval">10. Search &amp; Retrieval</h1>
+<h2 id="methods">Methods</h2>
+
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Use For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>File browser</td>
+<td>Find by part number</td>
+</tr>
+<tr>
+<td>Text search in index.json</td>
+<td>Find by description, project, status</td>
+</tr>
+<tr>
+<td>Search relationships.json</td>
+<td>Find where a part is used</td>
+</tr>
+</tbody>
+</table><h2 id="finding-a-part">Finding a Part</h2>
+<ol>
+<li>Know the number? → Browse to project folder</li>
+<li>Know the description? → Search index.json</li>
+<li>Know the project? → Browse project folder</li>
+</ol>
+<h2 id="finding-where-used">Finding Where-Used</h2>
+<ol>
+<li>Open relationships.json</li>
+<li>Search for part number</li>
+<li>Note which assemblies contain it</li>
+</ol>
+<hr>
+<h1 id="rules-summary">11. Rules Summary</h1>
+<h2 id="file-rules">File Rules</h2>
+
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One file per part/assembly</td>
+<td>No duplicates</td>
+</tr>
+<tr>
+<td>Filename is number only</td>
+<td>No description, no revision</td>
+</tr>
+<tr>
+<td>Current file is latest revision</td>
+<td>Always</td>
+</tr>
+<tr>
+<td>Archive is read-only</td>
+<td>Never edit archived files</td>
+</tr>
+</tbody>
+</table><h2 id="editing-rules">Editing Rules</h2>
+
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Check out before editing</td>
+<td>Always update checkout.json</td>
+</tr>
+<tr>
+<td>Check in after editing</td>
+<td>Always clear checkout.json</td>
+</tr>
+<tr>
+<td>Never edit checked-out files</td>
+<td>Wait for other user</td>
+</tr>
+<tr>
+<td>Never edit released files</td>
+<td>Create new revision first</td>
+</tr>
+</tbody>
+</table><h2 id="revision-rules">Revision Rules</h2>
+
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>New parts start at Rev A</td>
+<td>Always</td>
+</tr>
+<tr>
+<td>Revision changes only on released modification</td>
+<td>Not on working edits</td>
+</tr>
+<tr>
+<td>Archive before incrementing revision</td>
+<td>Always preserve old revision</td>
+</tr>
+<tr>
+<td>Document reason for revision</td>
+<td>In ChangeNote and revision_history</td>
+</tr>
+</tbody>
+</table><hr>
+<h1 id="initial-setup-checklist">12. Initial Setup Checklist</h1>
+<pre><code>[ ] Create PDM_Root folder
+[ ] Create _ADMIN folder
+[ ] Create _LIBRARY folder with subfolders
+[ ] Create _TEMPLATES folder
+[ ] Create PROJECTS folder
+[ ] Create ARCHIVE folder
+[ ] Create index.json with initial content
+[ ] Create checkout.json (empty: {})
+[ ] Create relationships.json with initial content
+[ ] Create config.json with team settings
+[ ] Create FreeCAD template file with custom properties
+[ ] Document team member names in config.json
+[ ] Train team on workflows
+</code></pre>
+<hr>
+<h1 id="template-files">13. Template Files</h1>
+<h2 id="empty-index.json">Empty index.json</h2>
+<pre class=" language-json"><code class="prism  language-json"><span class="token punctuation">{</span>
+  <span class="token string">"meta"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"version"</span><span class="token punctuation">:</span> <span class="token string">"1.0"</span><span class="token punctuation">,</span>
+    <span class="token string">"last_updated"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+    <span class="token string">"next_part"</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"next_assembly"</span><span class="token punctuation">:</span> <span class="token number">1</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"parts"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"assemblies"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="empty-checkout.json">Empty checkout.json</h2>
+<pre class=" language-json"><code class="prism  language-json"><span class="token punctuation">{</span><span class="token punctuation">}</span>
+</code></pre>
+<h2 id="empty-relationships.json">Empty relationships.json</h2>
+<pre class=" language-json"><code class="prism  language-json"><span class="token punctuation">{</span>
+  <span class="token string">"meta"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"version"</span><span class="token punctuation">:</span> <span class="token string">"1.0"</span><span class="token punctuation">,</span>
+    <span class="token string">"last_updated"</span><span class="token punctuation">:</span> <span class="token string">""</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"assemblies"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="template-config.json">Template config.json</h2>
+<pre class=" language-json"><code class="prism  language-json"><span class="token punctuation">{</span>
+  <span class="token string">"system"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"version"</span><span class="token punctuation">:</span> <span class="token string">"1.0"</span><span class="token punctuation">,</span>
+    <span class="token string">"name"</span><span class="token punctuation">:</span> <span class="token string">"[Your PDM Name]"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"numbering"</span><span class="token punctuation">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"part_prefix"</span><span class="token punctuation">:</span> <span class="token string">"P"</span><span class="token punctuation">,</span>
+    <span class="token string">"assembly_prefix"</span><span class="token punctuation">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+    <span class="token string">"digits"</span><span class="token punctuation">:</span> <span class="token number">6</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"status_values"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+    <span class="token string">"working"</span><span class="token punctuation">,</span>
+    <span class="token string">"released"</span><span class="token punctuation">,</span>
+    <span class="token string">"obsolete"</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token string">"revision_scheme"</span><span class="token punctuation">:</span> <span class="token string">"alpha"</span><span class="token punctuation">,</span>
+  <span class="token string">"users"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<hr>
+<h1 id="future-enhancements">14. Future Enhancements</h1>
+
+<table>
+<thead>
+<tr>
+<th>Enhancement</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python scripts</td>
+<td>Automate JSON updates</td>
+</tr>
+<tr>
+<td>FreeCAD macros</td>
+<td>Read/write properties and JSON</td>
+</tr>
+<tr>
+<td>Validation script</td>
+<td>Check data consistency</td>
+</tr>
+<tr>
+<td>Search tool</td>
+<td>Better metadata search</td>
+</tr>
+<tr>
+<td>Report generation</td>
+<td>BOM reports, part lists</td>
+</tr>
+<tr>
+<td>Web interface</td>
+<td>Easy browsing and management</td>
+</tr>
+<tr>
+<td>Nextcloud integration</td>
+<td>Cloud sync and auto-versioning</td>
+</tr>
+</tbody>
+</table><hr>
+<h1 id="document-information">Document Information</h1>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Version</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>Date</td>
+<td>2024</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Ready for implementation</td>
+</tr>
+</tbody>
+</table><hr>
+<p><strong>End of Document</strong></p>
+</div>
+</body>
+
+</html>
