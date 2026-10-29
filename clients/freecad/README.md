@@ -48,6 +48,16 @@ Select **View → Workbench → ForgePDM**. The backend must be running and reac
 
 The API upload currently accepts one file per Dataset. For project users, enter the project UUID when creating an Item; projectless Items are administrator-only. Download also requires access to every referenced component revision.
 
+The project ID is an internal UUID supplied by your administrator, not a project
+number such as `PRJ-001` or `241205`. Invalid IDs are rejected with a readable
+explanation; canceling the project prompt stops Item creation. The server still
+checks project permissions independently of this client-side input validation.
+
+If the current document comes from a read-only location (including bundled
+FreeCAD examples inside an AppImage), Create / Upload prompts for a writable
+local copy first. Choose a folder you own; the original is not overwritten.
+Canceling that save prompt stops the operation before any Item is created.
+
 ## Current limits
 
 The Workbench does not search Items by number yet, so download starts from an Item UUID. It downloads each BOM revision under an item/revision-based filename but does not rewrite FreeCAD's internal external-link paths. Assemblies whose linked documents depend on their original local filenames may need those references relinked in FreeCAD. Only the native CAD Dataset is transferred automatically; drawings and neutral exports remain available through the API but are not yet exposed in the Workbench.

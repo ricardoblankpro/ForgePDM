@@ -2,6 +2,7 @@
 
 import os
 import re
+from uuid import UUID
 
 import FreeCAD
 import FreeCADGui
@@ -14,6 +15,19 @@ from .i18n import translate
 
 
 METADATA_OBJECT = "ForgePDM_Metadata"
+
+
+def _project_id(value):
+    value = value.strip()
+    if not value:
+        return None
+    try:
+        return str(UUID(value))
+    except ValueError as exception:
+        raise ValueError(
+            "Enter the project's ID (UUID), not its project number. "
+            "Ask your administrator for the ID of a project you can access."
+        ) from exception
 
 
 def _main_window():
@@ -55,22 +69,44 @@ def _require_document():
 
 def _save_document(document):
     path = getattr(document, "FileName", "")
-    if not path:
+    needs_copy = bool(path) and (
+        not os.access(path, os.W_OK)
+        or not os.access(os.path.dirname(os.path.abspath(path)), os.W_OK)
+    )
+    save_as = not path or needs_copy
+    if save_as:
+        filename = os.path.basename(path) if path else document.Label + ".FCStd"
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(
             _main_window(),
-            "Save FreeCAD document",
-            document.Label + ".FCStd",
+            "Save a writable FreeCAD copy" if needs_copy else "Save FreeCAD document",
+            os.path.join(os.path.expanduser("~"), filename),
             "FreeCAD document (*.FCStd)",
         )
         if not path:
             raise RuntimeError("Save the document before uploading")
         if not path.lower().endswith(".fcstd"):
             path += ".FCStd"
-        document.saveAs(path)
-    else:
+    path = os.path.abspath(path)
+    directory = os.path.dirname(path)
+    if not os.access(directory, os.W_OK) or (os.path.exists(path) and not os.access(path, os.W_OK)):
+        raise RuntimeError(
+            "Cannot save to '{}'. Choose a writable location using File > Save As.".format(path)
+        )
+    try:
         document.recompute()
-        document.save()
-    return os.path.abspath(document.FileName)
+        if save_as:
+            document.saveAs(path)
+        else:
+            document.save()
+    except (OSError, RuntimeError) as exception:
+        raise RuntimeError(
+            "Could not save FreeCAD document to '{}': {}. "
+            "Choose a writable location using File > Save As and try again.".format(path, exception)
+        ) from exception
+    saved_path = os.path.abspath(document.FileName)
+    if not os.path.isfile(saved_path):
+        raise RuntimeError("FreeCAD did not create the saved file: '{}'".format(saved_path))
+    return saved_path
 
 
 def _require_metadata(document):
@@ -163,10 +199,14 @@ class UploadCommand:
                     return
                 project_id = ask_text(
                     "New ForgePDM Item",
-                    "Project UUID (leave blank for administrator-only item)",
+                    "Project ID (UUID, not project number).\n"
+                    "Leave blank only for administrator-only items.",
                     "",
                 )
-                result = client.create_item(kind, document.Label, project_id or None)
+                if project_id is None:
+                    return
+                project_id = _project_id(project_id)
+                result = client.create_item(kind, document.Label, project_id)
                 _set_metadata(
                     document,
                     ItemId=result["id"],

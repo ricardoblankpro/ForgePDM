@@ -17,6 +17,35 @@ class ForgePDMError(Exception):
         self.status = status
 
 
+def _error_message(detail, status):
+    """Present API validation messages without exposing raw response structures."""
+    if isinstance(detail, str):
+        return detail
+    if isinstance(detail, list):
+        messages = []
+        for issue in detail:
+            if not isinstance(issue, dict):
+                continue
+            location = issue.get("loc", [])
+            field = next((part for part in reversed(location) if isinstance(part, str)), "")
+            if field == "project_id" and str(issue.get("type", "")).startswith("uuid"):
+                message = (
+                    "Project: enter the project's ID (UUID), not its project number. "
+                    "Ask your administrator for the ID of a project you can access."
+                )
+            else:
+                label = field.replace("_", " ").capitalize()
+                text = issue.get("msg")
+                if not isinstance(text, str):
+                    continue
+                message = "{}: {}".format(label, text) if label else text
+            if message not in messages:
+                messages.append(message)
+        if messages:
+            return "Please check your input:\n" + "\n".join(messages)
+    return "ForgePDM request failed (HTTP {}).".format(status)
+
+
 class ForgePDMClient:
     """API client with a memory-only bearer token and streamed file transfer."""
 
@@ -240,10 +269,10 @@ class ForgePDMClient:
         if status >= 400:
             try:
                 result = json.loads(body.decode("utf-8"))
-                detail = result.get("detail", result)
+                detail = result.get("detail", result) if isinstance(result, dict) else result
             except (ValueError, UnicodeError):
                 detail = body.decode("utf-8", "replace")
-            raise ForgePDMError(str(detail), status)
+            raise ForgePDMError(_error_message(detail, status), status)
         if not body:
             return None
         try:

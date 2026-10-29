@@ -19,10 +19,15 @@ execution. No runtime dependency is installed into FreeCAD by these commands.
 
 ## Required real FreeCAD validation
 
-FreeCAD was not available in the implementation environment: no executable was
-found on PATH and `/opt/freecad` was empty. FreeCAD 1.0+ with Python 3.11+ is the
-declared initial target, not a verified runtime matrix. Qt 5/PySide2 and
-Qt 6/PySide6 imports have mocked coverage; platform compatibility remains pending.
+FreeCAD was not available during initial implementation. On 2026-10-29 the
+installed addon was subsequently tested in a live FreeCAD 1.1.4 session through
+FreeCAD MCP Bridge (Linux, Python 3.11.14, Qt 6.8.3). All nine commands executed
+against an isolated backend, and 34 checks passed, including native CAD
+save/reopen, metadata preservation and historical part geometry/hash checks.
+Dialog input and notifications were automated; this does not replace visual
+inspection or a clean startup test with the backend stopped. See the repository's
+`docs/validation/freecad-phase1-2026-10-29.json` for the actual results and scope.
+Other runtime/platform combinations remain unverified.
 
 1. Record OS, FreeCAD build, embedded Python and Qt/PySide versions.
 2. Remove the old `Mod/ForgePDM` installation and extract the new archive into

@@ -147,3 +147,41 @@ def test_download_contract(api, monkeypatch, tmp_path):
     assert requests[0].full_url == "https://example.invalid/pdm/api/v1/files/file"
     assert requests[0].get_header("Authorization") == "Bearer secret"
     assert not (tmp_path / "part.FCStd.part").exists()
+
+
+def test_uuid_validation_error_has_readable_guidance(api):
+    body = json.dumps(
+        {
+            "detail": [
+                {
+                    "type": "uuid_parsing",
+                    "loc": ["body", "project_id"],
+                    "msg": "Input should be a valid UUID, invalid length: found 6",
+                    "input": "241205",
+                    "ctx": {"error": "invalid length: found 6"},
+                }
+            ]
+        }
+    ).encode()
+    with pytest.raises(api.ForgePDMError) as caught:
+        api.ForgePDMClient._decode_response(422, body)
+    assert caught.value.status == 422
+    assert "not its project number" in str(caught.value)
+    assert "uuid_parsing" not in str(caught.value)
+    assert "'loc'" not in str(caught.value)
+    assert "241205" not in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    ("detail", "expected"),
+    [
+        ([{"loc": ["body", "name"], "msg": "Field required"}], "Name: Field required"),
+        ("project editor access is required", "project editor access is required"),
+        ({"unexpected": "value"}, "ForgePDM request failed (HTTP 422)."),
+        ([], "ForgePDM request failed (HTTP 422)."),
+    ],
+)
+def test_other_api_errors_remain_readable(api, detail, expected):
+    with pytest.raises(api.ForgePDMError) as caught:
+        api.ForgePDMClient._decode_response(422, json.dumps({"detail": detail}).encode())
+    assert expected in str(caught.value)
