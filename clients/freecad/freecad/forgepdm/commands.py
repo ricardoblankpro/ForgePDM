@@ -6,9 +6,11 @@ import re
 import FreeCAD
 import FreeCADGui
 
-from ForgePDM.api import ForgePDMClient, ForgePDMError
-from ForgePDM.session import Session
-from ForgePDM.ui import QtWidgets, ask_choice, ask_text, error, information, warning
+from .api import ForgePDMClient, ForgePDMError
+from .session import Session
+from .ui import QtWidgets, ask_choice, ask_text, error, information, warning
+from .resources import icon_path
+from .i18n import translate
 
 
 METADATA_OBJECT = "ForgePDM_Metadata"
@@ -55,7 +57,10 @@ def _save_document(document):
     path = getattr(document, "FileName", "")
     if not path:
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(
-            _main_window(), "Save FreeCAD document", document.Label + ".FCStd", "FreeCAD document (*.FCStd)"
+            _main_window(),
+            "Save FreeCAD document",
+            document.Label + ".FCStd",
+            "FreeCAD document (*.FCStd)",
         )
         if not path:
             raise RuntimeError("Save the document before uploading")
@@ -86,7 +91,11 @@ def _run(action):
 
 class LoginCommand:
     def GetResources(self):
-        return {"MenuText": "Log In", "ToolTip": "Connect this FreeCAD session to ForgePDM"}
+        return {
+            "Pixmap": icon_path(),
+            "MenuText": translate("ForgePDM", "Log In"),
+            "ToolTip": translate("ForgePDM", "Connect this FreeCAD session to ForgePDM"),
+        }
 
     def IsActive(self):
         return True
@@ -112,7 +121,11 @@ class LoginCommand:
 
 class LogoutCommand:
     def GetResources(self):
-        return {"MenuText": "Log Out", "ToolTip": "End the ForgePDM session"}
+        return {
+            "Pixmap": icon_path(),
+            "MenuText": translate("ForgePDM", "Log Out"),
+            "ToolTip": translate("ForgePDM", "End the ForgePDM session"),
+        }
 
     def IsActive(self):
         return Session.client is not None
@@ -127,7 +140,13 @@ class LogoutCommand:
 
 class UploadCommand:
     def GetResources(self):
-        return {"MenuText": "Create / Upload Current Document", "ToolTip": "Create a ForgePDM item if needed, then upload this document"}
+        return {
+            "Pixmap": icon_path(),
+            "MenuText": translate("ForgePDM", "Create / Upload Current Document"),
+            "ToolTip": translate(
+                "ForgePDM", "Create a ForgePDM item if needed, then upload this document"
+            ),
+        }
 
     def IsActive(self):
         return Session.client is not None
@@ -143,7 +162,9 @@ class UploadCommand:
                 if not kind:
                     return
                 project_id = ask_text(
-                    "New ForgePDM Item", "Project UUID (leave blank for administrator-only item)", ""
+                    "New ForgePDM Item",
+                    "Project UUID (leave blank for administrator-only item)",
+                    "",
                 )
                 result = client.create_item(kind, document.Label, project_id or None)
                 _set_metadata(
@@ -156,7 +177,7 @@ class UploadCommand:
                 document.recompute()
                 document.save()
                 metadata = _require_metadata(document)
-            response = client.upload_file(
+            client.upload_file(
                 metadata.RevisionId,
                 local_path,
                 dataset_type="native_cad",
@@ -174,7 +195,11 @@ class UploadCommand:
 
 class CheckoutCommand:
     def GetResources(self):
-        return {"MenuText": "Acquire / Renew Checkout", "ToolTip": "Acquire or extend the active revision checkout"}
+        return {
+            "Pixmap": icon_path(),
+            "MenuText": translate("ForgePDM", "Acquire / Renew Checkout"),
+            "ToolTip": translate("ForgePDM", "Acquire or extend the active revision checkout"),
+        }
 
     def IsActive(self):
         return Session.client is not None and FreeCAD.ActiveDocument is not None
@@ -191,7 +216,11 @@ class CheckoutCommand:
 
 class CheckInCommand:
     def GetResources(self):
-        return {"MenuText": "Check In Current Revision", "ToolTip": "Record a change note and release your checkout"}
+        return {
+            "Pixmap": icon_path(),
+            "MenuText": translate("ForgePDM", "Check In Current Revision"),
+            "ToolTip": translate("ForgePDM", "Record a change note and release your checkout"),
+        }
 
     def IsActive(self):
         return Session.client is not None and FreeCAD.ActiveDocument is not None
@@ -215,7 +244,11 @@ class CheckInCommand:
 
 class ReleaseCommand:
     def GetResources(self):
-        return {"MenuText": "Release Current Revision", "ToolTip": "Release a checked-in revision"}
+        return {
+            "Pixmap": icon_path(),
+            "MenuText": translate("ForgePDM", "Release Current Revision"),
+            "ToolTip": translate("ForgePDM", "Release a checked-in revision"),
+        }
 
     def IsActive(self):
         return Session.client is not None and FreeCAD.ActiveDocument is not None
@@ -231,7 +264,13 @@ class ReleaseCommand:
 
 class NewRevisionCommand:
     def GetResources(self):
-        return {"MenuText": "Create Next Revision", "ToolTip": "Start the next Working revision from a Released item"}
+        return {
+            "Pixmap": icon_path(),
+            "MenuText": translate("ForgePDM", "Create Next Revision"),
+            "ToolTip": translate(
+                "ForgePDM", "Start the next Working revision from a Released item"
+            ),
+        }
 
     def IsActive(self):
         return Session.client is not None and FreeCAD.ActiveDocument is not None
@@ -261,7 +300,13 @@ class NewRevisionCommand:
 
 class ShowBOMCommand:
     def GetResources(self):
-        return {"MenuText": "Show ForgePDM BOM", "ToolTip": "Display the current revision's nested bill of materials"}
+        return {
+            "Pixmap": icon_path(),
+            "MenuText": translate("ForgePDM", "Show ForgePDM BOM"),
+            "ToolTip": translate(
+                "ForgePDM", "Display the current revision's nested bill of materials"
+            ),
+        }
 
     def IsActive(self):
         return Session.client is not None and FreeCAD.ActiveDocument is not None
@@ -290,7 +335,13 @@ class ShowBOMCommand:
 
 class DownloadCommand:
     def GetResources(self):
-        return {"MenuText": "Download Item / Assembly", "ToolTip": "Download the current native file and BOM component revisions"}
+        return {
+            "Pixmap": icon_path(),
+            "MenuText": translate("ForgePDM", "Download Item / Assembly"),
+            "ToolTip": translate(
+                "ForgePDM", "Download the current native file and BOM component revisions"
+            ),
+        }
 
     def IsActive(self):
         return Session.client is not None
@@ -333,13 +384,17 @@ class DownloadCommand:
                         destination,
                     )
                     if path is None:
-                        skipped.append("{} Rev{} has no native CAD dataset".format(
-                            component["item_number"], component["revision_label"]
-                        ))
+                        skipped.append(
+                            "{} Rev{} has no native CAD dataset".format(
+                                component["item_number"], component["revision_label"]
+                            )
+                        )
                 except ForgePDMError as exception:
-                    skipped.append("{} Rev{}: {}".format(
-                        component["item_number"], component["revision_label"], exception
-                    ))
+                    skipped.append(
+                        "{} Rev{}: {}".format(
+                            component["item_number"], component["revision_label"], exception
+                        )
+                    )
             document = FreeCAD.openDocument(downloaded)
             _set_metadata(
                 document,

@@ -1,0 +1,25 @@
+name: FreeCAD addon packaging
+
+on:
+  push:
+    paths: ["clients/freecad/**", ".github/workflows/freecad-addon.yml"]
+  pull_request:
+    paths: ["clients/freecad/**", ".github/workflows/freecad-addon.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  addon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv run --project clients/freecad --extra dev --locked python clients/freecad/tools/addon.py check
+      - run: uv run --project clients/freecad --extra dev --locked pytest clients/freecad/tests -q
+      - run: uv run --project clients/freecad --extra dev --locked ruff check clients/freecad
+      - run: uv run --project clients/freecad --extra dev --locked ruff format --check clients/freecad
+      - run: uv run --project clients/freecad --extra dev --locked python clients/freecad/tools/addon.py build

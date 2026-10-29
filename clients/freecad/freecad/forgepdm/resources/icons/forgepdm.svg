@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>ForgePDM</title>
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="#17324d"/>
+  <path d="M16 15h32v8H25v8h19v8H25v12h-9z" fill="#fff"/>
+  <path d="m39 46 6 6 12-14" fill="none" stroke="#59d6bd" stroke-width="5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

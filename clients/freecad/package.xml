@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
+  <name>ForgePDM</name>
+  <description>Thin FreeCAD Workbench for the ForgePDM API. Development preview.</description>
+  <version>0.1.0</version>
+  <date>2026-10-29</date>
+  <maintainer>Ricardo Blank</maintainer>
+  <author>ForgePDM contributors</author>
+  <license file="LICENSE">UNLICENSED</license>
+  <icon>freecad/forgepdm/resources/icons/forgepdm.svg</icon>
+  <freecadmin>1.0.0</freecadmin>
+  <pythonmin>3.11.0</pythonmin>
+  <tag>PDM</tag>
+  <tag>Engineering</tag>
+  <tag>CAD</tag>
+  <url type="repository" branch="main">https://github.com/ricardoblankpro/ForgePDM</url>
+  <url type="bugtracker">https://github.com/ricardoblankpro/ForgePDM/issues</url>
+  <url type="readme">https://raw.githubusercontent.com/ricardoblankpro/ForgePDM/main/clients/freecad/README.md</url>
+  <content>
+    <workbench>
+      <name>ForgePDM</name>
+      <classname>ForgePDMWorkbench</classname>
+      <subdirectory>freecad/forgepdm</subdirectory>
+      <icon>resources/icons/forgepdm.svg</icon>
+    </workbench>
+  </content>
+</package>

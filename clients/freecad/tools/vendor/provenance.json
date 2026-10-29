@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/FreeCAD/Addon-Manifest-Schema",
+  "tag": "v1.0",
+  "commit": "25158f37049e42ae2aa297f8ce2350e075a93031",
+  "entrypoint": "Source/mod.xsd",
+  "license": "Unlicense",
+  "sha256": "37a2dc6bddce9e39d7e641dfc753244155677eac32593336dfb1dc20a00a4769",
+  "derivation": "Includes expanded once in traversal order; comments and documentation annotations removed. Validation declarations unchanged. No upstream scripts copied."
+}

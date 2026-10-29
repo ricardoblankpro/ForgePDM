@@ -77,18 +77,29 @@ class ForgePDMClient:
         boundary = "----ForgePDM" + uuid.uuid4().hex
         endpoint = "/api/v1/revisions/{}/datasets".format(self._quote(revision_id))
         file_header = (
-            "--{0}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{1}\"\r\n"
-            "Content-Type: application/octet-stream\r\n\r\n"
-        ).format(boundary, self._safe_header_filename(filename)).encode("ascii")
+            (
+                '--{0}\r\nContent-Disposition: form-data; name="file"; filename="{1}"\r\n'
+                "Content-Type: application/octet-stream\r\n\r\n"
+            )
+            .format(boundary, self._safe_header_filename(filename))
+            .encode("ascii")
+        )
         field_parts = []
         for field_name, field_value in fields:
             field_parts.append(
-                ("--{0}\r\nContent-Disposition: form-data; name=\"{1}\"\r\n\r\n{2}\r\n".format(
-                    boundary, field_name, field_value
-                )).encode("utf-8")
+                (
+                    '--{0}\r\nContent-Disposition: form-data; name="{1}"\r\n\r\n{2}\r\n'.format(
+                        boundary, field_name, field_value
+                    )
+                ).encode("utf-8")
             )
         closing = ("\r\n--{0}--\r\n".format(boundary)).encode("ascii")
-        content_length = sum(len(part) for part in field_parts) + len(file_header) + os.path.getsize(file_path) + len(closing)
+        content_length = (
+            sum(len(part) for part in field_parts)
+            + len(file_header)
+            + os.path.getsize(file_path)
+            + len(closing)
+        )
 
         connection = self._http_connection()
         try:
@@ -186,7 +197,9 @@ class ForgePDMClient:
             if not self.token:
                 raise ForgePDMError("Log in to ForgePDM first")
             headers["Authorization"] = "Bearer " + self.token
-        request = urllib.request.Request(self.base_url + path, data=data, headers=headers, method=method)
+        request = urllib.request.Request(
+            self.base_url + path, data=data, headers=headers, method=method
+        )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 return self._decode_response(response.status, response.read())
@@ -214,7 +227,9 @@ class ForgePDMClient:
 
     @staticmethod
     def _safe_header_filename(filename):
-        filename = filename.replace("\\", "_").replace('"', "_").replace("\r", "_").replace("\n", "_")
+        filename = (
+            filename.replace("\\", "_").replace('"', "_").replace("\r", "_").replace("\n", "_")
+        )
         try:
             return filename.encode("ascii").decode("ascii")
         except UnicodeEncodeError:

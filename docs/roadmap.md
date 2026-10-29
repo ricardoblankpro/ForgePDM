@@ -2,6 +2,13 @@
 
 This roadmap sequences a backend-first MVP. Each phase should include focused automated tests for domain rules and integration behavior before moving on. No application code is included in this proposal.
 
+The phase numbering below records the original MVP sequence. The approved
+development-direction roadmap now places **FreeCAD addon modernization in
+Phase 1**. Its implementation and remaining acceptance gates are recorded in
+[the Phase 1 report](freecad-addon-phase1.md) and
+[ADR-002](decisions/ADR-002-freecad-addon-packaging.md). Later phases have not
+been started by this increment.
+
 ## Phase 0 — decisions and project foundation (started)
 
 - Confirm the architecture, entity boundaries, identifier policy, and open questions in these documents.

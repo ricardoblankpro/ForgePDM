@@ -1,1 +1,0 @@
-"""FreeCAD Workbench package initialization."""
