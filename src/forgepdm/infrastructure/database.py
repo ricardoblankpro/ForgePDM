@@ -161,12 +161,35 @@ CREATE TABLE bom_lines (
 CREATE INDEX bom_component_idx ON bom_lines(component_revision_id, parent_revision_id);
 """
 
+MANIFEST_SCHEMA = """
+CREATE TABLE dataset_manifests (
+    dataset_id TEXT PRIMARY KEY REFERENCES datasets(id),
+    source_file_id TEXT NOT NULL REFERENCES files(id),
+    profile TEXT NOT NULL,
+    created_by TEXT NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL
+);
+CREATE TABLE dataset_references (
+    id TEXT PRIMARY KEY,
+    dataset_id TEXT NOT NULL REFERENCES dataset_manifests(dataset_id),
+    object_name TEXT NOT NULL,
+    property_name TEXT NOT NULL,
+    target_revision_id TEXT NOT NULL REFERENCES item_revisions(id),
+    target_dataset_id TEXT NOT NULL REFERENCES datasets(id),
+    target_file_id TEXT NOT NULL REFERENCES files(id),
+    target_object_name TEXT NOT NULL,
+    UNIQUE(dataset_id, object_name, property_name)
+);
+CREATE INDEX dataset_reference_target_idx ON dataset_references(target_dataset_id);
+"""
+
 MIGRATIONS = (
     (1, SCHEMA),
     (2, AUTHORIZATION_SCHEMA),
     (3, DATASET_SCHEMA),
     (4, CHECKOUT_SCHEMA),
     (5, BOM_SCHEMA),
+    (6, MANIFEST_SCHEMA),
 )
 
 

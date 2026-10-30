@@ -16,15 +16,15 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 | 0 | Architecture review and governance | Baseline assessment and phase approvals recorded |
 | 1 | Modern FreeCAD addon packaging | Implemented; live loading and part workflows tested |
 | 2 | Initialization, connectivity and catalog browsing | Implemented; [scope and validation](freecad-addon-phase2.md) |
-| 3 | Local workspace, CAD files and reference integrity | Next; preserve dirty files and reconstruct reference graphs |
+| 3 | Local workspace, CAD files and reference integrity | Implemented for whole-object App::Link; [scope and validation](freecad-addon-phase3.md) |
 | 4 | BOM extraction and revision-aware assembly synchronization | Depends on supported structures and Phase 3 identity mapping |
 | 5 | Robust checkout/check-in, lifecycle, revisions and datasets | Close atomicity, fencing and retry/idempotency gaps |
 | 6 | Security, testing, backup/recovery and operational hardening | Consolidate production-readiness evidence |
 | 7 | Addon Manager distribution and stable deployment | Requires licensing, distribution approval and operational gates |
 | 8 | Web interface, ERPNext and future integrations | Build on stable authoritative APIs |
 
-No phase after Phase 2 was started by the connectivity increment. The original
-MVP sequence below is historical and uses different phase numbers.
+Phase 3 was explicitly authorized after Phase 2. Phase 4 has not started. The
+original MVP sequence below is historical and uses different phase numbers.
 
 ## Phase 0 — decisions and project foundation (started)
 

@@ -1,0 +1,52 @@
+{
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "python": "3.11.14 | packaged by conda-forge | (main, Oct 13 2025, 14:25:33) [GCC 14.3.0]",
+  "qt": "6.8.3",
+  "checks": [
+    "nine command IDs registered",
+    "P3First original preserved",
+    "P3Second original preserved",
+    "nested assemblies uploaded with exact manifests",
+    "new revision uses a separate file",
+    "historical component geometry retained",
+    "same-basename components remain distinct",
+    "repeated components share exact pinned document",
+    "occurrence placement retained",
+    "nested link points to pinned assembly object",
+    "complete ledger after GUI reference verification",
+    "relocated root resolves nested assembly",
+    "relocated references stay inside relocated workspace",
+    "unsaved linked component rejected",
+    "private dependency denies retrieval",
+    "denied retrieval publishes no configuration",
+    "interrupted graph has no published configuration",
+    "retry reconstructs complete graph",
+    "Download command opens verified four-document configuration",
+    "Download command completes workspace ledger",
+    "HTTP and transfer work stayed off GUI thread",
+    "GUI timers remained responsive during requests"
+  ],
+  "scope": "Real FreeCAD GUI, isolated HTTP server, automated dialog choices",
+  "heartbeat_ticks": 226,
+  "status": "passed",
+  "local_development_upgrade": {
+    "migration": 6,
+    "sqlite_backup": "var/backups/phase3-before-20261030T005345Z/forgepdm.sqlite3",
+    "existing_metadata_rows_preserved": true,
+    "existing_blob_hashes_preserved": true,
+    "addon_installed_in_both_existing_profiles": true
+  },
+  "automated_tests": {
+    "backend_passed": 29,
+    "addon_passed": 88
+  }
+}

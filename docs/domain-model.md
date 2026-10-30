@@ -42,3 +42,13 @@ Checkout is an exclusive lease, not authentication. The API authenticates bearer
 ## Deferred model questions
 
 Decide before implementing schema: whether numbering is global or partitioned by item type; whether BOM lines may reference non-released child revisions; whether datasets need independent revision/version lifecycle; allowed project membership cardinality; soft-delete/retention rules; and whether quantities support units or only dimensionless counts. The MVP assumes global per-type numbering, explicit child revisions, revision-scoped datasets, many-to-many project membership, no hard deletion through ordinary workflows, and positive decimal quantity with a unit field reserved for later use.
+
+## CAD reference manifests (Phase 3)
+
+A native Dataset may have one immutable manifest binding its source File to CAD
+occurrences: object/property → target ItemRevision, Dataset, File and object.
+These technical references are distinct from BOMLine and contain no engineering
+quantity or automatic BOM synchronization. Exact dataset/file pinning prevents
+historical CAD retrieval from substituting a later upload of the same revision.
+The server enforces authorization, membership, checkout and cycle rules; the
+client adapter verifies the native document links. See ADR-004 for profile limits.

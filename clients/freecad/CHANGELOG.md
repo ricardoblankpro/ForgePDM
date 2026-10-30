@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 — managed workspace and pinned CAD references
+
+- Fork source and next-revision files into isolated managed working copies.
+- Upload verified snapshots with immutable exact dependency manifests.
+- Retrieve nested whole-object App::Link configurations through verified cache,
+  relative path rewriting and GUI document/object validation.
+- Preserve dirty local files; reject inaccessible, corrupt or mismatched graphs.
+- Keep engineering BOM synchronization and atomic check-in for later phases.
+- Requires the additive Phase 3 backend manifest API and migration 6.
+
 ## 0.2.0 — connectivity and catalog browsing
 
 - Run all HTTP requests and file transfers in a worker, with GUI-thread

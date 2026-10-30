@@ -26,6 +26,7 @@ from forgepdm.application.bom import BOMService
 from forgepdm.application.catalog import CatalogService
 from forgepdm.application.datasets import DatasetService
 from forgepdm.application.items import ItemService
+from forgepdm.application.manifests import ManifestService
 from forgepdm.application.revisions import RevisionService
 from forgepdm.domain.entities import (
     Checkout,
@@ -74,6 +75,10 @@ def get_catalog_service(request: Request) -> CatalogService:
     return request.app.state.catalog_service
 
 
+def get_manifest_service(request: Request) -> ManifestService:
+    return request.app.state.manifest_service
+
+
 def get_revision_service(request: Request) -> RevisionService:
     return request.app.state.revision_service
 
@@ -115,6 +120,23 @@ class BOMLineRequest(BaseModel):
 
 class ReplaceBOMRequest(BaseModel):
     lines: list[BOMLineRequest]
+
+
+class CADReferenceRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    object_name: str = Field(min_length=1, max_length=200)
+    property_name: str = "LinkedObject"
+    target_revision_id: UUID
+    target_dataset_id: UUID
+    target_file_id: UUID
+    target_object_name: str = Field(min_length=1, max_length=200)
+
+
+class DatasetManifestRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    source_file_id: UUID
+    profile: str = "freecad-app-link-v1"
+    references: list[CADReferenceRequest] = Field(default_factory=list, max_length=10000)
 
 
 def current_user(
@@ -579,6 +601,48 @@ def download_file(
     except (BlobNotFound, BlobIntegrityError) as error:
         raise HTTPException(status_code=500, detail="stored file integrity check failed") from error
     return FileResponse(path, media_type=file_record.media_type, filename=file_record.original_filename)
+
+
+@router.get("/datasets/{dataset_id}/manifest")
+def get_dataset_manifest(
+    dataset_id: UUID,
+    user: User = Depends(current_user),
+    manifests: ManifestService = Depends(get_manifest_service),
+):
+    try:
+        return manifests.get(user, str(dataset_id))
+    except NotFound as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except Forbidden as error:
+        raise HTTPException(status_code=403, detail="CAD dependency is not available to this user") from error
+
+
+@router.post("/datasets/{dataset_id}/manifest", status_code=status.HTTP_201_CREATED)
+def attach_dataset_manifest(
+    dataset_id: UUID,
+    payload: DatasetManifestRequest,
+    user: User = Depends(current_user),
+    manifests: ManifestService = Depends(get_manifest_service),
+):
+    try:
+        return manifests.attach(
+            user,
+            str(dataset_id),
+            str(payload.source_file_id),
+            [
+                {key: str(value) for key, value in reference.model_dump().items()}
+                for reference in payload.references
+            ],
+            payload.profile,
+        )
+    except NotFound as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except Forbidden as error:
+        raise HTTPException(status_code=403, detail="CAD dependency is not available to this user") from error
+    except Conflict as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 def _item_response(item):

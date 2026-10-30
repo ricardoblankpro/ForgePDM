@@ -59,3 +59,10 @@ target: upload and check-in currently use separate requests and transactions,
 which Phase 5 must reconcile before production use.
 
 The legacy design does not settle authentication strength, authorization granularity, retention/deletion policy, file size limits, backup/restore, revision conflict behavior, or BOM snapshot semantics. Resolve these before production use. SQLite is appropriate for local/small-team MVP use, but concurrent multi-user writes and network filesystem behavior require explicit limits and deployment guidance. A single-server deployment with a local disk is the initial supported topology.
+
+Phase 3 adds a separate immutable CAD dataset-reference graph and client-managed
+workspaces; see ADR-004. Migration 6 is additive. Exact revision/dataset/file/object
+bindings are independent of the engineering BOM. The supported FreeCAD profile
+reconstructs whole-object external App::Link graphs after byte verification and
+relative-path rewriting, before opening files. Engineering occurrence/quantity
+synchronization and atomic check-in remain Phases 4 and 5 respectively.

@@ -10,6 +10,7 @@ import urllib.parse
 import urllib.request
 import uuid
 import tempfile
+import hashlib
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from threading import local
@@ -148,6 +149,64 @@ class ForgePDMClient:
     def get_revision(self, revision_id):
         return self._json_request("GET", "/api/v1/revisions/" + self._quote(revision_id))
 
+    def get_manifest(self, dataset_id):
+        try:
+            return self._json_request(
+                "GET", "/api/v1/datasets/" + self._quote(dataset_id) + "/manifest"
+            )
+        except ForgePDMError as error:
+            if error.status == 404 and str(error) == "dataset reference manifest not found":
+                return None
+            if error.status == 404 and str(error) == "Not Found":
+                raise ForgePDMError(
+                    "This server needs the Phase 3 dataset-reference API. Update/restart the backend.",
+                    404,
+                    "unsupported_server",
+                ) from error
+            raise
+
+    def attach_manifest(self, dataset_id, source_file_id, references):
+        return self._json_request(
+            "POST",
+            "/api/v1/datasets/" + self._quote(dataset_id) + "/manifest",
+            {
+                "source_file_id": source_file_id,
+                "profile": "freecad-app-link-v1",
+                "references": references,
+            },
+        )
+
+    def prepare_working(self, root):
+        from .workspace import prepare_working
+
+        return prepare_working(self.base_url, root)
+
+    def validate_references(self, references):
+        from .workspace import bind_references
+
+        return bind_references(self, references)
+
+    def validate_native(self, path, references):
+        from .fcstd import validate
+        from .workspace import bind_references
+
+        validate(path, bind_references(self, references), source_path=path)
+
+    def upload_native(self, path, revision_id, item_id, references):
+        from .workspace import upload
+
+        return upload(self, path, revision_id, item_id, references)
+
+    def retrieve_configuration(self, root, revision_id, dataset_id, file_id):
+        from .workspace import retrieve
+
+        return retrieve(self, root, revision_id, dataset_id, file_id)
+
+    def finish_configuration(self, configuration):
+        from .workspace import finish
+
+        return finish(self, configuration)
+
     def _catalog_request(self, path):
         try:
             return self._json_request("GET", path)
@@ -248,7 +307,7 @@ class ForgePDMClient:
         finally:
             connection.close()
 
-    def download_file(self, file_id, destination):
+    def download_file(self, file_id, destination, expected_hash=None, expected_size=None):
         if not self.token:
             raise ForgePDMError("Log in to ForgePDM before downloading")
         url = self.base_url + "/api/v1/files/" + self._quote(file_id)
@@ -266,6 +325,7 @@ class ForgePDMClient:
             self._checkpoint()
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 completed = 0
+                content_hash = hashlib.sha256()
                 total = int(getattr(response, "headers", {}).get("Content-Length", 0))
                 with open(temporary, "wb") as output:
                     while True:
@@ -274,8 +334,16 @@ class ForgePDMClient:
                         if not chunk:
                             break
                         output.write(chunk)
+                        content_hash.update(chunk)
                         completed += len(chunk)
             self._checkpoint(completed, total)
+            if (expected_hash is not None and content_hash.hexdigest() != expected_hash) or (
+                expected_size is not None and completed != expected_size
+            ):
+                raise ForgePDMError(
+                    "Downloaded bytes failed SHA-256/size verification. No destination was published.",
+                    code="integrity_failed",
+                )
             # Same-directory staging permits atomic no-clobber publication.
             # Unlike an existence check followed by replace, link cannot
             # overwrite a file created by another process during the transfer.

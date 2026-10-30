@@ -10,7 +10,7 @@ from conftest import create_item
 def test_migrations_are_repeatable_and_item_creation_is_atomic(backend):
     with backend.database.connection() as connection:
         versions = [row["version"] for row in connection.execute("SELECT version FROM schema_version ORDER BY version")]
-    assert versions == [1, 2, 3, 4, 5]
+    assert versions == [1, 2, 3, 4, 5, 6]
 
     first = create_item(backend, kind="part")
     second = create_item(backend, kind="assembly", name="Test Assembly")

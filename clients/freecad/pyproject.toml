@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "forgepdm-freecad"
-version = "0.2.0"
+version = "0.3.0"
 description = "Thin FreeCAD Workbench for the ForgePDM HTTP API"
 requires-python = ">=3.11.0"
 dependencies = []

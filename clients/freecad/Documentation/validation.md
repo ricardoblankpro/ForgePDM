@@ -67,4 +67,8 @@ Other runtime/platform combinations remain unverified.
    can be added after reviewed translations exist.
 
 Do not mark runtime acceptance complete until this checklist has actual results.
-Assembly reference reconstruction and responsive networking remain later phases.
+Phase 2 added responsive networking. Phase 3 exercised pinned whole-object
+App::Link reconstruction in FreeCAD 1.1.4, including nested/repeated links,
+historical geometry, relocation and failed-transfer recovery. See
+`docs/freecad-addon-phase3.md` and its live report. Other adapters and platforms
+remain unverified; clean-start and visual checks above still require a restart.

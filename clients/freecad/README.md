@@ -17,7 +17,7 @@ uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.
 uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.py build
 ```
 
-The output is `clients/freecad/dist/ForgePDM-0.2.0.zip`. Create a `ForgePDM`
+The output is `clients/freecad/dist/ForgePDM-0.3.0.zip`. Create a `ForgePDM`
 directory inside your FreeCAD user `Mod` directory and extract the archive there.
 The resulting layout must be `Mod/ForgePDM/package.xml` and
 `Mod/ForgePDM/freecad/forgepdm/init_gui.py`. Do not extract into an extra nested
@@ -41,10 +41,10 @@ Select **View → Workbench → ForgePDM**. The backend must be running and reac
 ## Workflows
 
 1. **Log In** opens a connection form with server URL, username, password and request timeout. URL, username and timeout are remembered; passwords and bearer tokens are not saved. Expired/revoked sessions prompt you to log in again.
-2. **Create / Upload Current Document** lets you choose an authorized project by number/name for a new Item, saves the active document, attaches hidden item/revision metadata, and uploads a `native_cad` Dataset. Only editable projects are offered; administrators may choose a projectless Item.
+2. **Create / Upload Current Document** lets you choose an authorized project by number/name for a new Item, creates a managed working copy, attaches hidden item/revision metadata, and uploads a verified `native_cad` snapshot with its exact component references. Only editable projects are offered; administrators may choose a projectless Item.
 3. **Acquire / Renew Checkout**, **Check In Current Revision**, and **Release Current Revision** manage the current revision. Check-in uploads the saved native file first and then releases the checkout. The intended workflow is check-in before release; release prerequisites remain enforced by the existing backend.
-4. **Create Next Revision** creates the next Working revision, updates the local metadata, saves, and uploads the native CAD file.
-5. **Download Item / Assembly** searches by item number, name or description (blank to browse), offers pages of matching items, then lets you select a revision, including historical revisions. It downloads that native CAD file and files for its explicit BOM component revisions. Missing/inaccessible components stop the workflow before opening the assembly.
+4. **Create Next Revision** creates the next Working revision in a separate managed file, updates the local metadata and uploads its native snapshot, preserving the previous revision file.
+5. **Download Item / Assembly** searches by item number, name or description (blank to browse), offers pages of matching items, then lets you select a revision, including historical revisions. Select an exact native snapshot if several exist. It retrieves the pinned CAD reference graph into a new configuration and verifies external links before completion. Missing/inaccessible components stop retrieval before opening the assembly.
 6. **Show ForgePDM BOM** displays the current revision's recursive BOM.
 
 The API upload accepts one file per Dataset. Project authorization and all PDM
@@ -52,10 +52,27 @@ rules remain on the server. Downloads require access to every referenced
 component revision. Internal UUIDs are carried by the client; you do not need
 to enter them when selecting projects, items or revisions.
 
-If the current document comes from a read-only location (including bundled
-FreeCAD examples inside an AppImage), Create / Upload prompts for a writable
-local copy first. Choose a folder you own; the original is not overwritten.
-Canceling that save prompt stops the operation before any Item is created.
+## Managed workspace
+
+Choose a workspace folder when first uploading or retrieving. Originals, including
+bundled read-only examples, are preserved. New working copies live in
+`working/<uuid>/model.FCStd`; downloaded graphs live in `configurations/<uuid>`.
+The hidden `.forgepdm` directory holds server identity, locks, staging and a
+SHA-256 verified cache. Keep the complete workspace together when relocating it.
+Do not edit its ledgers or cache. Retrieval always creates a new configuration.
+
+Upload each linked component first, from a managed workspace on the same server.
+Save and upload component changes before uploading the parent. This version
+supports whole-object external `App::Link` references, including nested and
+repeated occurrences. It rejects unsupported subelement references and
+cross-document expressions; other assembly adapters remain unverified.
+
+Downloaded files are locally read-only. Use Acquire / Renew Checkout to create
+an editable working copy of a Working revision, or Create Next Revision for a
+Released revision. PDM edit permissions and lifecycle remain server-enforced.
+An old assembly pins its original component revision/dataset/file, even after
+newer component revisions are created. Engineering BOM synchronization is a
+separate operation planned for Phase 4; an empty BOM is not proof of consistency.
 
 ## Current limits
 
@@ -67,18 +84,25 @@ Short finalization requests cannot be canceled. Cancellation never undoes a
 server commit, and failed/uncertain mutations are never retried automatically.
 Check the revision/server state before repeating a failed upload or check-in.
 
-CAD save/recompute still runs on the GUI thread. Downloads retain the current
-latest-native-dataset selection policy within each explicitly selected revision;
-exact dataset/configuration manifests remain future work. External-link paths
-are not rewritten, so downloading all components does not guarantee a restored
-assembly. Managed workspaces, reference integrity, BOM extraction and atomic
-upload/check-in are deferred to later phases. Only native CAD is transferred
-automatically. The current no-overwrite download publication requires a
-filesystem supporting hard links.
+CAD save/recompute still runs on the GUI thread. Native ZIP inspection and
+path rewriting occur in the worker before opening files. Exact byte hashes are
+verified for cache hits as well as downloads. Existing local files are never
+silently replaced. A failed retrieval can be retried; it uses a new configuration
+and verified cached bytes. Inspect an unreadable/unknown workspace lock instead
+of deleting it while another operation may be running.
 
-Version 0.2.0 needs the Phase 2 backend catalog endpoints. Restart/update the
-server if the client reports that project/item browsing is unsupported. The
-backend still runs separately from FreeCAD.
+Upload, manifest attachment and check-in remain separate HTTP operations. A
+failed or timed-out operation may leave an uploaded dataset; inspect server state
+before retrying. Atomic check-in and mutation idempotency are Phase 5. Only
+native CAD files are transferred automatically, and the verified-cache download
+publication requires filesystem hard-link support. Local read-only protection
+is advisory. Third-party proxies, external textures and other CAD adapters are
+not certified. Windows, macOS and network shares remain unverified.
+
+Version 0.3.0 requires the Phase 3 backend manifest endpoints and additive SQLite
+migration 6. Back up the database and immutable files before updating/restarting
+the server. The backend still runs separately from FreeCAD. Restart FreeCAD after
+updating the addon. See [Phase 3 validation](../../docs/freecad-addon-phase3.md).
 
 ## Development resources
 

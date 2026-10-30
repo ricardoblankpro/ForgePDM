@@ -45,6 +45,7 @@ def commands(addon_root, monkeypatch):
 
 class Document:
     Label = "Example"
+    Objects = []
 
     Name = "ExampleDocument"
 
@@ -120,7 +121,7 @@ def test_unsaved_document_prompts_and_recomputes(commands, monkeypatch, tmp_path
     assert calls[0][1] == "Save FreeCAD document"
 
 
-def test_cancelled_copy_does_not_create_server_item(commands, monkeypatch, tmp_path):
+def test_cancelled_workspace_does_not_create_server_item(commands, monkeypatch, tmp_path):
     source = tmp_path / "example.FCStd"
     source.write_bytes(b"original CAD")
     document = Document(source)
@@ -130,6 +131,8 @@ def test_cancelled_copy_does_not_create_server_item(commands, monkeypatch, tmp_p
     calls = []
     client = SimpleNamespace(
         create_item=lambda *args: calls.append(args),
+        base_url="http://localhost:8000",
+        validate_references=lambda references: [],
         list_projects=lambda **kwargs: {
             "items": [{"id": "project", "project_number": "TEST", "name": "Test"}],
             "limit": 50,
@@ -141,8 +144,9 @@ def test_cancelled_copy_does_not_create_server_item(commands, monkeypatch, tmp_p
     errors = commands._test_errors
     monkeypatch.setattr(commands, "ask_choice", lambda title, prompt, choices, *args: choices[0])
     monkeypatch.setattr(commands, "_guard_document", lambda *args: document)
+    monkeypatch.setattr(commands, "_choose_workspace", lambda *args: None)
     commands.UploadCommand().Activated()
-    assert errors == ["Save the document before uploading"]
+    assert not errors
     assert not document.saved
     assert not calls
     assert document.FileName == str(source)
@@ -213,3 +217,38 @@ def test_logout_accepts_already_expired_server_session(commands, monkeypatch):
     with pytest.raises(StopIteration):
         workflow.throw(commands.ForgePDMError("expired", 401))
     assert messages == ["Logged out"]
+
+
+def test_managed_save_rebases_external_links_after_filename_changes(commands, tmp_path):
+    from types import SimpleNamespace
+
+    document = Document(tmp_path / "original.FCStd")
+    target = SimpleNamespace(Document=object())
+    events = []
+
+    class Link:
+        TypeId = "App::Link"
+        LinkedObject = target
+        Placement = object()
+
+        def setLink(self, value):
+            events.append((document.FileName, value))
+            self.LinkedObject = value
+
+    document.Objects = [Link()]
+    destination = tmp_path / "working.FCStd"
+    placement = document.Objects[0].Placement
+    commands._save_managed_as(document, str(destination))
+    assert events == [(str(destination), None), (str(destination), target)]
+    assert document.Objects[0].Placement is placement
+    assert document.saved == [("saveAs", str(destination)), ("save", str(destination))]
+
+
+def test_reference_change_during_preparation_stops_before_upload(commands, monkeypatch):
+    from types import SimpleNamespace
+
+    document = Document(None)
+    monkeypatch.setattr(commands.cad, "capture", lambda doc: [{"changed": True}])
+    workflow = commands._upload_native(SimpleNamespace(), document, "unused.FCStd", [])
+    with pytest.raises(commands.workspace.WorkspaceError, match="references changed"):
+        next(workflow)

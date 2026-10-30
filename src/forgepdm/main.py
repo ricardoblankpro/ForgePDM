@@ -12,6 +12,7 @@ from forgepdm.application.bom import BOMService
 from forgepdm.application.catalog import CatalogService
 from forgepdm.application.datasets import DatasetService
 from forgepdm.application.items import ItemService
+from forgepdm.application.manifests import ManifestService
 from forgepdm.application.revisions import RevisionService
 from forgepdm.infrastructure.database import Database
 from forgepdm.infrastructure.storage import DEFAULT_MAX_UPLOAD_BYTES, FileStorage
@@ -36,6 +37,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     app.state.bom_service = BOMService(database, authorization, revisions)
     app.state.item_service = ItemService(database)
     app.state.revision_service = revisions
+    app.state.manifest_service = ManifestService(database, authorization, revisions)
     app.state.dataset_service = DatasetService(database, storage, authorization, revisions)
     app.state.file_storage = storage
     app.include_router(routes.router)

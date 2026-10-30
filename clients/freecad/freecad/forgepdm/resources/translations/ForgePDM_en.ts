@@ -59,8 +59,8 @@
       <translation>Release a checked-in revision</translation>
     </message>
     <message>
-      <source>Save and upload the current document</source>
-      <translation>Save and upload the current document</translation>
+      <source>Save a managed working copy and upload a verified snapshot</source>
+      <translation>Save a managed working copy and upload a verified snapshot</translation>
     </message>
     <message>
       <source>Search items and retrieve a selected revision</source>

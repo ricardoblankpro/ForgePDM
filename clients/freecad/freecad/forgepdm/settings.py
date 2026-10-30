@@ -21,3 +21,11 @@ def save(url, username, timeout):
     parameters.SetString("ServerURL", url)
     parameters.SetString("Username", username)
     parameters.SetInt("TimeoutSeconds", int(timeout))
+
+
+def workspace_root():
+    return _parameters().GetString("WorkspaceRoot", "")
+
+
+def save_workspace(root):
+    _parameters().SetString("WorkspaceRoot", str(root))

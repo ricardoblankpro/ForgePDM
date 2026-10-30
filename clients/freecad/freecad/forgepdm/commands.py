@@ -1,7 +1,7 @@
 """FreeCAD Workbench commands backed by the ForgePDM HTTP API."""
 
 import os
-import re
+from pathlib import Path
 from uuid import UUID
 
 import FreeCAD
@@ -13,6 +13,7 @@ from .ui import QtWidgets, ask_choice, ask_text, execute_dialog, information, wa
 from .jobs import Request
 from .resources import icon_path
 from .i18n import translate
+from . import cad, workspace
 
 
 METADATA_OBJECT = "ForgePDM_Metadata"
@@ -57,6 +58,8 @@ def _metadata(document, create=False):
 def _set_metadata(document, **values):
     obj = _metadata(document, create=True)
     for key, value in values.items():
+        if not hasattr(obj, key):
+            obj.addProperty("App::PropertyString", key, "ForgePDM")
         setattr(obj, key, str(value or ""))
     return obj
 
@@ -167,6 +170,90 @@ def _select_record(title, prompt, fetch, label, args=(), kwargs=None, allow_proj
             return records[labels.index(selected)]
 
 
+def _choose_workspace(client, document=None):
+    from . import settings
+
+    if document is not None and document.FileName:
+        try:
+            return str(
+                workspace.binding(document.FileName, client.base_url, require_uploaded=False)[
+                    "root"
+                ]
+            )
+        except workspace.WorkspaceError:
+            if any(
+                (directory / workspace.MANIFEST).exists()
+                for directory in Path(document.FileName).absolute().parents
+            ):
+                raise
+    selected = QtWidgets.QFileDialog.getExistingDirectory(
+        _main_window(),
+        "Choose ForgePDM workspace",
+        settings.workspace_root() or os.path.expanduser("~"),
+    )
+    if not selected:
+        return None
+    settings.save_workspace(selected)
+    return selected
+
+
+def _save_managed_as(document, path):
+    if os.path.lexists(path):
+        raise workspace.WorkspaceError(
+            "The new working-copy path already exists; it was not overwritten"
+        )
+    document.recompute()
+    document.saveAs(path)
+    cad.rebase_links(document)
+    document.save()
+    if not os.path.isfile(path):
+        raise workspace.WorkspaceError("FreeCAD did not create the managed working copy")
+    return path
+
+
+def _ensure_working(client, document):
+    name = document.Name
+    if document.FileName and workspace.working_path(document.FileName, client.base_url) is not None:
+        return _save_document(document)
+    root = _choose_workspace(client, document)
+    if root is None:
+        return None
+    path = yield Request("Preparing isolated working copy…", client.prepare_working, (root,))
+    document = _guard_document(name)
+    return _save_managed_as(document, path)
+
+
+def _editable(client, metadata):
+    revision = yield Request("Checking revision…", client.get_revision, (metadata.RevisionId,))
+    if revision["item_id"] != metadata.ItemId:
+        raise workspace.WorkspaceError("Document item/revision metadata is inconsistent")
+    if revision["lifecycle_state"] != "working":
+        raise workspace.WorkspaceError(
+            "This revision is read-only. Create Next Revision before saving/uploading changes."
+        )
+    return revision
+
+
+def _upload_native(client, document, path, references):
+    if cad.capture(document) != references:
+        raise workspace.WorkspaceError(
+            "CAD references changed while preparing the upload. Review/save the document before retrying."
+        )
+    metadata = _require_metadata(document)
+    result = yield Request(
+        "Uploading verified native CAD snapshot…",
+        client.upload_native,
+        (path, metadata.RevisionId, metadata.ItemId, references),
+        mutates=True,
+    )
+    if result.get("local_changes_remain") or document.isTouched():
+        warning(
+            "ForgePDM",
+            "The saved snapshot was uploaded, but local changes remain. They were not included in that upload.",
+        )
+    return result
+
+
 class Command:
     menu_text = ""
     tooltip = ""
@@ -245,7 +332,7 @@ class LogoutCommand(Command):
 
 class UploadCommand(Command):
     menu_text = "Create / Upload Current Document"
-    tooltip = "Save and upload the current document"
+    tooltip = "Save a managed working copy and upload a verified snapshot"
     needs_document = True
 
     def action(self):
@@ -253,7 +340,9 @@ class UploadCommand(Command):
         document = _require_document()
         document_name = document.Name
         metadata = _metadata(document)
-        if metadata is None or not metadata.ItemId:
+        project = None
+        new = metadata is None or not metadata.ItemId
+        if new:
             kind = ask_choice("New ForgePDM Item", "Item kind", ["part", "assembly"], "part")
             if not kind:
                 return
@@ -267,8 +356,21 @@ class UploadCommand(Command):
             )
             if project is None:
                 return
-            document = _guard_document(document_name)
-            local_path = _save_document(document)
+        else:
+            yield from _editable(client, metadata)
+        document = _guard_document(document_name)
+        references = cad.capture(document)
+        yield Request(
+            "Checking linked component snapshots…", client.validate_references, (references,)
+        )
+        path = yield from _ensure_working(client, document)
+        if path is None:
+            return
+        document = _guard_document(document_name)
+        if new:
+            yield Request(
+                "Validating native CAD references…", client.validate_native, (path, references)
+            )
             result = yield Request(
                 "Creating item…",
                 client.create_item,
@@ -283,26 +385,11 @@ class UploadCommand(Command):
                 RevisionId=result["current_revision_id"],
                 ItemNumber=result["number"],
                 RevisionLabel="A",
+                ServerUrl=client.base_url,
             )
-            local_path = _save_document(document)
-            metadata = _require_metadata(document)
-        else:
-            local_path = _save_document(document)
-        revision_id, number, label = (
-            metadata.RevisionId,
-            metadata.ItemNumber,
-            metadata.RevisionLabel,
-        )
-        yield Request(
-            "Uploading native CAD…",
-            client.upload_file,
-            (revision_id, local_path, "native_cad", "Native CAD"),
-            mutates=True,
-        )
-        information(
-            "ForgePDM",
-            "Uploaded {} as {} (revision {})".format(os.path.basename(local_path), number, label),
-        )
+            _save_document(document)
+        yield from _upload_native(client, document, path, references)
+        information("ForgePDM", "Uploaded the managed CAD snapshot and its exact references.")
 
 
 class CheckoutCommand(Command):
@@ -311,15 +398,29 @@ class CheckoutCommand(Command):
     needs_document = True
 
     def action(self):
-        metadata = _require_metadata(_require_document())
+        client = Session.require_client()
+        document = _require_document()
+        metadata = _require_metadata(document)
+        name, revision_id = document.Name, metadata.RevisionId
         result = yield Request(
             "Acquiring checkout…",
-            Session.require_client().acquire_checkout,
-            (metadata.RevisionId,),
+            client.acquire_checkout,
+            (revision_id,),
             mutates=True,
             cancellable=False,
         )
-        information("ForgePDM", "Checkout held until {}".format(result["expires_at"]))
+        document = _guard_document(name, revision_id)
+        path = yield from _ensure_working(client, document)
+        if path is None:
+            information(
+                "ForgePDM",
+                "Checkout acquired; working-copy selection was canceled. No CAD file was overwritten.",
+            )
+            return
+        information(
+            "ForgePDM",
+            "Checkout held until {}. Edit the managed working copy.".format(result["expires_at"]),
+        )
 
 
 class CheckInCommand(Command):
@@ -330,17 +431,17 @@ class CheckInCommand(Command):
     def action(self):
         client = Session.require_client()
         document = _require_document()
-        revision_id = _require_metadata(document).RevisionId
+        metadata = _require_metadata(document)
+        revision_id = metadata.RevisionId
         note = ask_text("ForgePDM Check In", "Change note")
         if not note:
             return
-        path = _save_document(document)
-        yield Request(
-            "Uploading native CAD…",
-            client.upload_file,
-            (revision_id, path, "native_cad", "Native CAD"),
-            mutates=True,
-        )
+        yield from _editable(client, metadata)
+        references = cad.capture(document)
+        path = yield from _ensure_working(client, document)
+        if path is None:
+            return
+        yield from _upload_native(client, document, path, references)
         yield Request(
             "Checking in revision…",
             client.checkin,
@@ -382,6 +483,16 @@ class NewRevisionCommand(Command):
         note = ask_text("ForgePDM New Revision", "Describe the change")
         if not note:
             return
+        references = cad.capture(document)
+        yield Request(
+            "Checking linked component snapshots…", client.validate_references, (references,)
+        )
+        root = _choose_workspace(client, document)
+        if root is None:
+            return
+        path = yield Request(
+            "Preparing next-revision working copy…", client.prepare_working, (root,)
+        )
         result = yield Request(
             "Creating next revision…",
             client.create_next_revision,
@@ -390,15 +501,20 @@ class NewRevisionCommand(Command):
             cancellable=False,
         )
         document = _guard_document(name, revision_id)
-        _set_metadata(document, RevisionId=result["id"], RevisionLabel=result["label"])
-        path = _save_document(document)
-        yield Request(
-            "Uploading native CAD…",
-            client.upload_file,
-            (result["id"], path, "native_cad", "Native CAD"),
-            mutates=True,
+        _set_metadata(
+            document,
+            RevisionId=result["id"],
+            RevisionLabel=result["label"],
+            ServerUrl=client.base_url,
         )
-        information("ForgePDM", "Created and uploaded revision {}".format(result["label"]))
+        _save_managed_as(document, path)
+        yield from _upload_native(client, document, path, references)
+        information(
+            "ForgePDM",
+            "Created revision {} in a separate working copy; the previous file was preserved.".format(
+                result["label"]
+            ),
+        )
 
 
 class ShowBOMCommand(Command):
@@ -454,71 +570,72 @@ class DownloadCommand(Command):
         )
         if revision is None:
             return
-        destination = QtWidgets.QFileDialog.getExistingDirectory(
-            _main_window(), "Choose download folder", os.path.expanduser("~")
+        datasets = yield Request(
+            "Loading native CAD snapshots…", client.list_datasets, (revision["id"],)
         )
-        if not destination:
-            return
-        downloaded = yield from _download_revision(
-            client, revision["id"], item["number"], revision["label"], destination
-        )
-        if downloaded is None:
-            raise RuntimeError("No native CAD dataset is attached to the selected revision")
-        lines = yield Request(
-            "Loading assembly structure…", client.get_bom, (revision["id"],), {"recursive": True}
-        )
-        seen = {revision["id"]}
-        for component in _walk_bom(lines):
-            component_id = component["component_revision_id"]
-            if component_id in seen:
-                continue
-            seen.add(component_id)
-            path = yield from _download_revision(
-                client,
-                component_id,
-                component["item_number"],
-                component["revision_label"],
-                destination,
+        choices = [
+            (dataset, file_record)
+            for dataset in datasets
+            if dataset["dataset_type"] == "native_cad"
+            for file_record in dataset["files"]
+        ]
+        if not choices:
+            raise workspace.WorkspaceError(
+                "No native CAD snapshot is attached to the selected revision"
             )
-            if path is None:
-                raise RuntimeError(
-                    "Assembly retrieval is incomplete: a component has no native CAD dataset. The assembly was not opened."
+        selected = 0
+        if len(choices) > 1:
+            labels = [
+                "{}. {} — {} — {}".format(
+                    index + 1,
+                    dataset["name"],
+                    dataset["created_at"],
+                    file_record["content_hash"][:8],
                 )
-        document = FreeCAD.openDocument(downloaded)
-        _set_metadata(
-            document,
-            ItemId=item["id"],
-            RevisionId=revision["id"],
-            ItemNumber=item["number"],
-            RevisionLabel=revision["label"],
-        )
-        document.save()
-        information(
-            "ForgePDM", "Downloaded and opened {} Rev{}".format(item["number"], revision["label"])
-        )
-
-
-def _download_revision(client, revision_id, item_number, revision_label, destination):
-    datasets = yield Request("Loading datasets…", client.list_datasets, (revision_id,))
-    native = [dataset for dataset in datasets if dataset["dataset_type"] == "native_cad"]
-    if not native:
-        return None
-    dataset = sorted(native, key=lambda record: record["created_at"])[-1]
-    if not dataset["files"]:
-        return None
-    file_record = dataset["files"][0]
-    extension = os.path.splitext(file_record["original_filename"])[1] or ".FCStd"
-    stem = re.sub(r"[^A-Za-z0-9_.-]", "_", "{}_Rev{}".format(item_number, revision_label))
-    path = os.path.join(destination, stem + extension)
-    suffix = 1
-    while os.path.exists(path):
-        path = os.path.join(destination, "{}_{}{}".format(stem, suffix, extension))
-        suffix += 1
-    return (
-        yield Request(
-            "Downloading " + item_number + "…", client.download_file, (file_record["id"], path)
-        )
-    )
+                for index, (dataset, file_record) in enumerate(choices)
+            ]
+            value = ask_choice(
+                "CAD Snapshots", "Choose the exact saved snapshot", labels, labels[-1]
+            )
+            if value is None:
+                return
+            selected = labels.index(value)
+        dataset, file_record = choices[selected]
+        root = _choose_workspace(client)
+        if root is None:
+            return
+        configuration = None
+        opened = None
+        complete = False
+        try:
+            configuration = yield Request(
+                "Retrieving verified CAD configuration…",
+                client.retrieve_configuration,
+                (root, revision["id"], dataset["id"], file_record["id"]),
+            )
+            opened = cad.open_configuration(configuration, _set_metadata)
+            yield Request(
+                "Recording verified workspace configuration…",
+                client.finish_configuration,
+                (configuration,),
+            )
+            complete = True
+            information(
+                "ForgePDM",
+                "Opened the exact CAD configuration with verified external links. BOM extraction/synchronization remains a separate step.",
+            )
+        finally:
+            if not complete:
+                if opened is not None:
+                    retained = cad.close_owned(opened["owned"])
+                    if retained:
+                        warning(
+                            "ForgePDM",
+                            "Modified local documents were left open for review: "
+                            + ", ".join(retained),
+                        )
+                if configuration is not None:
+                    workspace.incomplete(configuration)
 
 
 def _walk_bom(lines):

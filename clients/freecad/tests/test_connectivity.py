@@ -157,3 +157,21 @@ def test_older_server_has_upgrade_guidance(api, monkeypatch):
         client.list_projects()
     assert error.value.code == "unsupported_server"
     assert "restart" in str(error.value)
+
+
+@pytest.mark.parametrize("expected_hash,expected_size", [("0" * 64, 3), (None, 99)])
+def test_download_hash_size_failure_does_not_publish(
+    api, monkeypatch, tmp_path, expected_hash, expected_size
+):
+    monkeypatch.setattr(api.urllib.request, "urlopen", lambda *args, **kwargs: io.BytesIO(b"CAD"))
+    client = api.ForgePDMClient("http://localhost:8000")
+    client.token = "token"
+    with pytest.raises(api.ForgePDMError) as error:
+        client.download_file(
+            "file",
+            str(tmp_path / "part.FCStd"),
+            expected_hash=expected_hash,
+            expected_size=expected_size,
+        )
+    assert error.value.code == "integrity_failed"
+    assert not list(tmp_path.iterdir())
