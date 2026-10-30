@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>ForgePDM — Create next revision</title>
+  <rect x="1" y="1" width="30" height="30" rx="6" fill="#17324d"/>
+  <g fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 23H6V6h13v4M11 11h11v16H11z"/><path d="M23 14h5m-2.5-2.5v5" stroke="#c6adff"/><path d="m15 22 2-5 2 5m-3.5-1.5h3" stroke="#c6adff"/>
+  </g>
+</svg>

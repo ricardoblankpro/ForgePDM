@@ -2,6 +2,7 @@
 
 ## 0.3.0 — managed workspace and pinned CAD references
 
+- Give each command its own original SVG icon, matching the Workbench palette.
 - Fork source and next-revision files into isolated managed working copies.
 - Upload verified snapshots with immutable exact dependency manifests.
 - Retrieve nested whole-object App::Link configurations through verified cache,

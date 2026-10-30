@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>ForgePDM — Upload CAD document</title>
+  <rect x="1" y="1" width="30" height="30" rx="6" fill="#17324d"/>
+  <g fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 25H8V7h11l5 5v5M18 7v6h6"/><path d="M22 26V16m-4 4 4-4 4 4" stroke="#59d6bd"/>
+  </g>
+</svg>

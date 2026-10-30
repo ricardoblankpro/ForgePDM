@@ -66,10 +66,13 @@ expected = [
 assert command_calls == wb.menu == wb.toolbar == expected
 assert wb.GetClassName() == 'Gui::PythonWorkbench'
 assert len(language_paths) == 1 and Path(language_paths[0]).is_dir()
-for command in registered.values():
+expected_icons = ['login', 'logout', 'upload', 'checkout', 'checkin', 'release',
+                  'new-revision', 'download', 'bom']
+for command, icon in zip(registered.values(), expected_icons):
     resources = command.GetResources()
     assert resources['MenuText'] and resources['ToolTip']
     assert Path(resources['Pixmap']).is_file()
+    assert Path(resources['Pixmap']).name == icon + '.svg'
 assert registered['ForgePDM_Login'].IsActive()
 assert not registered['ForgePDM_CheckIn'].IsActive()
 

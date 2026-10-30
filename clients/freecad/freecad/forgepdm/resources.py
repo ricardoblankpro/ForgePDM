@@ -6,5 +6,5 @@ from pathlib import Path
 RESOURCE_ROOT = Path(__file__).resolve().parent / "resources"
 
 
-def icon_path():
-    return str(RESOURCE_ROOT / "icons" / "forgepdm.svg")
+def icon_path(name="forgepdm"):
+    return str(RESOURCE_ROOT / "icons" / (name + ".svg"))

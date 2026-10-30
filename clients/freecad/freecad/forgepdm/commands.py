@@ -255,13 +255,14 @@ def _upload_native(client, document, path, references):
 
 
 class Command:
+    icon_name = "forgepdm"
     menu_text = ""
     tooltip = ""
     needs_document = False
 
     def GetResources(self):
         return {
-            "Pixmap": icon_path(),
+            "Pixmap": icon_path(self.icon_name),
             "MenuText": translate("ForgePDM", self.menu_text),
             "ToolTip": translate("ForgePDM", self.tooltip),
         }
@@ -278,6 +279,7 @@ class Command:
 
 
 class LoginCommand(Command):
+    icon_name = "login"
     menu_text = "Log In"
     tooltip = "Connect to ForgePDM"
 
@@ -316,6 +318,7 @@ class LoginCommand(Command):
 
 
 class LogoutCommand(Command):
+    icon_name = "logout"
     menu_text = "Log Out"
     tooltip = "End the ForgePDM session"
 
@@ -331,6 +334,7 @@ class LogoutCommand(Command):
 
 
 class UploadCommand(Command):
+    icon_name = "upload"
     menu_text = "Create / Upload Current Document"
     tooltip = "Save a managed working copy and upload a verified snapshot"
     needs_document = True
@@ -393,6 +397,7 @@ class UploadCommand(Command):
 
 
 class CheckoutCommand(Command):
+    icon_name = "checkout"
     menu_text = "Acquire / Renew Checkout"
     tooltip = "Acquire or extend the active revision checkout"
     needs_document = True
@@ -424,6 +429,7 @@ class CheckoutCommand(Command):
 
 
 class CheckInCommand(Command):
+    icon_name = "checkin"
     menu_text = "Check In Current Revision"
     tooltip = "Upload saved content and release your checkout"
     needs_document = True
@@ -453,6 +459,7 @@ class CheckInCommand(Command):
 
 
 class ReleaseCommand(Command):
+    icon_name = "release"
     menu_text = "Release Current Revision"
     tooltip = "Release a checked-in revision"
     needs_document = True
@@ -470,6 +477,7 @@ class ReleaseCommand(Command):
 
 
 class NewRevisionCommand(Command):
+    icon_name = "new-revision"
     menu_text = "Create Next Revision"
     tooltip = "Start the next Working revision from a Released item"
     needs_document = True
@@ -518,6 +526,7 @@ class NewRevisionCommand(Command):
 
 
 class ShowBOMCommand(Command):
+    icon_name = "bom"
     menu_text = "Show ForgePDM BOM"
     tooltip = "Display the current revision's nested bill of materials"
     needs_document = True
@@ -542,6 +551,7 @@ class ShowBOMCommand(Command):
 
 
 class DownloadCommand(Command):
+    icon_name = "download"
     menu_text = "Download Item / Assembly"
     tooltip = "Search items and retrieve a selected revision"
 
