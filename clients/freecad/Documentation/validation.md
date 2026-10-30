@@ -1,5 +1,11 @@
 # Phase 1 validation and manual acceptance
 
+The historical checklist below covers Phase 1. For the current Phase 2 addon,
+see `docs/freecad-addon-phase2.md` in the repository. The live harness is
+`clients/freecad/tests/freecad_phase2_smoke.py`; execute it only through an actual
+FreeCAD interpreter with isolated backend credentials supplied as `PHASE2_CASE`.
+It is intentionally not part of pytest discovery and is excluded from the ZIP.
+
 ## Automated checks
 
 From the repository root:

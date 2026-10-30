@@ -1,6 +1,12 @@
 # ForgePDM
 
-ForgePDM is a backend-first product data management system for engineering teams, with FreeCAD as its first planned CAD client. The current increment provides a local FastAPI service, password login, bearer sessions, project access roles, SQLite-backed Items/revisions/datasets, and SHA-256 content-addressed file storage. Checkout, BOM, release workflows, and the FreeCAD client are planned follow-on work.
+ForgePDM is a backend-first product data management system for engineering teams,
+with FreeCAD as its primary CAD client. The current implementation provides a
+FastAPI service, password/bearer authentication, project roles, SQLite-backed
+Items/revisions/datasets/BOMs, exclusive checkout, lifecycle workflows and SHA-256
+file storage. The independently packaged FreeCAD Workbench provides responsive
+API workflows, authorized project/item browsing and historical revision selection.
+Assembly reference reconstruction and operational hardening remain future work.
 
 ## Local development
 
@@ -47,3 +53,16 @@ Keep the server bound to loopback. Authentication is now implemented, but transp
 Run `uv run ruff check src` and `uv run ruff format --check src` for style checks.
 
 Run the automated backend suite with `uv run --group dev pytest -q`. Tests use temporary SQLite databases and file stores.
+
+## FreeCAD client and catalog reads
+
+See [the addon README](clients/freecad/README.md) for installation and workflows.
+The client requires a running backend; it does not install the server in FreeCAD.
+
+Authenticated catalog endpoints are `GET /api/v1/projects`, `GET /api/v1/items`
+(with `q` search text), `GET /api/v1/items/{id}/revisions` and
+`GET /api/v1/revisions/{id}`. Paged reads accept `limit` (1–100) and non-negative
+`offset`, returning `items`, `limit`, `offset` and `has_more`. Project selection
+can request `editable=true`. Search filters project permissions before paging;
+revision retrieval never silently substitutes the current revision for a
+requested historical one. Existing write API contracts remain unchanged.

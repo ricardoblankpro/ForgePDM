@@ -9,6 +9,7 @@ from forgepdm.api.v1 import routes
 from forgepdm.application.auth import AuthService
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.application.bom import BOMService
+from forgepdm.application.catalog import CatalogService
 from forgepdm.application.datasets import DatasetService
 from forgepdm.application.items import ItemService
 from forgepdm.application.revisions import RevisionService
@@ -31,6 +32,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     app.state.database = database
     app.state.auth_service = AuthService(database)
     app.state.authorization_service = authorization
+    app.state.catalog_service = CatalogService(database, authorization)
     app.state.bom_service = BOMService(database, authorization, revisions)
     app.state.item_service = ItemService(database)
     app.state.revision_service = revisions

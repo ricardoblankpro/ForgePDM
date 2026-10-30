@@ -9,12 +9,17 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+import tempfile
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from threading import local
 
 
 class ForgePDMError(Exception):
-    def __init__(self, message, status=None):
+    def __init__(self, message, status=None, code="request_failed"):
         Exception.__init__(self, message)
         self.status = status
+        self.code = code
 
 
 def _error_message(detail, status):
@@ -26,7 +31,7 @@ def _error_message(detail, status):
         for issue in detail:
             if not isinstance(issue, dict):
                 continue
-            location = issue.get("loc", [])
+            location = issue.get("loc") or []
             field = next((part for part in reversed(location) if isinstance(part, str)), "")
             if field == "project_id" and str(issue.get("type", "")).startswith("uuid"):
                 message = (
@@ -54,9 +59,37 @@ class ForgePDMClient:
         parsed = urllib.parse.urlsplit(self.base_url)
         if parsed.scheme not in ("http", "https") or not parsed.netloc:
             raise ValueError("Server URL must start with http:// or https://")
+        if parsed.username or parsed.password or parsed.query or parsed.fragment:
+            raise ValueError("Server URL must not include credentials, a query, or a fragment")
+        if not 1 <= float(timeout) <= 300:
+            raise ValueError("Connection timeout must be between 1 and 300 seconds")
         self._parsed = parsed
         self.timeout = timeout
         self.token = None
+        self.expires_at = None
+        self._local = local()
+
+    @contextmanager
+    def operation(self, context):
+        self._local.context = context
+        try:
+            yield
+        finally:
+            self._local.context = None
+
+    def _checkpoint(self, completed=None, total=0):
+        context = getattr(self._local, "context", None)
+        if context is not None:
+            context.check()
+            if completed is not None:
+                context.progress(completed, total)
+
+    def is_expired(self):
+        if not self.expires_at:
+            return False
+        return datetime.fromisoformat(self.expires_at).astimezone(timezone.utc) <= datetime.now(
+            timezone.utc
+        )
 
     def login(self, username, password):
         result = self._json_request(
@@ -65,7 +98,27 @@ class ForgePDMClient:
             {"username": username, "password": password},
             authenticated=False,
         )
+        if (
+            not isinstance(result, dict)
+            or not isinstance(result.get("access_token"), str)
+            or not result["access_token"]
+            or not isinstance(result.get("user"), dict)
+        ):
+            raise ForgePDMError(
+                "ForgePDM returned an invalid login response.", code="invalid_response"
+            )
+        expiry = result.get("expires_at")
+        if expiry is not None:
+            try:
+                parsed_expiry = datetime.fromisoformat(expiry)
+                if parsed_expiry.tzinfo is None:
+                    raise ValueError("missing time zone")
+            except (ValueError, TypeError):
+                raise ForgePDMError(
+                    "ForgePDM returned an invalid session expiry.", code="invalid_response"
+                )
         self.token = result["access_token"]
+        self.expires_at = expiry
         return result["user"]
 
     def logout(self):
@@ -74,6 +127,38 @@ class ForgePDMClient:
                 self._json_request("POST", "/api/v1/auth/logout", None)
             finally:
                 self.token = None
+                self.expires_at = None
+
+    def list_projects(self, editable=False, limit=50, offset=0):
+        query = urllib.parse.urlencode(
+            {"editable": str(editable).lower(), "limit": limit, "offset": offset}
+        )
+        return self._catalog_request("/api/v1/projects?" + query)
+
+    def search_items(self, query="", limit=50, offset=0):
+        query = urllib.parse.urlencode({"q": query, "limit": limit, "offset": offset})
+        return self._catalog_request("/api/v1/items?" + query)
+
+    def list_revisions(self, item_id, limit=50, offset=0):
+        query = urllib.parse.urlencode({"limit": limit, "offset": offset})
+        return self._catalog_request(
+            "/api/v1/items/" + self._quote(item_id) + "/revisions?" + query
+        )
+
+    def get_revision(self, revision_id):
+        return self._json_request("GET", "/api/v1/revisions/" + self._quote(revision_id))
+
+    def _catalog_request(self, path):
+        try:
+            return self._json_request("GET", path)
+        except ForgePDMError as error:
+            if error.status == 404 and str(error) == "Not Found":
+                raise ForgePDMError(
+                    "This server does not support project/item browsing. Update or restart the ForgePDM backend.",
+                    status=404,
+                    code="unsupported_server",
+                ) from error
+            raise
 
     def create_item(self, kind, name, project_id=None, description=""):
         payload = {"kind": kind, "name": name, "description": description}
@@ -132,6 +217,7 @@ class ForgePDMClient:
 
         connection = self._http_connection()
         try:
+            self._checkpoint()
             target = self._target(endpoint)
             connection.putrequest("POST", target)
             connection.putheader("Authorization", "Bearer " + self.token)
@@ -142,16 +228,23 @@ class ForgePDMClient:
                 connection.send(part)
             connection.send(file_header)
             with open(file_path, "rb") as source:
+                completed = 0
+                total = os.path.getsize(file_path)
                 while True:
+                    self._checkpoint(completed, total)
                     chunk = source.read(1024 * 1024)
                     if not chunk:
                         break
                     connection.send(chunk)
+                    completed += len(chunk)
             connection.send(closing)
             response = connection.getresponse()
             return self._decode_response(response.status, response.read())
         except (OSError, http.client.HTTPException) as error:
-            raise ForgePDMError("File upload failed: {}".format(error))
+            raise ForgePDMError(
+                "File upload failed. Check your connection and the revision before retrying.",
+                code="connection_failed",
+            ) from error
         finally:
             connection.close()
 
@@ -165,21 +258,40 @@ class ForgePDMClient:
             method="GET",
         )
         destination = os.path.abspath(destination)
-        temporary = destination + ".part"
+        descriptor, temporary = tempfile.mkstemp(
+            prefix=".forgepdm-", suffix=".part", dir=os.path.dirname(destination)
+        )
+        os.close(descriptor)
         try:
+            self._checkpoint()
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                completed = 0
+                total = int(getattr(response, "headers", {}).get("Content-Length", 0))
                 with open(temporary, "wb") as output:
                     while True:
+                        self._checkpoint(completed, total)
                         chunk = response.read(1024 * 1024)
                         if not chunk:
                             break
                         output.write(chunk)
-            os.replace(temporary, destination)
+                        completed += len(chunk)
+            self._checkpoint(completed, total)
+            # Same-directory staging permits atomic no-clobber publication.
+            # Unlike an existence check followed by replace, link cannot
+            # overwrite a file created by another process during the transfer.
+            os.link(temporary, destination)
             return destination
+        except FileExistsError as error:
+            raise ForgePDMError(
+                "The download destination already exists. Choose another filename."
+            ) from error
         except urllib.error.HTTPError as error:
             self._raise_http_error(error)
-        except (OSError, urllib.error.URLError) as error:
-            raise ForgePDMError("File download failed: {}".format(error))
+        except (OSError, http.client.HTTPException) as error:
+            raise ForgePDMError(
+                "File download failed. Check your connection and try again.",
+                code="connection_failed",
+            ) from error
         finally:
             if os.path.exists(temporary):
                 os.remove(temporary)
@@ -216,6 +328,7 @@ class ForgePDMClient:
         )
 
     def _json_request(self, method, path, payload=None, authenticated=True):
+        self._checkpoint()
         headers = {"Accept": "application/json"}
         if payload is not None:
             data = json.dumps(payload).encode("utf-8")
@@ -231,11 +344,15 @@ class ForgePDMClient:
         )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                return self._decode_response(response.status, response.read())
+                result = self._decode_response(response.status, response.read())
+            return result
         except urllib.error.HTTPError as error:
             self._raise_http_error(error)
-        except urllib.error.URLError as error:
-            raise ForgePDMError("Could not reach ForgePDM: {}".format(error.reason))
+        except (OSError, http.client.HTTPException) as error:
+            raise ForgePDMError(
+                "Could not reach ForgePDM. Check the server URL and whether the server is running.",
+                code="connection_failed",
+            ) from error
 
     def _http_connection(self):
         host = self._parsed.hostname
@@ -272,13 +389,22 @@ class ForgePDMClient:
                 detail = result.get("detail", result) if isinstance(result, dict) else result
             except (ValueError, UnicodeError):
                 detail = body.decode("utf-8", "replace")
-            raise ForgePDMError(_error_message(detail, status), status)
+            code = {
+                401: "authentication_required",
+                403: "permission_denied",
+                409: "conflict",
+                422: "validation_failed",
+            }.get(status, "server_error" if status >= 500 else "request_failed")
+            raise ForgePDMError(_error_message(detail, status), status, code)
         if not body:
             return None
         try:
             return json.loads(body.decode("utf-8"))
         except (ValueError, UnicodeError):
-            return body
+            raise ForgePDMError(
+                "ForgePDM returned an invalid response. Check the server URL and server log.",
+                code="invalid_response",
+            )
 
     @staticmethod
     def _raise_http_error(error):

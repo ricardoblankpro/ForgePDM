@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 from forgepdm.application.auth import AuthService, AuthenticationError
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.application.bom import BOMService
+from forgepdm.application.catalog import CatalogService
 from forgepdm.application.datasets import DatasetService
 from forgepdm.application.items import ItemService
 from forgepdm.application.revisions import RevisionService
@@ -67,6 +68,10 @@ def get_dataset_service(request: Request) -> DatasetService:
 
 def get_item_service(request: Request) -> ItemService:
     return request.app.state.item_service
+
+
+def get_catalog_service(request: Request) -> CatalogService:
+    return request.app.state.catalog_service
 
 
 def get_revision_service(request: Request) -> RevisionService:
@@ -195,6 +200,54 @@ def create_item(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return {**_item_response(item), "current_checkout": _checkout_response(checkout)}
+
+
+@router.get("/projects")
+def list_projects(
+    editable: bool = False,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    user: User = Depends(current_user),
+    catalog: CatalogService = Depends(get_catalog_service),
+):
+    return catalog.projects(user, editable=editable, limit=limit, offset=offset)
+
+
+@router.get("/items")
+def search_items(
+    q: str = Query(default="", max_length=200),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    user: User = Depends(current_user),
+    catalog: CatalogService = Depends(get_catalog_service),
+):
+    return catalog.search_items(user, query=q, limit=limit, offset=offset)
+
+
+@router.get("/items/{item_id}/revisions")
+def list_item_revisions(
+    item_id: UUID,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    user: User = Depends(current_user),
+    catalog: CatalogService = Depends(get_catalog_service),
+):
+    try:
+        return catalog.revisions(user, str(item_id), limit=limit, offset=offset)
+    except (NotFound, Forbidden) as error:
+        raise HTTPException(status_code=404, detail="item not found") from error
+
+
+@router.get("/revisions/{revision_id}")
+def get_revision(
+    revision_id: UUID,
+    user: User = Depends(current_user),
+    catalog: CatalogService = Depends(get_catalog_service),
+):
+    try:
+        return catalog.revision(user, str(revision_id))
+    except (NotFound, Forbidden) as error:
+        raise HTTPException(status_code=404, detail="revision not found") from error
 
 
 @router.get("/items/{item_id}")

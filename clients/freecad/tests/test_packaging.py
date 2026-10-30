@@ -51,13 +51,13 @@ assert not {'FreeCAD', 'FreeCADGui', 'PySide', 'PySide6', 'forgepdm', 'sqlite3'}
         timeout=15,
     )
     # Validation also works against the extracted distribution, not just source.
-    assert addon_tools.validate(installed) == "0.1.0"
+    assert addon_tools.validate(installed) == "0.2.0"
 
 
 @pytest.mark.parametrize(
     ("old", "new"),
     [
-        ("<version>0.1.0</version>", "<version>0.1.1</version>"),
+        ("<version>0.2.0</version>", "<version>0.1.1</version>"),
         ("<format-does-not-exist/>", ""),
         ("<classname>ForgePDMWorkbench</classname>", "<classname>DifferentWorkbench</classname>"),
         ("<name>ForgePDM</name>", ""),
@@ -119,13 +119,18 @@ def test_translation_sources_cover_command_resources(addon_root):
 
     tree = ast.parse((addon_root / "freecad/forgepdm/commands.py").read_text())
     strings = {
-        node.args[1].value
+        node.value.value
         for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "translate"
-        and isinstance(node.args[1], ast.Constant)
+        if isinstance(node, ast.Assign)
+        and isinstance(node.value, ast.Constant)
+        and isinstance(node.value.value, str)
+        and any(
+            isinstance(target, ast.Name) and target.id in {"menu_text", "tooltip"}
+            for target in node.targets
+        )
+        and node.value.value
     }
+    assert len(strings) >= 15
     catalog = etree.parse(
         str(addon_root / "freecad/forgepdm/resources/translations/ForgePDM_en.ts")
     )

@@ -1,0 +1,80 @@
+{
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "python": "3.11.14 | packaged by conda-forge | (main, Oct 13 2025, 14:25:33) [GCC 14.3.0]",
+  "qt": "6.8.3",
+  "checks": [
+    "Nine existing command IDs retained",
+    "Backend package absent from FreeCAD",
+    "Login completed",
+    "Non-secret connection settings saved",
+    "No credentials or tokens persisted",
+    "Upload completed",
+    "GUI heartbeat continues during delayed catalog HTTP",
+    "Project picker shows only authorized human-readable project",
+    "Checkout completed",
+    "CheckIn completed",
+    "Release completed",
+    "NewRevision completed",
+    "CheckIn completed",
+    "ShowBOM completed",
+    "Download completed",
+    "Selected historical revision A retrieved rather than current B",
+    "Historical CAD geometry preserved",
+    "HTTP and file transfers run outside GUI thread",
+    "Document saves and metadata changes stay on GUI thread",
+    "Logout completed",
+    "Logout clears session",
+    "Login completed",
+    "HTTP 401 clears session and gives login recovery",
+    "Login completed",
+    "Local expiry prevents network request and clears token",
+    "Network timeout reported while GUI stays responsive",
+    "Live HTTP download cancellation stops continuation",
+    "Canceled transfer leaves no destination or partial files",
+    "Expected failures are reported, not suppressed"
+  ],
+  "scope": "Real FreeCAD and isolated backend; dialog choices automated",
+  "callbacks_rebound_for_live_test": 18,
+  "result": "passed",
+  "original_documents_preserved": true,
+  "original_identity_restored": true,
+  "worker_thread_count": 2,
+  "expected_error_count": 3,
+  "recorded_at_utc": "2026-10-30T00:03:41.790402+00:00",
+  "local_test_date": "2026-10-29 (America/Sao_Paulo)",
+  "addon_version": "0.2.0",
+  "addon_pytest": {
+    "passed": 64,
+    "seconds": 0.65
+  },
+  "backend_pytest": {
+    "passed": 21,
+    "seconds": 3.45,
+    "outside_sandbox": true
+  },
+  "normal_backend_restarted": true,
+  "normal_metadata_counts_preserved": true,
+  "normal_account_catalog_check": {
+    "result": "passed",
+    "project_labels": [
+      "PRJ-001 \u2014 Prototype Project"
+    ],
+    "visible_item_count": 1
+  },
+  "test_servers_stopped": true,
+  "test_credentials_deleted": true,
+  "manual_limits": [
+    "Clean process startup after installation",
+    "Other operating systems/Qt/FreeCAD versions",
+    "Assembly reference recovery and configuration manifests"
+  ]
+}

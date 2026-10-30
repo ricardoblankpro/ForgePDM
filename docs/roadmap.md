@@ -1,13 +1,30 @@
 # ForgePDM MVP Roadmap
 
-This roadmap sequences a backend-first MVP. Each phase should include focused automated tests for domain rules and integration behavior before moving on. No application code is included in this proposal.
+This roadmap sequences a backend-first MVP. Each phase includes focused automated
+tests and actual integration evidence where available.
 
 The phase numbering below records the original MVP sequence. The approved
 development-direction roadmap now places **FreeCAD addon modernization in
 Phase 1**. Its implementation and remaining acceptance gates are recorded in
 [the Phase 1 report](freecad-addon-phase1.md) and
-[ADR-002](decisions/ADR-002-freecad-addon-packaging.md). Later phases have not
-been started by this increment.
+[ADR-002](decisions/ADR-002-freecad-addon-packaging.md).
+
+## Active development-direction roadmap
+
+| Phase | Scope | Status / next gate |
+|---|---|---|
+| 0 | Architecture review and governance | Baseline assessment and phase approvals recorded |
+| 1 | Modern FreeCAD addon packaging | Implemented; live loading and part workflows tested |
+| 2 | Initialization, connectivity and catalog browsing | Implemented; [scope and validation](freecad-addon-phase2.md) |
+| 3 | Local workspace, CAD files and reference integrity | Next; preserve dirty files and reconstruct reference graphs |
+| 4 | BOM extraction and revision-aware assembly synchronization | Depends on supported structures and Phase 3 identity mapping |
+| 5 | Robust checkout/check-in, lifecycle, revisions and datasets | Close atomicity, fencing and retry/idempotency gaps |
+| 6 | Security, testing, backup/recovery and operational hardening | Consolidate production-readiness evidence |
+| 7 | Addon Manager distribution and stable deployment | Requires licensing, distribution approval and operational gates |
+| 8 | Web interface, ERPNext and future integrations | Build on stable authoritative APIs |
+
+No phase after Phase 2 was started by the connectivity increment. The original
+MVP sequence below is historical and uses different phase numbers.
 
 ## Phase 0 — decisions and project foundation (started)
 

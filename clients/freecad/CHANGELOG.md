@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 — connectivity and catalog browsing
+
+- Run all HTTP requests and file transfers in a worker, with GUI-thread
+  continuations, progress, cooperative cancellation and no automatic retries.
+- Remember server URL, username and request timeout without storing passwords
+  or bearer tokens; clear expired/revoked sessions and provide recovery messages.
+- Select authorized projects by number/name and browse items and historical
+  revisions through additive, permission-filtered catalog API endpoints.
+- Keep existing command IDs and authoritative PDM editing rules unchanged.
+
 ## 0.1.0 — development preview
 
 - Migrate existing commands to the modern `freecad.forgepdm` namespace.

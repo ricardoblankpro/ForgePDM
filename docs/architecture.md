@@ -50,4 +50,12 @@ The initial implementation uses FastAPI with Python's SQLite driver, schema migr
 
 ## Risks and open requirements
 
+Phase 2 adds an authorized application catalog service and additive v1 reads for
+projects, item search and exact revision history/retrieval. The FreeCAD client
+uses GUI-thread workflows with worker-only HTTP/transfer requests, progress and
+cooperative cancellation; see ADR-003. Existing migrations and editing rules
+are unchanged. The atomic check-in/file-association description above remains a
+target: upload and check-in currently use separate requests and transactions,
+which Phase 5 must reconcile before production use.
+
 The legacy design does not settle authentication strength, authorization granularity, retention/deletion policy, file size limits, backup/restore, revision conflict behavior, or BOM snapshot semantics. Resolve these before production use. SQLite is appropriate for local/small-team MVP use, but concurrent multi-user writes and network filesystem behavior require explicit limits and deployment guidance. A single-server deployment with a local disk is the initial supported topology.

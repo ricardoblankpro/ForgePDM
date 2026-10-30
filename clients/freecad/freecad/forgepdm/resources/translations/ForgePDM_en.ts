@@ -15,8 +15,8 @@
       <translation>Check In Current Revision</translation>
     </message>
     <message>
-      <source>Connect this FreeCAD session to ForgePDM</source>
-      <translation>Connect this FreeCAD session to ForgePDM</translation>
+      <source>Connect to ForgePDM</source>
+      <translation>Connect to ForgePDM</translation>
     </message>
     <message>
       <source>Create / Upload Current Document</source>
@@ -27,20 +27,12 @@
       <translation>Create Next Revision</translation>
     </message>
     <message>
-      <source>Create a ForgePDM item if needed, then upload this document</source>
-      <translation>Create a ForgePDM item if needed, then upload this document</translation>
-    </message>
-    <message>
       <source>Display the current revision's nested bill of materials</source>
       <translation>Display the current revision's nested bill of materials</translation>
     </message>
     <message>
       <source>Download Item / Assembly</source>
       <translation>Download Item / Assembly</translation>
-    </message>
-    <message>
-      <source>Download the current native file and BOM component revisions</source>
-      <translation>Download the current native file and BOM component revisions</translation>
     </message>
     <message>
       <source>End the ForgePDM session</source>
@@ -59,10 +51,6 @@
       <translation>Log Out</translation>
     </message>
     <message>
-      <source>Record a change note and release your checkout</source>
-      <translation>Record a change note and release your checkout</translation>
-    </message>
-    <message>
       <source>Release Current Revision</source>
       <translation>Release Current Revision</translation>
     </message>
@@ -71,12 +59,24 @@
       <translation>Release a checked-in revision</translation>
     </message>
     <message>
+      <source>Save and upload the current document</source>
+      <translation>Save and upload the current document</translation>
+    </message>
+    <message>
+      <source>Search items and retrieve a selected revision</source>
+      <translation>Search items and retrieve a selected revision</translation>
+    </message>
+    <message>
       <source>Show ForgePDM BOM</source>
       <translation>Show ForgePDM BOM</translation>
     </message>
     <message>
       <source>Start the next Working revision from a Released item</source>
       <translation>Start the next Working revision from a Released item</translation>
+    </message>
+    <message>
+      <source>Upload saved content and release your checkout</source>
+      <translation>Upload saved content and release your checkout</translation>
     </message>
   </context>
 </TS>

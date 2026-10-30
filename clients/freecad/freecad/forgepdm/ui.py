@@ -49,3 +49,40 @@ def ask_choice(title, label, choices, default=None):
         parent_window(), title, label, choices, choices.index(initial) if initial else 0, False
     )
     return value if accepted else None
+
+
+def execute_dialog(dialog):
+    return dialog.exec() if hasattr(dialog, "exec") else dialog.exec_()
+
+
+def login_form(values):
+    dialog = QtWidgets.QDialog(parent_window())
+    dialog.setWindowTitle("Connect to ForgePDM")
+    layout = QtWidgets.QFormLayout(dialog)
+    server = QtWidgets.QLineEdit(values["url"])
+    username = QtWidgets.QLineEdit(values["username"])
+    password = QtWidgets.QLineEdit()
+    password.setEchoMode(QtWidgets.QLineEdit.Password)
+    timeout = QtWidgets.QSpinBox()
+    timeout.setRange(1, 300)
+    timeout.setValue(values["timeout"])
+    timeout.setSuffix(" seconds")
+    for label, widget in (
+        ("Server", server),
+        ("Username", username),
+        ("Password", password),
+        ("Request timeout", timeout),
+    ):
+        layout.addRow(label, widget)
+    buttons = QtWidgets.QDialogButtonBox(
+        QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel, parent=dialog
+    )
+    buttons.accepted.connect(dialog.accept)
+    buttons.rejected.connect(dialog.reject)
+    layout.addRow(buttons)
+    if not execute_dialog(dialog):
+        password.clear()
+        return None
+    result = (server.text().strip(), username.text().strip(), password.text(), timeout.value())
+    password.clear()
+    return result

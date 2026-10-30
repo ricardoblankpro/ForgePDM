@@ -9,7 +9,8 @@ import FreeCADGui
 
 from .api import ForgePDMClient, ForgePDMError
 from .session import Session
-from .ui import QtWidgets, ask_choice, ask_text, error, information, warning
+from .ui import QtWidgets, ask_choice, ask_text, execute_dialog, information, warning
+from .jobs import Request
 from .resources import icon_path
 from .i18n import translate
 
@@ -117,345 +118,388 @@ def _require_metadata(document):
 
 
 def _run(action):
+    from .tasks import run
+
+    return run(action())
+
+
+def _guard_document(name, revision_id=None):
     try:
-        action()
-    except ForgePDMError as exception:
-        error("ForgePDM", str(exception))
-    except Exception as exception:
-        error("ForgePDM", str(exception))
+        document = FreeCAD.getDocument(name)
+    except NameError:
+        document = None
+    if document is None:
+        raise RuntimeError("The document was closed. Check server state before retrying.")
+    if revision_id and _require_metadata(document).RevisionId != revision_id:
+        raise RuntimeError("The document revision changed while the request was running.")
+    return document
 
 
-class LoginCommand:
+def _select_record(title, prompt, fetch, label, args=(), kwargs=None, allow_projectless=False):
+    offset = 0
+    while True:
+        page = yield Request(
+            "Loading " + title.lower() + "…", fetch, args, dict(kwargs or {}, offset=offset)
+        )
+        records = page["items"]
+        labels = [label(record) for record in records]
+        choices = list(labels)
+        if allow_projectless:
+            choices.append("No project (administrators only)")
+        if offset:
+            choices.append("← Previous page")
+        if page["has_more"]:
+            choices.append("Next page →")
+        if not choices:
+            raise RuntimeError(
+                "No " + title.lower() + " are available. Check the search or your project access."
+            )
+        selected = ask_choice(title, prompt, choices)
+        if selected is None:
+            return None
+        if selected == "Next page →":
+            offset += page["limit"]
+        elif selected == "← Previous page":
+            offset = max(0, offset - page["limit"])
+        elif selected == "No project (administrators only)":
+            return {}
+        else:
+            return records[labels.index(selected)]
+
+
+class Command:
+    menu_text = ""
+    tooltip = ""
+    needs_document = False
+
     def GetResources(self):
         return {
             "Pixmap": icon_path(),
-            "MenuText": translate("ForgePDM", "Log In"),
-            "ToolTip": translate("ForgePDM", "Connect this FreeCAD session to ForgePDM"),
+            "MenuText": translate("ForgePDM", self.menu_text),
+            "ToolTip": translate("ForgePDM", self.tooltip),
         }
 
     def IsActive(self):
-        return True
+        return (
+            not Session.busy
+            and Session.client is not None
+            and (not self.needs_document or FreeCAD.ActiveDocument is not None)
+        )
 
     def Activated(self):
-        def action():
-            base_url = ask_text("ForgePDM Login", "Server URL", "http://127.0.0.1:8000")
-            if not base_url:
-                return
-            username = ask_text("ForgePDM Login", "Username")
-            if not username:
-                return
-            password = ask_text("ForgePDM Login", "Password", password=True)
-            if password is None:
-                return
-            client = ForgePDMClient(base_url)
-            user = client.login(username, password)
-            Session.set_client(client, user)
-            information("ForgePDM", "Logged in as {}".format(user.get("display_name", username)))
-
-        _run(action)
+        return _run(self.action)
 
 
-class LogoutCommand:
-    def GetResources(self):
-        return {
-            "Pixmap": icon_path(),
-            "MenuText": translate("ForgePDM", "Log Out"),
-            "ToolTip": translate("ForgePDM", "End the ForgePDM session"),
-        }
+class LoginCommand(Command):
+    menu_text = "Log In"
+    tooltip = "Connect to ForgePDM"
 
     def IsActive(self):
-        return Session.client is not None
+        return not Session.busy
 
-    def Activated(self):
+    def action(self):
+        from . import settings
+        from .ui import login_form
+
+        values = login_form(settings.load())
+        if values is None:
+            return
+        base_url, username, password, timeout = values
+        client = ForgePDMClient(base_url, timeout=timeout)
         try:
-            Session.clear()
-            information("ForgePDM", "Logged out")
-        except ForgePDMError as exception:
-            warning("ForgePDM", str(exception))
+            user = yield Request(
+                "Logging in…", client.login, (username, password), mutates=True, cancellable=False
+            )
+        finally:
+            password = None
+            values = None
+        previous = Session.clear()
+        Session.set_client(client, user)
+        settings.save(client.base_url, username, timeout)
+        if previous is not None:
+            try:
+                yield Request(
+                    "Closing previous session…", previous.logout, mutates=True, cancellable=False
+                )
+            except ForgePDMError:
+                warning(
+                    "ForgePDM", "Connected, but the previous server session could not be revoked."
+                )
+        information("ForgePDM", "Connected as {}".format(user.get("display_name", username)))
 
 
-class UploadCommand:
-    def GetResources(self):
-        return {
-            "Pixmap": icon_path(),
-            "MenuText": translate("ForgePDM", "Create / Upload Current Document"),
-            "ToolTip": translate(
-                "ForgePDM", "Create a ForgePDM item if needed, then upload this document"
-            ),
-        }
+class LogoutCommand(Command):
+    menu_text = "Log Out"
+    tooltip = "End the ForgePDM session"
 
-    def IsActive(self):
-        return Session.client is not None
+    def action(self):
+        client = Session.clear()
+        if client is not None:
+            try:
+                yield Request("Logging out…", client.logout, mutates=True, cancellable=False)
+            except ForgePDMError as error:
+                if error.status != 401:
+                    raise
+        information("ForgePDM", "Logged out")
 
-    def Activated(self):
-        def action():
-            client = Session.require_client()
-            document = _require_document()
+
+class UploadCommand(Command):
+    menu_text = "Create / Upload Current Document"
+    tooltip = "Save and upload the current document"
+    needs_document = True
+
+    def action(self):
+        client = Session.require_client()
+        document = _require_document()
+        document_name = document.Name
+        metadata = _metadata(document)
+        if metadata is None or not metadata.ItemId:
+            kind = ask_choice("New ForgePDM Item", "Item kind", ["part", "assembly"], "part")
+            if not kind:
+                return
+            project = yield from _select_record(
+                "Projects",
+                "Choose a project",
+                client.list_projects,
+                lambda record: record["project_number"] + " — " + record["name"],
+                kwargs={"editable": True},
+                allow_projectless=(Session.user or {}).get("role") == "admin",
+            )
+            if project is None:
+                return
+            document = _guard_document(document_name)
             local_path = _save_document(document)
-            metadata = _metadata(document)
-            if metadata is None or not metadata.ItemId:
-                kind = ask_choice("New ForgePDM Item", "Item kind", ["part", "assembly"], "part")
-                if not kind:
-                    return
-                project_id = ask_text(
-                    "New ForgePDM Item",
-                    "Project ID (UUID, not project number).\n"
-                    "Leave blank only for administrator-only items.",
-                    "",
-                )
-                if project_id is None:
-                    return
-                project_id = _project_id(project_id)
-                result = client.create_item(kind, document.Label, project_id)
-                _set_metadata(
-                    document,
-                    ItemId=result["id"],
-                    RevisionId=result["current_revision_id"],
-                    ItemNumber=result["number"],
-                    RevisionLabel="A",
-                )
-                document.recompute()
-                document.save()
-                metadata = _require_metadata(document)
-            client.upload_file(
-                metadata.RevisionId,
-                local_path,
-                dataset_type="native_cad",
-                name="Native CAD",
+            result = yield Request(
+                "Creating item…",
+                client.create_item,
+                (kind, document.Label, project.get("id")),
+                mutates=True,
+                cancellable=False,
             )
-            information(
-                "ForgePDM",
-                "Uploaded {} as {} (revision {})".format(
-                    os.path.basename(local_path), metadata.ItemNumber, metadata.RevisionLabel
-                ),
-            )
-
-        _run(action)
-
-
-class CheckoutCommand:
-    def GetResources(self):
-        return {
-            "Pixmap": icon_path(),
-            "MenuText": translate("ForgePDM", "Acquire / Renew Checkout"),
-            "ToolTip": translate("ForgePDM", "Acquire or extend the active revision checkout"),
-        }
-
-    def IsActive(self):
-        return Session.client is not None and FreeCAD.ActiveDocument is not None
-
-    def Activated(self):
-        def action():
-            document = _require_document()
-            metadata = _require_metadata(document)
-            checkout = Session.require_client().acquire_checkout(metadata.RevisionId)
-            information("ForgePDM", "Checkout held until {}".format(checkout["expires_at"]))
-
-        _run(action)
-
-
-class CheckInCommand:
-    def GetResources(self):
-        return {
-            "Pixmap": icon_path(),
-            "MenuText": translate("ForgePDM", "Check In Current Revision"),
-            "ToolTip": translate("ForgePDM", "Record a change note and release your checkout"),
-        }
-
-    def IsActive(self):
-        return Session.client is not None and FreeCAD.ActiveDocument is not None
-
-    def Activated(self):
-        def action():
-            document = _require_document()
-            metadata = _require_metadata(document)
-            note = ask_text("ForgePDM Check In", "Change note")
-            if not note:
-                return
-            _save_document(document)
-            Session.require_client().upload_file(
-                metadata.RevisionId, document.FileName, "native_cad", "Native CAD"
-            )
-            Session.require_client().checkin(metadata.RevisionId, note)
-            information("ForgePDM", "Revision checked in")
-
-        _run(action)
-
-
-class ReleaseCommand:
-    def GetResources(self):
-        return {
-            "Pixmap": icon_path(),
-            "MenuText": translate("ForgePDM", "Release Current Revision"),
-            "ToolTip": translate("ForgePDM", "Release a checked-in revision"),
-        }
-
-    def IsActive(self):
-        return Session.client is not None and FreeCAD.ActiveDocument is not None
-
-    def Activated(self):
-        def action():
-            metadata = _require_metadata(_require_document())
-            Session.require_client().transition(metadata.RevisionId, "released")
-            information("ForgePDM", "Revision released")
-
-        _run(action)
-
-
-class NewRevisionCommand:
-    def GetResources(self):
-        return {
-            "Pixmap": icon_path(),
-            "MenuText": translate("ForgePDM", "Create Next Revision"),
-            "ToolTip": translate(
-                "ForgePDM", "Start the next Working revision from a Released item"
-            ),
-        }
-
-    def IsActive(self):
-        return Session.client is not None and FreeCAD.ActiveDocument is not None
-
-    def Activated(self):
-        def action():
-            document = _require_document()
-            metadata = _require_metadata(document)
-            note = ask_text("ForgePDM New Revision", "Describe the change")
-            if not note:
-                return
-            result = Session.require_client().create_next_revision(metadata.ItemId, note)
+            document = _guard_document(document_name)
             _set_metadata(
                 document,
-                RevisionId=result["id"],
-                RevisionLabel=result["label"],
+                ItemId=result["id"],
+                RevisionId=result["current_revision_id"],
+                ItemNumber=result["number"],
+                RevisionLabel="A",
             )
-            document.recompute()
-            document.save()
-            Session.require_client().upload_file(
-                result["id"], document.FileName, "native_cad", "Native CAD"
-            )
-            information("ForgePDM", "Created and uploaded revision {}".format(result["label"]))
-
-        _run(action)
-
-
-class ShowBOMCommand:
-    def GetResources(self):
-        return {
-            "Pixmap": icon_path(),
-            "MenuText": translate("ForgePDM", "Show ForgePDM BOM"),
-            "ToolTip": translate(
-                "ForgePDM", "Display the current revision's nested bill of materials"
-            ),
-        }
-
-    def IsActive(self):
-        return Session.client is not None and FreeCAD.ActiveDocument is not None
-
-    def Activated(self):
-        def action():
-            metadata = _require_metadata(_require_document())
-            item = Session.require_client().get_item(metadata.ItemId)
-            lines = Session.require_client().get_bom(metadata.RevisionId, recursive=True)
-            text = _format_bom(lines)
-            dialog = QtWidgets.QDialog(_main_window())
-            dialog.setWindowTitle("ForgePDM BOM — {}".format(item["number"]))
-            dialog.resize(640, 480)
-            layout = QtWidgets.QVBoxLayout(dialog)
-            output = QtWidgets.QPlainTextEdit(dialog)
-            output.setReadOnly(True)
-            output.setPlainText(text or "This revision has no BOM lines.")
-            layout.addWidget(output)
-            buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok, parent=dialog)
-            buttons.accepted.connect(dialog.accept)
-            layout.addWidget(buttons)
-            dialog.exec_() if hasattr(dialog, "exec_") else dialog.exec()
-
-        _run(action)
+            local_path = _save_document(document)
+            metadata = _require_metadata(document)
+        else:
+            local_path = _save_document(document)
+        revision_id, number, label = (
+            metadata.RevisionId,
+            metadata.ItemNumber,
+            metadata.RevisionLabel,
+        )
+        yield Request(
+            "Uploading native CAD…",
+            client.upload_file,
+            (revision_id, local_path, "native_cad", "Native CAD"),
+            mutates=True,
+        )
+        information(
+            "ForgePDM",
+            "Uploaded {} as {} (revision {})".format(os.path.basename(local_path), number, label),
+        )
 
 
-class DownloadCommand:
-    def GetResources(self):
-        return {
-            "Pixmap": icon_path(),
-            "MenuText": translate("ForgePDM", "Download Item / Assembly"),
-            "ToolTip": translate(
-                "ForgePDM", "Download the current native file and BOM component revisions"
-            ),
-        }
+class CheckoutCommand(Command):
+    menu_text = "Acquire / Renew Checkout"
+    tooltip = "Acquire or extend the active revision checkout"
+    needs_document = True
 
-    def IsActive(self):
-        return Session.client is not None
+    def action(self):
+        metadata = _require_metadata(_require_document())
+        result = yield Request(
+            "Acquiring checkout…",
+            Session.require_client().acquire_checkout,
+            (metadata.RevisionId,),
+            mutates=True,
+            cancellable=False,
+        )
+        information("ForgePDM", "Checkout held until {}".format(result["expires_at"]))
 
-    def Activated(self):
-        def action():
-            client = Session.require_client()
-            item_id = ask_text("Download from ForgePDM", "Item UUID")
-            if not item_id:
-                return
-            destination = QtWidgets.QFileDialog.getExistingDirectory(
-                _main_window(), "Choose download folder", os.path.expanduser("~")
-            )
-            if not destination:
-                return
-            item = client.get_item(item_id)
-            revision = item["current_revision"]
-            downloaded = _download_revision(
+
+class CheckInCommand(Command):
+    menu_text = "Check In Current Revision"
+    tooltip = "Upload saved content and release your checkout"
+    needs_document = True
+
+    def action(self):
+        client = Session.require_client()
+        document = _require_document()
+        revision_id = _require_metadata(document).RevisionId
+        note = ask_text("ForgePDM Check In", "Change note")
+        if not note:
+            return
+        path = _save_document(document)
+        yield Request(
+            "Uploading native CAD…",
+            client.upload_file,
+            (revision_id, path, "native_cad", "Native CAD"),
+            mutates=True,
+        )
+        yield Request(
+            "Checking in revision…",
+            client.checkin,
+            (revision_id, note),
+            mutates=True,
+            cancellable=False,
+        )
+        information("ForgePDM", "Revision checked in")
+
+
+class ReleaseCommand(Command):
+    menu_text = "Release Current Revision"
+    tooltip = "Release a checked-in revision"
+    needs_document = True
+
+    def action(self):
+        revision_id = _require_metadata(_require_document()).RevisionId
+        yield Request(
+            "Releasing revision…",
+            Session.require_client().transition,
+            (revision_id, "released"),
+            mutates=True,
+            cancellable=False,
+        )
+        information("ForgePDM", "Revision released")
+
+
+class NewRevisionCommand(Command):
+    menu_text = "Create Next Revision"
+    tooltip = "Start the next Working revision from a Released item"
+    needs_document = True
+
+    def action(self):
+        client = Session.require_client()
+        document = _require_document()
+        name = document.Name
+        metadata = _require_metadata(document)
+        revision_id = metadata.RevisionId
+        note = ask_text("ForgePDM New Revision", "Describe the change")
+        if not note:
+            return
+        result = yield Request(
+            "Creating next revision…",
+            client.create_next_revision,
+            (metadata.ItemId, note),
+            mutates=True,
+            cancellable=False,
+        )
+        document = _guard_document(name, revision_id)
+        _set_metadata(document, RevisionId=result["id"], RevisionLabel=result["label"])
+        path = _save_document(document)
+        yield Request(
+            "Uploading native CAD…",
+            client.upload_file,
+            (result["id"], path, "native_cad", "Native CAD"),
+            mutates=True,
+        )
+        information("ForgePDM", "Created and uploaded revision {}".format(result["label"]))
+
+
+class ShowBOMCommand(Command):
+    menu_text = "Show ForgePDM BOM"
+    tooltip = "Display the current revision's nested bill of materials"
+    needs_document = True
+
+    def action(self):
+        client = Session.require_client()
+        metadata = _require_metadata(_require_document())
+        number, revision_id = metadata.ItemNumber, metadata.RevisionId
+        lines = yield Request("Loading BOM…", client.get_bom, (revision_id,), {"recursive": True})
+        dialog = QtWidgets.QDialog(_main_window())
+        dialog.setWindowTitle("ForgePDM BOM — " + number)
+        dialog.resize(640, 480)
+        layout = QtWidgets.QVBoxLayout(dialog)
+        output = QtWidgets.QPlainTextEdit(dialog)
+        output.setReadOnly(True)
+        output.setPlainText(_format_bom(lines) or "This revision has no BOM lines.")
+        layout.addWidget(output)
+        buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok, parent=dialog)
+        buttons.accepted.connect(dialog.accept)
+        layout.addWidget(buttons)
+        execute_dialog(dialog)
+
+
+class DownloadCommand(Command):
+    menu_text = "Download Item / Assembly"
+    tooltip = "Search items and retrieve a selected revision"
+
+    def action(self):
+        client = Session.require_client()
+        query = ask_text(
+            "Find ForgePDM Item", "Item number, name or description (blank to browse)", ""
+        )
+        if query is None:
+            return
+        item = yield from _select_record(
+            "Items",
+            "Choose an item",
+            client.search_items,
+            lambda record: record["number"] + " — " + record["name"],
+            args=(query,),
+        )
+        if item is None:
+            return
+        revision = yield from _select_record(
+            "Revisions",
+            "Choose the revision to retrieve",
+            client.list_revisions,
+            lambda record: record["label"] + " — " + record["lifecycle_state"],
+            args=(item["id"],),
+        )
+        if revision is None:
+            return
+        destination = QtWidgets.QFileDialog.getExistingDirectory(
+            _main_window(), "Choose download folder", os.path.expanduser("~")
+        )
+        if not destination:
+            return
+        downloaded = yield from _download_revision(
+            client, revision["id"], item["number"], revision["label"], destination
+        )
+        if downloaded is None:
+            raise RuntimeError("No native CAD dataset is attached to the selected revision")
+        lines = yield Request(
+            "Loading assembly structure…", client.get_bom, (revision["id"],), {"recursive": True}
+        )
+        seen = {revision["id"]}
+        for component in _walk_bom(lines):
+            component_id = component["component_revision_id"]
+            if component_id in seen:
+                continue
+            seen.add(component_id)
+            path = yield from _download_revision(
                 client,
-                revision["id"],
-                item["number"],
-                revision["label"],
+                component_id,
+                component["item_number"],
+                component["revision_label"],
                 destination,
             )
-            if downloaded is None:
-                raise RuntimeError("No native_cad dataset is attached to the current revision")
-            skipped = []
-            try:
-                lines = client.get_bom(revision["id"], recursive=True)
-            except ForgePDMError as exception:
-                lines = []
-                skipped.append(str(exception))
-            for component in _walk_bom(lines):
-                try:
-                    path = _download_revision(
-                        client,
-                        component["component_revision_id"],
-                        component["item_number"],
-                        component["revision_label"],
-                        destination,
-                    )
-                    if path is None:
-                        skipped.append(
-                            "{} Rev{} has no native CAD dataset".format(
-                                component["item_number"], component["revision_label"]
-                            )
-                        )
-                except ForgePDMError as exception:
-                    skipped.append(
-                        "{} Rev{}: {}".format(
-                            component["item_number"], component["revision_label"], exception
-                        )
-                    )
-            document = FreeCAD.openDocument(downloaded)
-            _set_metadata(
-                document,
-                ItemId=item["id"],
-                RevisionId=revision["id"],
-                ItemNumber=item["number"],
-                RevisionLabel=revision["label"],
-            )
-            document.save()
-            message = "Downloaded and opened {} Rev{}".format(item["number"], revision["label"])
-            if skipped:
-                message += "\n\nSome BOM files were not downloaded:\n" + "\n".join(skipped)
-                warning("ForgePDM", message)
-            else:
-                information("ForgePDM", message)
-
-        _run(action)
+            if path is None:
+                raise RuntimeError(
+                    "Assembly retrieval is incomplete: a component has no native CAD dataset. The assembly was not opened."
+                )
+        document = FreeCAD.openDocument(downloaded)
+        _set_metadata(
+            document,
+            ItemId=item["id"],
+            RevisionId=revision["id"],
+            ItemNumber=item["number"],
+            RevisionLabel=revision["label"],
+        )
+        document.save()
+        information(
+            "ForgePDM", "Downloaded and opened {} Rev{}".format(item["number"], revision["label"])
+        )
 
 
 def _download_revision(client, revision_id, item_number, revision_label, destination):
-    datasets = client.list_datasets(revision_id)
+    datasets = yield Request("Loading datasets…", client.list_datasets, (revision_id,))
     native = [dataset for dataset in datasets if dataset["dataset_type"] == "native_cad"]
     if not native:
         return None
@@ -465,14 +509,16 @@ def _download_revision(client, revision_id, item_number, revision_label, destina
     file_record = dataset["files"][0]
     extension = os.path.splitext(file_record["original_filename"])[1] or ".FCStd"
     stem = re.sub(r"[^A-Za-z0-9_.-]", "_", "{}_Rev{}".format(item_number, revision_label))
-    filename = stem + extension
-    path = os.path.join(destination, filename)
+    path = os.path.join(destination, stem + extension)
     suffix = 1
     while os.path.exists(path):
-        filename = "{}_{}{}".format(stem, suffix, extension)
-        path = os.path.join(destination, filename)
+        path = os.path.join(destination, "{}_{}{}".format(stem, suffix, extension))
         suffix += 1
-    return client.download_file(file_record["id"], path)
+    return (
+        yield Request(
+            "Downloading " + item_number + "…", client.download_file, (file_record["id"], path)
+        )
+    )
 
 
 def _walk_bom(lines):

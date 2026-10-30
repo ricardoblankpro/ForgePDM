@@ -22,6 +22,21 @@ def commands(addon_root, monkeypatch):
     for name, module in (("FreeCAD", app), ("FreeCADGui", gui), ("PySide", qt)):
         monkeypatch.setitem(sys.modules, name, module)
     module = importlib.import_module("freecad.forgepdm.commands")
+    module._test_errors = []
+
+    def run(action):
+        workflow = action()
+        value = None
+        try:
+            while True:
+                request = workflow.send(value)
+                value = request.function(*request.args, **request.kwargs)
+        except StopIteration:
+            pass
+        except Exception as exception:
+            module._test_errors.append(str(exception))
+
+    monkeypatch.setattr(module, "_run", run)
     yield module
     for name in set(sys.modules) - before:
         if name == "freecad" or name.startswith("freecad."):
@@ -31,6 +46,8 @@ def commands(addon_root, monkeypatch):
 class Document:
     Label = "Example"
 
+    Name = "ExampleDocument"
+
     def __init__(self, path):
         self.FileName = str(path) if path else ""
         self.saved = []
@@ -38,6 +55,9 @@ class Document:
 
     def recompute(self):
         self.recomputes += 1
+
+    def getObject(self, name):
+        return None
 
     def save(self):
         self.saved.append(("save", self.FileName))
@@ -108,10 +128,19 @@ def test_cancelled_copy_does_not_create_server_item(commands, monkeypatch, tmp_p
     choose_file(commands, monkeypatch, None)
     monkeypatch.setattr(commands.FreeCAD, "ActiveDocument", document)
     calls = []
-    client = SimpleNamespace(create_item=lambda *args: calls.append(args))
+    client = SimpleNamespace(
+        create_item=lambda *args: calls.append(args),
+        list_projects=lambda **kwargs: {
+            "items": [{"id": "project", "project_number": "TEST", "name": "Test"}],
+            "limit": 50,
+            "offset": 0,
+            "has_more": False,
+        },
+    )
     monkeypatch.setattr(commands.Session, "require_client", lambda: client)
-    errors = []
-    monkeypatch.setattr(commands, "error", lambda title, message: errors.append(message))
+    errors = commands._test_errors
+    monkeypatch.setattr(commands, "ask_choice", lambda title, prompt, choices, *args: choices[0])
+    monkeypatch.setattr(commands, "_guard_document", lambda *args: document)
     commands.UploadCommand().Activated()
     assert errors == ["Save the document before uploading"]
     assert not document.saved
@@ -142,29 +171,45 @@ def test_save_failure_reports_path_and_recovery(commands, monkeypatch, tmp_path)
         commands._save_document(document)
 
 
-@pytest.mark.parametrize("value", ["241205", None])
-def test_invalid_or_cancelled_project_does_not_create_item(commands, monkeypatch, value):
-    calls, errors = [], []
+def test_cancelled_project_does_not_create_item(commands, monkeypatch):
+    calls = []
     document = Document(None)
     monkeypatch.setattr(commands, "_require_document", lambda: document)
-    monkeypatch.setattr(commands, "_save_document", lambda doc: "/tmp/example.FCStd")
     monkeypatch.setattr(commands, "_metadata", lambda doc: None)
-    monkeypatch.setattr(commands, "ask_choice", lambda *args: "part")
-    monkeypatch.setattr(commands, "ask_text", lambda *args: value)
-    monkeypatch.setattr(commands, "error", lambda title, message: errors.append(message))
-    client = SimpleNamespace(create_item=lambda *args: calls.append(args))
+    monkeypatch.setattr(
+        commands,
+        "ask_choice",
+        lambda title, *args: "part" if title == "New ForgePDM Item" else None,
+    )
+    client = SimpleNamespace(
+        create_item=lambda *args: calls.append(args),
+        list_projects=lambda **kwargs: {
+            "items": [{"id": "project", "project_number": "TEST", "name": "Test"}],
+            "limit": 50,
+            "offset": 0,
+            "has_more": False,
+        },
+    )
     monkeypatch.setattr(commands.Session, "require_client", lambda: client)
     commands.UploadCommand().Activated()
     assert not calls
-    if value is None:
-        assert not errors
-    else:
-        assert len(errors) == 1
-        assert "not its project number" in errors[0]
-        assert "uuid_parsing" not in errors[0]
+    assert not commands._test_errors
+    assert not document.saved
 
 
 def test_project_id_accepts_uuid_and_optional_blank(commands):
     project = "d96e592c-d42c-4c88-8920-2bfa2c944c1f"
     assert commands._project_id("  " + project.upper() + "  ") == project
     assert commands._project_id("   ") is None
+
+
+def test_logout_accepts_already_expired_server_session(commands, monkeypatch):
+    client = SimpleNamespace(logout=lambda: None)
+    monkeypatch.setattr(commands.Session, "clear", lambda: client)
+    messages = []
+    monkeypatch.setattr(commands, "information", lambda title, message: messages.append(message))
+    workflow = commands.LogoutCommand().action()
+    next(workflow)
+    with pytest.raises(StopIteration):
+        workflow.throw(commands.ForgePDMError("expired", 401))
+    assert messages == ["Logged out"]
