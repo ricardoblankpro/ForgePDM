@@ -29,6 +29,14 @@ def api(addon_root):
         ),
         ("get_item", ("item",), "GET", "/api/v1/items/item", None),
         ("get_bom", ("rev", True), "GET", "/api/v1/revisions/rev/bom?recursive=true", None),
+        ("bom_snapshot", ("rev",), "GET", "/api/v1/revisions/rev/bom/snapshot", None),
+        (
+            "synchronize_bom",
+            ("rev", [], {"token": "snapshot", "checkout_id": "lease"}),
+            "PUT",
+            "/api/v1/revisions/rev/bom/synchronize",
+            {"lines": [], "expected_token": "snapshot", "expected_checkout_id": "lease"},
+        ),
         ("list_datasets", ("rev",), "GET", "/api/v1/revisions/rev/datasets", None),
         (
             "checkin",

@@ -6,7 +6,9 @@ FastAPI service, password/bearer authentication, project roles, SQLite-backed
 Items/revisions/datasets/BOMs, exclusive checkout, lifecycle workflows and SHA-256
 file storage. The independently packaged FreeCAD Workbench provides responsive
 API workflows, authorized project/item browsing and historical revision selection.
-Assembly reference reconstruction and operational hardening remain future work.
+Managed CAD workspaces reconstruct pinned assembly references, and the Workbench
+can review and synchronize engineering BOMs for supported App::Link structures.
+Atomic check-in and operational hardening remain future work.
 
 ## Local development
 

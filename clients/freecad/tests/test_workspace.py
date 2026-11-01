@@ -205,14 +205,16 @@ def test_missing_manifest_is_allowed_only_for_self_contained_legacy_files(tmp_pa
         workspace.retrieve(client, tmp_path, *assembly)
 
 
-def test_bom_revision_mismatch_stops_retrieval_before_open(tmp_path):
+def test_engineering_bom_difference_does_not_substitute_cad_dependencies(tmp_path):
     client = Client()
     child = client.add(native())
     root = client.add(native([("Link", "old.FCStd", "Box")]), "assembly", [reference(child)])
     client.get_bom = lambda revision_id: [{"component_revision_id": str(uuid4())}]
-    with pytest.raises(workspace.WorkspaceError, match="BOM"):
-        workspace.retrieve(client, tmp_path, *root)
-    assert not (tmp_path / "configurations").exists()
+    result = workspace.retrieve(client, tmp_path, *root)
+    documents = result["ledger"]["documents"]
+    root_entry = next(entry for entry in documents if entry["file_id"] == root[2])
+    assert root_entry["bom_revision_check"] == "differs"
+    assert root_entry["references"][0]["target_revision_id"] == child[0]
 
 
 def test_configuration_remains_relocatable(tmp_path):
@@ -249,6 +251,45 @@ def test_dirty_linked_component_is_not_silently_rebound(tmp_path):
     }
     with pytest.raises(workspace.WorkspaceError, match="unuploaded"):
         workspace.bind_references(client, [ref])
+
+
+@pytest.mark.parametrize("fault", [None, "root_changed", "child_reuploaded", "missing_manifest"])
+def test_bom_preparation_requires_the_uploaded_root_and_exact_child_snapshot(tmp_path, fault):
+    from freecad.forgepdm.api import ForgePDMClient
+
+    client = Client()
+    child = Path(workspace.prepare_working(client.base_url, tmp_path))
+    child.write_bytes(native())
+    child_revision, child_item = str(uuid4()), str(uuid4())
+    workspace.upload(client, str(child), child_revision, child_item, [])
+    root = Path(workspace.prepare_working(client.base_url, tmp_path))
+    root.write_bytes(native([("Link", str(child), "Box")]))
+    references = [
+        {
+            "object_name": "Link",
+            "property_name": "LinkedObject",
+            "target_path": str(child),
+            "target_object_name": "Box",
+            "target_item_id": child_item,
+            "target_revision_id": child_revision,
+        }
+    ]
+    revision = str(uuid4())
+    workspace.upload(client, str(root), revision, str(uuid4()), references)
+    if fault == "root_changed":
+        root.write_bytes(native(extra="<Changed/>"))
+    elif fault == "child_reuploaded":
+        child.write_bytes(native(extra="<Changed/>"))
+        workspace.upload(client, str(child), child_revision, child_item, [])
+    elif fault == "missing_manifest":
+        client.get_manifest = lambda dataset: None
+    if fault:
+        with pytest.raises(workspace.WorkspaceError):
+            ForgePDMClient.prepare_cad_bom(client, str(root), revision, references)
+    else:
+        result = ForgePDMClient.prepare_cad_bom(client, str(root), revision, references)
+        assert result["references"][0]["target_revision_id"] == child_revision
+        assert result["source_hash"] == workspace.digest(root)[0]
 
 
 def test_snapshot_upload_does_not_read_later_working_file_edits(tmp_path):
@@ -389,8 +430,10 @@ def test_recovery_guard_prevents_competing_dead_lock_recovery(tmp_path):
 def test_archive_rewrite_honors_cancellation_without_changing_source(tmp_path):
     client = Client()
     root = client.add(native())
+
     def cancelled():
         raise RuntimeError("cancelled during archive rewrite")
+
     source = tmp_path / "source.FCStd"
     source.write_bytes(client.files[root[2]])
     with pytest.raises(RuntimeError, match="cancelled"):

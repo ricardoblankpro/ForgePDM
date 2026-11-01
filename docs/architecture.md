@@ -65,4 +65,9 @@ workspaces; see ADR-004. Migration 6 is additive. Exact revision/dataset/file/ob
 bindings are independent of the engineering BOM. The supported FreeCAD profile
 reconstructs whole-object external App::Link graphs after byte verification and
 relative-path rewriting, before opening files. Engineering occurrence/quantity
-synchronization and atomic check-in remain Phases 4 and 5 respectively.
+synchronization is implemented by Phase 4's explicit occurrence selection and
+reviewed replacement workflow; see ADR-005. Additive synchronization endpoints
+compare the reviewed BOM snapshot and checkout ID within the write transaction.
+CAD reconstruction follows manifest pins independently of engineering selection;
+revision-set differences are recorded rather than rejected. Atomic check-in and
+general mutation idempotency remain Phase 5.

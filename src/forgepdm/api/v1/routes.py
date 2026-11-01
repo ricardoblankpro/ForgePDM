@@ -122,6 +122,11 @@ class ReplaceBOMRequest(BaseModel):
     lines: list[BOMLineRequest]
 
 
+class SynchronizeBOMRequest(ReplaceBOMRequest):
+    expected_token: str = Field(pattern=r"^[0-9a-f]{64}$")
+    expected_checkout_id: UUID
+
+
 class CADReferenceRequest(BaseModel):
     model_config = {"extra": "forbid"}
     object_name: str = Field(min_length=1, max_length=200)
@@ -182,9 +187,7 @@ def get_current_user(user: User = Depends(current_user)):
     return _user_response(user)
 
 
-@router.post(
-    "/auth/logout", status_code=status.HTTP_204_NO_CONTENT, response_class=Response
-)
+@router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 def logout(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     user: User = Depends(current_user),
@@ -424,9 +427,7 @@ def create_next_revision(
     revisions: RevisionService = Depends(get_revision_service),
 ):
     try:
-        revision, checkout = revisions.create_next_revision(
-            user, str(item_id), payload.change_note
-        )
+        revision, checkout = revisions.create_next_revision(user, str(item_id), payload.change_note)
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Forbidden as error:
@@ -484,6 +485,54 @@ def replace_bom(
                 }
                 for line in payload.lines
             ],
+        )
+    except NotFound as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except Forbidden as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except Conflict as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.get("/revisions/{revision_id}/bom/snapshot")
+def bom_snapshot(
+    revision_id: UUID,
+    user: User = Depends(current_user),
+    bom: BOMService = Depends(get_bom_service),
+):
+    try:
+        return bom.synchronization_snapshot(user, str(revision_id))
+    except NotFound as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except Forbidden as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except Conflict as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@router.put("/revisions/{revision_id}/bom/synchronize")
+def synchronize_bom(
+    revision_id: UUID,
+    payload: SynchronizeBOMRequest,
+    user: User = Depends(current_user),
+    bom: BOMService = Depends(get_bom_service),
+):
+    try:
+        return bom.replace_bom(
+            user,
+            str(revision_id),
+            [
+                {
+                    "component_revision_id": str(line.component_revision_id),
+                    "quantity": line.quantity,
+                    "position": line.position,
+                }
+                for line in payload.lines
+            ],
+            expected_token=payload.expected_token,
+            expected_checkout_id=str(payload.expected_checkout_id),
         )
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
@@ -600,7 +649,9 @@ def download_file(
         )
     except (BlobNotFound, BlobIntegrityError) as error:
         raise HTTPException(status_code=500, detail="stored file integrity check failed") from error
-    return FileResponse(path, media_type=file_record.media_type, filename=file_record.original_filename)
+    return FileResponse(
+        path, media_type=file_record.media_type, filename=file_record.original_filename
+    )
 
 
 @router.get("/datasets/{dataset_id}/manifest")
@@ -614,7 +665,9 @@ def get_dataset_manifest(
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Forbidden as error:
-        raise HTTPException(status_code=403, detail="CAD dependency is not available to this user") from error
+        raise HTTPException(
+            status_code=403, detail="CAD dependency is not available to this user"
+        ) from error
 
 
 @router.post("/datasets/{dataset_id}/manifest", status_code=status.HTTP_201_CREATED)
@@ -638,7 +691,9 @@ def attach_dataset_manifest(
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Forbidden as error:
-        raise HTTPException(status_code=403, detail="CAD dependency is not available to this user") from error
+        raise HTTPException(
+            status_code=403, detail="CAD dependency is not available to this user"
+        ) from error
     except Conflict as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     except ValueError as error:

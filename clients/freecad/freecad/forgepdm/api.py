@@ -234,6 +234,56 @@ class ForgePDMClient:
             "GET", "/api/v1/revisions/" + self._quote(revision_id) + "/bom" + query
         )
 
+    def bom_snapshot(self, revision_id):
+        return self._json_request(
+            "GET", "/api/v1/revisions/" + self._quote(revision_id) + "/bom/snapshot"
+        )
+
+    def synchronize_bom(self, revision_id, lines, snapshot):
+        return self._json_request(
+            "PUT",
+            "/api/v1/revisions/" + self._quote(revision_id) + "/bom/synchronize",
+            {
+                "lines": lines,
+                "expected_token": snapshot["token"],
+                "expected_checkout_id": snapshot["checkout_id"],
+            },
+        )
+
+    def prepare_cad_bom(self, path, revision_id, references):
+        from .workspace import binding, bind_references, digest, WorkspaceError
+        from .fcstd import validate
+
+        value = binding(path, self.base_url)
+        entry = value["entry"]
+        current, _size = digest(path, self._checkpoint)
+        if entry["revision_id"] != revision_id or current != entry["working_hash"]:
+            raise WorkspaceError("Upload the saved assembly before synchronizing its BOM")
+        manifest = self.get_manifest(entry["dataset_id"])
+        if (
+            manifest is None
+            or manifest["source_file_id"] != entry["file_id"]
+            or manifest["profile"] != "freecad-app-link-v1"
+        ):
+            raise WorkspaceError("The assembly needs an uploaded pinned reference manifest")
+        validate(path, manifest["references"])
+        bound = bind_references(self, references)
+        fields = ("target_revision_id", "target_dataset_id", "target_file_id", "target_object_name")
+        pins = {tuple(ref[field] for field in fields) for ref in manifest["references"]}
+        if any(tuple(ref[field] for field in fields) not in pins for ref in bound):
+            raise WorkspaceError(
+                "CAD occurrences differ from the uploaded assembly pins; upload again"
+            )
+        for ref, captured in zip(bound, references):
+            ref["component_label"] = captured.get("component_label", ref["target_revision_id"])
+        return {"references": bound, "source_hash": current}
+
+    def synchronize_cad_bom(self, path, revision_id, references, source_hash, lines, snapshot):
+        prepared = self.prepare_cad_bom(path, revision_id, references)
+        if prepared["source_hash"] != source_hash:
+            raise ForgePDMError("The assembly changed after review. Prepare a new BOM proposal.")
+        return self.synchronize_bom(revision_id, lines, snapshot)
+
     def list_datasets(self, revision_id):
         return self._json_request(
             "GET", "/api/v1/revisions/" + self._quote(revision_id) + "/datasets"

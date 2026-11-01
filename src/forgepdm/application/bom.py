@@ -1,7 +1,8 @@
 """Revision-bound assembly structures and where-used queries."""
 
+import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
@@ -22,7 +23,40 @@ class BOMService:
         self.authorization = authorization
         self.revisions = revisions
 
-    def replace_bom(self, user: User, parent_revision_id: str, requested_lines: list[dict]) -> list[dict]:
+    @staticmethod
+    def _token(connection, revision_id):
+        rows = connection.execute(
+            "SELECT id, component_revision_id, quantity, position FROM bom_lines "
+            "WHERE parent_revision_id=? ORDER BY position",
+            (revision_id,),
+        ).fetchall()
+        return hashlib.sha256(json.dumps([list(row) for row in rows]).encode()).hexdigest()
+
+    def synchronization_snapshot(self, user, revision_id):
+        with self.database.transaction() as connection:
+            self.authorization.require_edit_revision(user, revision_id, connection)
+            checkout = self.revisions.require_checkout_owner(user, revision_id, connection)
+            kind = connection.execute(
+                "SELECT i.kind FROM items i JOIN item_revisions r ON r.item_id=i.id WHERE r.id=?",
+                (revision_id,),
+            ).fetchone()["kind"]
+            if kind != "assembly":
+                raise Conflict("BOM synchronization requires an assembly revision")
+            return {
+                "lines": self._read_bom(connection, user, revision_id, False, 1, set()),
+                "token": self._token(connection, revision_id),
+                "checkout_id": checkout.id,
+            }
+
+    def replace_bom(
+        self,
+        user: User,
+        parent_revision_id: str,
+        requested_lines: list[dict],
+        *,
+        expected_token=None,
+        expected_checkout_id=None,
+    ) -> list[dict]:
         prepared: list[tuple[str, Decimal, int]] = []
         positions: set[int] = set()
         for requested in requested_lines:
@@ -39,10 +73,17 @@ class BOMService:
             positions.add(position)
             prepared.append((component_revision_id, quantity, position))
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         with self.database.transaction() as connection:
             self.authorization.require_edit_revision(user, parent_revision_id, connection)
-            self.revisions.require_checkout_owner(user, parent_revision_id, connection)
+            checkout = self.revisions.require_checkout_owner(user, parent_revision_id, connection)
+            if expected_checkout_id is not None and checkout.id != expected_checkout_id:
+                raise Conflict("checkout changed; prepare a new BOM proposal")
+            if (
+                expected_token is not None
+                and self._token(connection, parent_revision_id) != expected_token
+            ):
+                raise Conflict("BOM changed; prepare a new BOM proposal")
             parent = connection.execute(
                 "SELECT r.item_id, i.kind FROM item_revisions r JOIN items i ON i.id = r.item_id "
                 "WHERE r.id = ?",
@@ -64,7 +105,9 @@ class BOMService:
                     raise Conflict("obsolete revisions cannot be used as BOM components")
                 self.authorization.require_read_revision(user, component_revision_id, connection)
 
-            connection.execute("DELETE FROM bom_lines WHERE parent_revision_id = ?", (parent_revision_id,))
+            connection.execute(
+                "DELETE FROM bom_lines WHERE parent_revision_id = ?", (parent_revision_id,)
+            )
             new_ids = []
             for component_revision_id, quantity, position in prepared:
                 cycle = connection.execute(
@@ -104,7 +147,8 @@ class BOMService:
                     json.dumps({"line_count": len(new_ids)}),
                 ),
             )
-        return self.get_bom(user, parent_revision_id)
+            result = self._read_bom(connection, user, parent_revision_id, False, 1, set())
+        return result
 
     def get_bom(self, user: User, parent_revision_id: str, recursive: bool = False) -> list[dict]:
         with self.database.connection() as connection:

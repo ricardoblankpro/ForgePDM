@@ -13,7 +13,8 @@ from .ui import QtWidgets, ask_choice, ask_text, execute_dialog, information, wa
 from .jobs import Request
 from .resources import icon_path
 from .i18n import translate
-from . import cad, workspace
+from . import bom, cad, workspace
+from .ui import select_bom_occurrences, review_bom
 
 
 METADATA_OBJECT = "ForgePDM_Metadata"
@@ -110,6 +111,10 @@ def _save_document(document):
     saved_path = os.path.abspath(document.FileName)
     if not os.path.isfile(saved_path):
         raise RuntimeError("FreeCAD did not create the saved file: '{}'".format(saved_path))
+    # App.Document.save() leaves Gui.Document.Modified set in FreeCAD 1.1.
+    # Clear it only after successful synchronous save and file verification.
+    if hasattr(FreeCADGui, "getDocument"):
+        FreeCADGui.getDocument(document.Name).Modified = False
     return saved_path
 
 
@@ -528,7 +533,7 @@ class NewRevisionCommand(Command):
 class ShowBOMCommand(Command):
     icon_name = "bom"
     menu_text = "Show ForgePDM BOM"
-    tooltip = "Display the current revision's nested bill of materials"
+    tooltip = "Display the nested BOM or review and synchronize CAD occurrences"
     needs_document = True
 
     def action(self):
@@ -546,8 +551,62 @@ class ShowBOMCommand(Command):
         layout.addWidget(output)
         buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok, parent=dialog)
         buttons.accepted.connect(dialog.accept)
+        synchronize = QtWidgets.QPushButton("Synchronize from CAD…")
+        synchronize.clicked.connect(dialog.accept)
+        requested = []
+        synchronize.clicked.connect(lambda: requested.append(True))
+        layout.addWidget(synchronize)
         layout.addWidget(buttons)
         execute_dialog(dialog)
+        if requested:
+            yield from _synchronize_bom(client, revision_id)
+
+
+def _synchronize_bom(client, revision_id):
+    document = _require_document()
+    name = document.Name
+    if _require_metadata(document).RevisionId != revision_id:
+        raise RuntimeError("Select the original assembly before synchronizing its BOM")
+    if cad.document_modified(document):
+        raise RuntimeError("Save/upload the assembly before synchronizing its BOM")
+    references = cad.capture_bom(document)
+    path = document.FileName
+    prepared = yield Request(
+        "Verifying uploaded CAD occurrences…",
+        client.prepare_cad_bom,
+        (path, revision_id, references),
+    )
+    snapshot = yield Request("Loading editable BOM snapshot…", client.bom_snapshot, (revision_id,))
+    selected = select_bom_occurrences(prepared["references"])
+    if selected is None:
+        return
+    proposal = bom.propose_lines(
+        {"profile": "freecad-app-link-v1", "references": prepared["references"]}, selected
+    )
+    if not review_bom(snapshot["lines"], proposal):
+        return
+    current = _guard_document(name, revision_id)
+    if (
+        cad.document_modified(current)
+        or current.FileName != path
+        or cad.capture_bom(current) != references
+    ):
+        raise RuntimeError("CAD occurrences changed during review. Prepare a new BOM proposal.")
+    yield Request(
+        "Synchronizing approved BOM…",
+        client.synchronize_cad_bom,
+        (
+            path,
+            revision_id,
+            references,
+            prepared["source_hash"],
+            [line.as_payload() for line in proposal],
+            snapshot,
+        ),
+        mutates=True,
+        cancellable=False,
+    )
+    information("ForgePDM", "The reviewed engineering BOM was synchronized.")
 
 
 class DownloadCommand(Command):

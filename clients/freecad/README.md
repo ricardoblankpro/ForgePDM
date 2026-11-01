@@ -17,7 +17,7 @@ uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.
 uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.py build
 ```
 
-The output is `clients/freecad/dist/ForgePDM-0.3.0.zip`. Create a `ForgePDM`
+The output is `clients/freecad/dist/ForgePDM-0.4.0.zip`. Create a `ForgePDM`
 directory inside your FreeCAD user `Mod` directory and extract the archive there.
 The resulting layout must be `Mod/ForgePDM/package.xml` and
 `Mod/ForgePDM/freecad/forgepdm/init_gui.py`. Do not extract into an extra nested
@@ -45,7 +45,12 @@ Select **View → Workbench → ForgePDM**. The backend must be running and reac
 3. **Acquire / Renew Checkout**, **Check In Current Revision**, and **Release Current Revision** manage the current revision. Check-in uploads the saved native file first and then releases the checkout. The intended workflow is check-in before release; release prerequisites remain enforced by the existing backend.
 4. **Create Next Revision** creates the next Working revision in a separate managed file, updates the local metadata and uploads its native snapshot, preserving the previous revision file.
 5. **Download Item / Assembly** searches by item number, name or description (blank to browse), offers pages of matching items, then lets you select a revision, including historical revisions. Select an exact native snapshot if several exist. It retrieves the pinned CAD reference graph into a new configuration and verifies external links before completion. Missing/inaccessible components stop retrieval before opening the assembly.
-6. **Show ForgePDM BOM** displays the current revision's recursive BOM.
+6. **Show ForgePDM BOM** displays the current revision's recursive BOM. Choose
+   **Synchronize from CAD…** on a saved/uploaded Working assembly with your active
+   checkout. Select engineering occurrences, review exact revisions, quantities,
+   source occurrences and quantity changes, then explicitly approve replacement.
+   This replaces all current lines, including manual lines. An empty proposal
+   explicitly clears the BOM. Canceling either dialog preserves the BOM.
 
 The API upload accepts one file per Dataset. Project authorization and all PDM
 rules remain on the server. Downloads require access to every referenced
@@ -72,7 +77,19 @@ an editable working copy of a Working revision, or Create Next Revision for a
 Released revision. PDM edit permissions and lifecycle remain server-enforced.
 An old assembly pins its original component revision/dataset/file, even after
 newer component revisions are created. Engineering BOM synchronization is a
-separate operation planned for Phase 4; an empty BOM is not proof of consistency.
+separate reviewed operation. CAD dependencies may include references excluded
+from the engineering BOM; reconstruction always follows the pinned CAD manifest.
+The retrieval ledger records revision-set differences without treating them as
+CAD corruption. An empty BOM is not proof of consistency.
+
+BOM extraction supports whole-object external links, internal links resolving to
+those targets, and plain groups/parts as organizational containers. Every selected
+link contributes one unit; external subassemblies count as one direct component.
+Unselected links and local geometry do not enter the proposal. Arrays, subelements,
+internal links to local geometry/groups, external link-to-link targets and custom
+assembly proxies require a dedicated adapter and are rejected. Hidden links are
+still candidates: use explicit selection to exclude templates or construction aids.
+Save/upload changed components and then their parent before synchronizing.
 
 ## Current limits
 
@@ -99,10 +116,11 @@ publication requires filesystem hard-link support. Local read-only protection
 is advisory. Third-party proxies, external textures and other CAD adapters are
 not certified. Windows, macOS and network shares remain unverified.
 
-Version 0.3.0 requires the Phase 3 backend manifest endpoints and additive SQLite
-migration 6. Back up the database and immutable files before updating/restarting
+Version 0.4.0 requires the Phase 3 manifest endpoints and Phase 4 BOM snapshot/
+synchronization endpoints. SQLite schema remains at migration 6.
+Back up the database and immutable files before updating/restarting
 the server. The backend still runs separately from FreeCAD. Restart FreeCAD after
-updating the addon. See [Phase 3 validation](../../docs/freecad-addon-phase3.md).
+updating the addon. See [Phase 4 validation](../../docs/freecad-addon-phase4.md).
 
 ## Development resources
 

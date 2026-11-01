@@ -27,8 +27,8 @@
       <translation>Create Next Revision</translation>
     </message>
     <message>
-      <source>Display the current revision's nested bill of materials</source>
-      <translation>Display the current revision's nested bill of materials</translation>
+      <source>Display the nested BOM or review and synchronize CAD occurrences</source>
+      <translation>Display the nested BOM or review and synchronize CAD occurrences</translation>
     </message>
     <message>
       <source>Download Item / Assembly</source>

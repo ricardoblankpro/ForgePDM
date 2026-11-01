@@ -55,6 +55,94 @@ def execute_dialog(dialog):
     return dialog.exec() if hasattr(dialog, "exec") else dialog.exec_()
 
 
+def select_bom_occurrences(references):
+    dialog = QtWidgets.QDialog(parent_window())
+    dialog.setWindowTitle("Select engineering BOM occurrences")
+    layout = QtWidgets.QVBoxLayout(dialog)
+    layout.addWidget(
+        QtWidgets.QLabel(
+            "Select component occurrences to count. Local geometry is excluded.\n"
+            "External assemblies count as one component; their children are not flattened."
+        )
+    )
+    checks = []
+    scroll = QtWidgets.QScrollArea()
+    scroll.setWidgetResizable(True)
+    content = QtWidgets.QWidget()
+    rows = QtWidgets.QVBoxLayout(content)
+    for reference in references:
+        check = QtWidgets.QCheckBox(
+            "{} → {}".format(
+                reference["object_name"],
+                reference.get("component_label", reference["target_revision_id"]),
+            )
+        )
+        rows.addWidget(check)
+        checks.append((check, reference))
+    scroll.setWidget(content)
+    layout.addWidget(scroll)
+    dialog.resize(720, 480)
+    buttons = QtWidgets.QDialogButtonBox(
+        QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel, parent=dialog
+    )
+    buttons.accepted.connect(dialog.accept)
+    buttons.rejected.connect(dialog.reject)
+    layout.addWidget(buttons)
+    if not execute_dialog(dialog):
+        return None
+    return [
+        (ref["object_name"], ref["property_name"]) for check, ref in checks if check.isChecked()
+    ]
+
+
+def review_bom(current, proposed):
+    from .bom import quantity_changes
+
+    dialog = QtWidgets.QDialog(parent_window())
+    dialog.setWindowTitle("Review BOM replacement")
+    dialog.resize(800, 600)
+    layout = QtWidgets.QVBoxLayout(dialog)
+    text = QtWidgets.QPlainTextEdit()
+    text.setReadOnly(True)
+    sections = ["QUANTITY CHANGES (exact component revisions)"]
+    sections.extend("{}: {} → {}".format(*change) for change in quantity_changes(current, proposed))
+    sections.append("\nCURRENT ENGINEERING BOM (including manual lines)")
+    sections.extend(
+        "Position {position}: {item_number} / {revision_label} — {component_revision_id} × {quantity}".format(
+            **line
+        )
+        for line in current
+    )
+    sections.append("\nPROPOSED ENGINEERING BOM")
+    for line in proposed:
+        sections.append(
+            "Position {}: {} — {} × {}\n  Occurrences: {}".format(
+                line.position,
+                line.component_label,
+                line.component_revision_id,
+                line.quantity,
+                ", ".join(key[0] for key in line.occurrences),
+            )
+        )
+    if not proposed:
+        sections.append("EMPTY — this will remove every current line.")
+    text.setPlainText("\n".join(sections))
+    layout.addWidget(text)
+    consent = QtWidgets.QCheckBox(
+        "Replace the entire BOM, including manual lines, with this proposal"
+    )
+    layout.addWidget(consent)
+    buttons = QtWidgets.QDialogButtonBox(
+        QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel, parent=dialog
+    )
+    buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
+    consent.toggled.connect(buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled)
+    buttons.accepted.connect(dialog.accept)
+    buttons.rejected.connect(dialog.reject)
+    layout.addWidget(buttons)
+    return bool(execute_dialog(dialog) and consent.isChecked())
+
+
 def login_form(values):
     dialog = QtWidgets.QDialog(parent_window())
     dialog.setWindowTitle("Connect to ForgePDM")

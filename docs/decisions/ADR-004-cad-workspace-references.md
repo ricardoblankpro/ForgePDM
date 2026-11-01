@@ -3,6 +3,10 @@
 - Status: Implemented within the authorized Phase 3 scope
 - Date: 2026-10-29
 
+Phase 4 supersedes the engineering BOM mismatch rejection described below;
+see [ADR-005](ADR-005-reviewed-bom-synchronization.md). CAD manifest integrity
+and exact reference reconstruction are unchanged.
+
 ## Decision
 
 Preserve the backend-first modular monolith, SQLite and existing domain rules.

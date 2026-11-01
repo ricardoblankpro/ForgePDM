@@ -66,7 +66,12 @@ def digest(path, checkpoint=lambda: None):
 def _safe_path(root, relative):
     root = Path(root)
     path = root / relative
-    if not relative or "\\" in relative or Path(relative).is_absolute() or ".." in Path(relative).parts:
+    if (
+        not relative
+        or "\\" in relative
+        or Path(relative).is_absolute()
+        or ".." in Path(relative).parts
+    ):
         raise WorkspaceError("Invalid path in workspace ledger")
     if path.resolve() != path.absolute() or not path.resolve().is_relative_to(root.resolve()):
         raise WorkspaceError(
@@ -98,12 +103,16 @@ def locked(root, server):
         try:
             recovery.mkdir()
         except FileExistsError as error:
-            raise WorkspaceError("Workspace lock recovery is in progress or needs inspection") from error
+            raise WorkspaceError(
+                "Workspace lock recovery is in progress or needs inspection"
+            ) from error
         try:
             try:
                 previous = json.loads(lock.read_text())
                 if os.name != "posix" or previous["host"] != socket.gethostname():
-                    raise WorkspaceError("Workspace is locked; close the other client before retrying")
+                    raise WorkspaceError(
+                        "Workspace is locked; close the other client before retrying"
+                    )
                 try:
                     os.kill(int(previous["pid"]), 0)
                 except ProcessLookupError:
@@ -406,13 +415,14 @@ def retrieve(client, root, revision_id, dataset_id, file_id):
                 }
                 if revision["item_kind"] == "assembly":
                     bom = client.get_bom(revision_id)
-                    if bom and {line["component_revision_id"] for line in bom} != {
+                    matched = {line["component_revision_id"] for line in bom} == {
                         reference["target_revision_id"] for reference in references
-                    }:
-                        raise WorkspaceError(
-                            "Stored BOM component revisions differ from the CAD reference manifest. Retrieval stopped before opening files."
-                        )
-                    node["bom_revision_check"] = "matched" if bom else "not_synchronized"
+                    }
+                    # Engineering selections/manual lines can differ from CAD dependencies.
+                    # Reconstruction remains exclusively bound to the immutable CAD manifest.
+                    node["bom_revision_check"] = (
+                        "matched" if bom and matched else "differs" if bom else "not_synchronized"
+                    )
                 nodes[file_id] = node
                 for reference in references:
                     target_key = (

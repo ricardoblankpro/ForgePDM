@@ -6,6 +6,13 @@ from pathlib import Path
 from .workspace import WorkspaceError, _safe_path
 
 
+def document_modified(document):
+    """Recompute clears touched flags; GUI Modified tracks unsaved edits as well."""
+    import FreeCADGui
+
+    return document.isTouched() or FreeCADGui.getDocument(document.Name).Modified
+
+
 def rebase_links(document):
     """Refresh FreeCAD's cached relative paths after changing FileName."""
     for obj in document.Objects:
@@ -62,6 +69,64 @@ def capture(document):
             }
         )
     return references
+
+
+def capture_bom(document):
+    """Capture candidate direct occurrences; internal links resolve to external pins.
+
+    Plain groups/parts organize occurrences in this document. Linked external
+    assemblies are single components; their documents are never flattened.
+    Selection of engineering components happens in the review dialog.
+    """
+    result = []
+    for obj in document.Objects:
+        if obj.Name == "ForgePDM_Metadata":
+            continue
+        if getattr(obj, "Proxy", None) is not None:
+            raise WorkspaceError("Custom assembly proxies require a dedicated BOM adapter")
+        if obj.TypeId.startswith("Assembly::") or (
+            obj.TypeId.startswith("App::Link") and obj.TypeId != "App::Link"
+        ):
+            raise WorkspaceError("This assembly structure requires a dedicated BOM adapter")
+        if obj.TypeId != "App::Link":
+            continue
+        current, visited = obj, set()
+        while current.Document is document and current.TypeId == "App::Link":
+            if current.Name in visited:
+                raise WorkspaceError("Internal CAD link cycle")
+            visited.add(current.Name)
+            if getattr(current, "ElementCount", 0):
+                raise WorkspaceError("Link arrays/subelements require a dedicated BOM adapter")
+            target = current.LinkedObject
+            if target is None or isinstance(target, tuple):
+                raise WorkspaceError("Unresolved/subelement CAD link cannot enter a BOM")
+            current = target
+        if current.Document is document:
+            raise WorkspaceError(
+                "Internal links to local geometry have no pinned component identity"
+            )
+        if current.TypeId == "App::Link":
+            raise WorkspaceError("External link-to-link targets require a dedicated BOM adapter")
+        target_document = current.Document
+        metadata = target_document.getObject("ForgePDM_Metadata")
+        if document_modified(target_document) or metadata is None:
+            raise WorkspaceError("Save/upload every linked component before extracting its BOM")
+        result.append(
+            {
+                "object_name": obj.Name,
+                "property_name": "LinkedObject",
+                "target_path": os.path.abspath(target_document.FileName),
+                "target_object_name": current.Name,
+                "target_item_id": getattr(metadata, "ItemId", ""),
+                "target_revision_id": getattr(metadata, "RevisionId", ""),
+                "component_label": "{} / {} — {}".format(
+                    getattr(metadata, "ItemNumber", ""),
+                    getattr(metadata, "RevisionLabel", ""),
+                    getattr(current, "Label", current.Name),
+                ),
+            }
+        )
+    return result
 
 
 def open_configuration(configuration, set_metadata):

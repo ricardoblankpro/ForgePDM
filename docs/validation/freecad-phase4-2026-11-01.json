@@ -1,0 +1,40 @@
+{
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "python": "3.11.14 | packaged by conda-forge | (main, Oct 13 2025, 14:25:33) [GCC 14.3.0]",
+  "qt": "6.8.3",
+  "checks": [
+    "replacement disabled until explicit consent",
+    "replacement enabled after consent",
+    "external plus internal repeated occurrence quantity is two",
+    "occurrence placements unchanged",
+    "replacement disabled until explicit consent",
+    "replacement enabled after consent",
+    "nested assembly remains a single direct component",
+    "canceling review preserves existing BOM",
+    "component has a newer current revision",
+    "replacement disabled until explicit consent",
+    "replacement enabled after consent",
+    "resynchronization retains historical revision A after B exists",
+    "CAD mutation during review blocks synchronization",
+    "CAD mutation leaves server BOM unchanged",
+    "real FreeCAD link arrays are rejected",
+    "stale review rejected by HTTP transaction",
+    "all HTTP work stayed off GUI thread"
+  ],
+  "scope": "Real GUI adapters/dialogs, isolated HTTP backend, disposable documents",
+  "status": "passed",
+  "date": "2026-11-01",
+  "addon_version": "0.4.0",
+  "backend_schema_version": 6,
+  "automated_backend_tests_passed": 34,
+  "automated_addon_tests_passed": 115
+}

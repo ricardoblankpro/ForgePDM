@@ -82,6 +82,36 @@ def choose_file(commands, monkeypatch, result):
     return calls
 
 
+def test_successful_addon_save_clears_gui_modified_flag(commands, monkeypatch, tmp_path):
+    path = tmp_path / "saved.FCStd"
+    path.write_bytes(b"saved")
+    document = Document(path)
+    gui_document = SimpleNamespace(Modified=True)
+    monkeypatch.setattr(
+        commands.FreeCADGui, "getDocument", lambda name: gui_document, raising=False
+    )
+    assert commands._save_document(document) == str(path)
+    assert not gui_document.Modified
+
+
+def test_failed_addon_save_preserves_gui_modified_flag(commands, monkeypatch, tmp_path):
+    path = tmp_path / "saved.FCStd"
+    path.write_bytes(b"saved")
+    document = Document(path)
+    gui_document = SimpleNamespace(Modified=True)
+    monkeypatch.setattr(
+        commands.FreeCADGui, "getDocument", lambda name: gui_document, raising=False
+    )
+
+    def fail():
+        raise RuntimeError("save failed")
+
+    document.save = fail
+    with pytest.raises(RuntimeError, match="Could not save"):
+        commands._save_document(document)
+    assert gui_document.Modified
+
+
 @pytest.mark.parametrize("readonly", ["file", "directory"])
 def test_readonly_document_prompts_for_copy(commands, monkeypatch, tmp_path, readonly):
     origin = tmp_path / "bundled"

@@ -1,9 +1,9 @@
 # Phase 1 validation and manual acceptance
 
-The historical checklist below covers Phase 1. For the current Phase 2 addon,
-see `docs/freecad-addon-phase2.md` in the repository. The live harness is
-`clients/freecad/tests/freecad_phase2_smoke.py`; execute it only through an actual
-FreeCAD interpreter with isolated backend credentials supplied as `PHASE2_CASE`.
+The historical checklist below covers Phase 1. For the current Phase 4 addon,
+see `docs/freecad-addon-phase4.md` in the repository. The live harness is
+`clients/freecad/tests/freecad_phase4_smoke.py`; its module docstring describes
+starting a disposable backend and executing it through the actual FreeCAD MCP.
 It is intentionally not part of pytest discovery and is excluded from the ZIP.
 
 ## Automated checks
@@ -72,3 +72,10 @@ App::Link reconstruction in FreeCAD 1.1.4, including nested/repeated links,
 historical geometry, relocation and failed-transfer recovery. See
 `docs/freecad-addon-phase3.md` and its live report. Other adapters and platforms
 remain unverified; clean-start and visual checks above still require a restart.
+
+Phase 4 exercised engineering occurrence selection, BOM replacement consent,
+internal repeated links, nested assemblies, historical revision pins and stale
+review/CAD-change rejection in the same FreeCAD/Python/Qt runtime. The public
+Show BOM command and real dialogs executed against an isolated backend. See
+`docs/validation/freecad-phase4-2026-11-01.json`. Other assembly adapters remain
+outside the certified profile; atomic check-in/idempotency remain Phase 5.

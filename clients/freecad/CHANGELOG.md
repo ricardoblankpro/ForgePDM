@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 — reviewed engineering BOM synchronization
+
+- Add occurrence selection and BOM replacement review to Show ForgePDM BOM.
+- Count supported external links and repeated internal links by exact revision;
+  keep linked subassemblies as direct components rather than flattening them.
+- Verify uploaded assembly/component snapshots before review and before writing.
+- Reject stale BOM snapshots and replaced checkout leases in one server transaction.
+- Preserve manual lines until explicit replacement consent; never retry uncertain writes.
+- Distinguish CAD dependencies from engineering components during retrieval.
+- Requires the additive Phase 4 synchronization API; schema remains version 6.
+
 ## 0.3.0 — managed workspace and pinned CAD references
 
 - Give each command its own original SVG icon, matching the Workbench palette.
