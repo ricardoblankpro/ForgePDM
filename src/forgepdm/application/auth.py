@@ -12,6 +12,7 @@ from forgepdm.infrastructure.database import Database
 
 
 SESSION_DURATION = timedelta(hours=8)
+MIN_PASSWORD_LENGTH = 4
 PASSWORD_SCRYPT_N = 2**14
 PASSWORD_SCRYPT_R = 8
 PASSWORD_SCRYPT_P = 1
@@ -22,8 +23,8 @@ class AuthenticationError(Exception):
 
 
 def hash_password(password: str) -> str:
-    if len(password) < 12:
-        raise ValueError("password must contain at least 12 characters")
+    if len(password) < MIN_PASSWORD_LENGTH:
+        raise ValueError(f"password must contain at least {MIN_PASSWORD_LENGTH} characters")
     if len(password) > 1024:
         raise ValueError("password is too long")
     salt = secrets.token_bytes(16)

@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from forgepdm.application.auth import hash_password
+from forgepdm.application.auth import MIN_PASSWORD_LENGTH, hash_password
 from forgepdm.infrastructure.database import Database
 
 
@@ -44,7 +44,7 @@ def main() -> None:
     elif args.command in {"set-password", "set-role"}:
         args.username = args.username.strip()
     if args.command in {"create-user", "set-password"}:
-        password = getpass("Password (at least 12 characters): ")
+        password = getpass(f"Password (at least {MIN_PASSWORD_LENGTH} characters): ")
         confirmation = getpass("Confirm password: ")
         if password != confirmation:
             parser.error("passwords do not match")
