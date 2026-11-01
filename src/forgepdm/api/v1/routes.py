@@ -101,7 +101,7 @@ class LoginRequest(BaseModel):
 
 
 class CheckInRequest(BaseModel):
-    change_note: str = Field(min_length=1, max_length=2000)
+    change_note: str = Field(default="", max_length=2000)
 
 
 class LifecycleTransitionRequest(BaseModel):
@@ -380,12 +380,12 @@ def release_checkout(
 )
 def check_in(
     revision_id: UUID,
-    payload: CheckInRequest,
+    payload: CheckInRequest | None = None,
     user: User = Depends(current_user),
     revisions: RevisionService = Depends(get_revision_service),
 ):
     try:
-        revisions.check_in(user, str(revision_id), payload.change_note)
+        revisions.check_in(user, str(revision_id), payload.change_note if payload else "")
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Forbidden as error:

@@ -28,6 +28,7 @@ def api(addon_root):
             {"kind": "part", "name": "Bracket", "description": "", "project_id": "project"},
         ),
         ("get_item", ("item",), "GET", "/api/v1/items/item", None),
+        ("get_checkout", ("rev",), "GET", "/api/v1/revisions/rev/checkout", None),
         ("get_bom", ("rev", True), "GET", "/api/v1/revisions/rev/bom?recursive=true", None),
         ("bom_snapshot", ("rev",), "GET", "/api/v1/revisions/rev/bom/snapshot", None),
         (
@@ -45,6 +46,7 @@ def api(addon_root):
             "/api/v1/revisions/rev/checkin",
             {"change_note": "note"},
         ),
+        ("checkin", ("rev",), "POST", "/api/v1/revisions/rev/checkin", {"change_note": ""}),
         (
             "transition",
             ("rev", "released"),

@@ -28,12 +28,16 @@ class ForgePDMWorkbench(Gui.Workbench):
             ("ForgePDM_NewRevision", commands.NewRevisionCommand),
             ("ForgePDM_Download", commands.DownloadCommand),
             ("ForgePDM_ShowBOM", commands.ShowBOMCommand),
+            ("ForgePDM_RefreshTreeLabels", commands.RefreshTreeLabelsCommand),
         )
         for name, command in entries:
             Gui.addCommand(name, command())
         names = [name for name, _command in entries]
         self.appendToolbar(translate("ForgePDM", "ForgePDM"), names)
         self.appendMenu(translate("ForgePDM", "ForgePDM"), names)
+        from . import tree_observer
+
+        tree_observer.install()
         self._initialized = True
 
     def GetClassName(self):

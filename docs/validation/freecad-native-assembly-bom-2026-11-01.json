@@ -1,0 +1,74 @@
+{
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "python": "3.11.14 | packaged by conda-forge | (main, Oct 13 2025, 14:25:33) [GCC 14.3.0]",
+  "qt": "6.8.3",
+  "addon_version": "0.4.2",
+  "checks": [
+    "native assembly exposes exactly the expected component links",
+    "joint objects excluded from engineering occurrences",
+    "selection dialog lists component links only",
+    "selection labels show expected item numbers",
+    "BOM replacement requires explicit consent",
+    "public Show BOM synchronization completed",
+    "engineering BOM contains expected components",
+    "each component quantity is one",
+    "exact pinned component revisions retained",
+    "Show BOM renders both component numbers",
+    "placements, membership and grounded constraints preserved",
+    "all open native files retain their byte hashes",
+    "original active assembly retained",
+    "toolbar actions reactivated after synchronization",
+    "reopened Show BOM dialog displays saved components"
+  ],
+  "revision_id": "53408751-68a3-47f8-859b-3df98ce5ee94",
+  "scope": "User-authorized native Assembly with direct App::Links and a grounded joint; real UI/HTTP BOM synchronization",
+  "status": "passed",
+  "lines": [
+    {
+      "id": "23f59317-d050-44c3-b7bb-e6479b818e13",
+      "parent_revision_id": "53408751-68a3-47f8-859b-3df98ce5ee94",
+      "component_revision_id": "2c252290-40fa-436b-9f8c-cb37bf897cd4",
+      "item_id": "81f67ad5-fe82-4810-a14b-b38843fd93f1",
+      "item_number": "P000005",
+      "item_kind": "part",
+      "item_name": "model",
+      "revision_label": "A",
+      "lifecycle_state": "working",
+      "quantity": "1",
+      "position": 1,
+      "level": 1
+    },
+    {
+      "id": "bd11f38b-d40b-4980-958a-881a0b83d534",
+      "parent_revision_id": "53408751-68a3-47f8-859b-3df98ce5ee94",
+      "component_revision_id": "6f2d6622-2458-4fd5-9414-9b802f036b64",
+      "item_id": "3044e868-ab7f-4073-83d7-a68846fdb95d",
+      "item_number": "P000004",
+      "item_kind": "part",
+      "item_name": "model",
+      "revision_label": "A",
+      "lifecycle_state": "working",
+      "quantity": "1",
+      "position": 2,
+      "level": 1
+    }
+  ],
+  "notifications": [
+    [
+      "information",
+      "The reviewed engineering BOM was synchronized."
+    ]
+  ],
+  "rendered_text": "1. P000005 model RevA  x1  working\n2. P000004 model RevA  x1  working",
+  "date": "2026-11-01",
+  "preparation": "Owned Working component copies were uploaded first, then parent, through normal commands with file backups. BOM synchronization then preserved native file hashes."
+}

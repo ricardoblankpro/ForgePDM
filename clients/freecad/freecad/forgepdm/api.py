@@ -234,6 +234,11 @@ class ForgePDMClient:
             "GET", "/api/v1/revisions/" + self._quote(revision_id) + "/bom" + query
         )
 
+    def get_checkout(self, revision_id):
+        return self._json_request(
+            "GET", "/api/v1/revisions/" + self._quote(revision_id) + "/checkout"
+        )
+
     def bom_snapshot(self, revision_id):
         return self._json_request(
             "GET", "/api/v1/revisions/" + self._quote(revision_id) + "/bom/snapshot"
@@ -414,7 +419,7 @@ class ForgePDMClient:
             if os.path.exists(temporary):
                 os.remove(temporary)
 
-    def checkin(self, revision_id, change_note):
+    def checkin(self, revision_id, change_note=""):
         return self._json_request(
             "POST",
             "/api/v1/revisions/{}/checkin".format(self._quote(revision_id)),

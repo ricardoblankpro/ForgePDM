@@ -46,6 +46,7 @@ def commands(addon_root, monkeypatch):
 class Document:
     Label = "Example"
     Objects = []
+    HasPendingTransaction = False
 
     Name = "ExampleDocument"
 
@@ -139,6 +140,66 @@ def test_writable_document_saves_in_place(commands, monkeypatch, tmp_path):
     assert commands._save_document(document) == str(source)
     assert document.saved == [("save", str(source))]
     assert not calls
+
+
+def test_checkin_uploads_and_releases_without_prompting_for_a_note(commands, monkeypatch):
+    document = Document("/tmp/managed.FCStd")
+    metadata = SimpleNamespace(RevisionId="revision")
+    calls = []
+    client = SimpleNamespace(checkin=lambda revision: calls.append(("checkin", revision)))
+
+    def editable(*args):
+        yield from ()
+
+    def ensure_working(*args):
+        yield from ()
+        return document.FileName
+
+    def upload(*args):
+        calls.append(("upload", args[2]))
+        yield from ()
+
+    monkeypatch.setattr(commands, "_require_document", lambda: document)
+    monkeypatch.setattr(commands, "_require_metadata", lambda doc: metadata)
+    monkeypatch.setattr(commands.Session, "require_client", lambda: client)
+    monkeypatch.setattr(commands, "_editable", editable)
+    monkeypatch.setattr(commands, "_ensure_working", ensure_working)
+    monkeypatch.setattr(commands, "_upload_native", upload)
+    monkeypatch.setattr(commands.cad, "capture", lambda doc: [])
+    monkeypatch.setattr(commands, "ask_text", lambda *args: pytest.fail("unexpected note prompt"))
+    monkeypatch.setattr(commands, "information", lambda *args: None)
+    commands.CheckInCommand().Activated()
+    assert not commands._test_errors
+    assert calls == [("upload", document.FileName), ("checkin", "revision")]
+
+
+def test_tree_refresh_checks_checkout_before_changing_labels(commands, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    document = Document("/workspace/working/model.FCStd")
+    metadata = SimpleNamespace(RevisionId="revision", ItemId="item")
+    client = SimpleNamespace(
+        base_url="http://localhost:8000",
+        get_revision=lambda revision: {"item_id": "item", "lifecycle_state": "working"},
+        get_checkout=lambda revision: {
+            "user_id": "other",
+            "revision_id": "revision",
+            "expires_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+        },
+    )
+    monkeypatch.setattr(commands, "_require_document", lambda: document)
+    monkeypatch.setattr(commands, "_require_metadata", lambda doc: metadata)
+    monkeypatch.setattr(commands, "_guard_document", lambda *args: document)
+    monkeypatch.setattr(commands.Session, "require_client", lambda: client)
+    monkeypatch.setattr(commands.Session, "user", {"id": "user"})
+    monkeypatch.setattr(commands.workspace, "working_path", lambda *args: object())
+    monkeypatch.setattr(
+        commands.tree_labels, "refresh", lambda doc: pytest.fail("unauthorized label mutation")
+    )
+    commands.RefreshTreeLabelsCommand().Activated()
+    assert len(commands._test_errors) == 1
+    assert "own assembly checkout" in commands._test_errors[0]
+    assert not document.saved
 
 
 def test_unsaved_document_prompts_and_recomputes(commands, monkeypatch, tmp_path):

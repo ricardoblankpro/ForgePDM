@@ -1,0 +1,55 @@
+{
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "python": "3.11.14 | packaged by conda-forge | (main, Oct 13 2025, 14:25:33) [GCC 14.3.0]",
+  "qt": "6.8.3",
+  "addon_version": "0.4.0",
+  "installed_module": "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/commands.py",
+  "document": "_0faf2d3e_7eac_4113_84dd_e84b948a58fa",
+  "revision_id": "53408751-68a3-47f8-859b-3df98ce5ee94",
+  "checks": [
+    "assembly is Working",
+    "current user owns checkout",
+    "registered toolbar workflow completed",
+    "no change-note prompt was shown",
+    "HTTP check-in sent an empty optional note",
+    "native assembly snapshot was uploaded",
+    "checkout was released",
+    "existing revision note preserved",
+    "document and active assembly retained",
+    "HTTP work stayed off GUI thread",
+    "success notification emitted"
+  ],
+  "scope": "User-authorized current assembly, actual registered toolbar command, real HTTP",
+  "status": "passed",
+  "checkin_requests": [
+    {
+      "method": "POST",
+      "payload": {
+        "change_note": ""
+      }
+    }
+  ],
+  "notifications": [
+    [
+      "information",
+      "Revision checked in"
+    ]
+  ],
+  "dataset_count_before": 5,
+  "dataset_count_after": 6,
+  "date": "2026-11-01",
+  "installation_updated": [
+    "FreeCAD/v1-1/Mod/ForgePDM",
+    "FreeCAD/Mod/ForgePDM"
+  ],
+  "backend_restarted": true
+}

@@ -38,6 +38,16 @@ def test_internal_repeated_link_resolves_to_same_exact_external_component():
     assert cad.capture_bom(root) == references
 
 
+def test_dirty_component_error_identifies_item_and_revision():
+    root, child, first, second = documents()
+    child.getObject = lambda name: NS(
+        ItemId="item", RevisionId="revision", ItemNumber="P000004", RevisionLabel="B"
+    )
+    child.isTouched = lambda: True
+    with pytest.raises(WorkspaceError, match="Component P000004 Rev B has unsaved changes"):
+        cad.capture_bom(root)
+
+
 @pytest.mark.parametrize(
     "fault", ["array", "cycle", "missing", "subelement", "local", "dirty", "proxy"]
 )
@@ -58,4 +68,75 @@ def test_ambiguous_or_unpinned_structures_are_rejected(fault):
     else:
         root.Objects[0].Proxy = object()
     with pytest.raises(WorkspaceError):
+        cad.capture_bom(root)
+
+
+def builtin_document():
+    root, child, first, second = documents()
+    grounded = NS(
+        Name="Grounded",
+        TypeId="App::FeaturePython",
+        Proxy=type("GroundedJoint", (), {"__module__": "JointObject"})(),
+        ObjectToGround=first,
+    )
+    joint = NS(
+        Name="Joint",
+        TypeId="App::FeaturePython",
+        Proxy=type("Joint", (), {"__module__": "JointObject"})(),
+    )
+    joints = NS(Name="Joints", TypeId="Assembly::JointGroup", Group=[grounded, joint])
+    assembly = NS(
+        Name="Assembly",
+        TypeId="Assembly::AssemblyObject",
+        Group=[joints, first, grounded, second, joint],
+    )
+    root.Objects = [assembly, joints, grounded, joint, first, second]
+    return root, assembly, joints, grounded
+
+
+def test_builtin_assembly_joints_are_not_components_or_duplicate_occurrences():
+    root, assembly, joints, grounded = builtin_document()
+    before = list(assembly.Group)
+    references = cad.capture_bom(root)
+    assert [ref["object_name"] for ref in references] == ["First", "Second"]
+    assert assembly.Group == before
+    assert grounded.ObjectToGround.Name == "First"
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "custom_joint",
+        "custom_container",
+        "custom_joint_group",
+        "unknown_assembly_type",
+        "nested_assembly",
+        "stray_link",
+        "local_member",
+    ],
+)
+def test_builtin_adapter_rejects_ambiguous_members_with_context(fault):
+    root, assembly, joints, grounded = builtin_document()
+    if fault == "custom_joint":
+        grounded.Proxy = type("GroundedJoint", (), {"__module__": "custom_addon"})()
+        message = "Unsupported built-in Assembly joint 'Grounded'"
+    elif fault == "custom_container":
+        assembly.Proxy = object()
+        message = "Custom native Assembly container proxies"
+    elif fault == "custom_joint_group":
+        joints.Proxy = object()
+        message = "Custom Assembly joint-group proxies"
+    elif fault == "unknown_assembly_type":
+        root.Objects.append(NS(Name="Unknown", TypeId="Assembly::Unknown"))
+        message = "Unsupported BOM object 'Unknown'"
+    elif fault == "nested_assembly":
+        root.Objects.append(NS(Name="Nested", TypeId="Assembly::AssemblyObject", Group=[]))
+        message = "one built-in Assembly container"
+    elif fault == "stray_link":
+        assembly.Group = [obj for obj in assembly.Group if obj.Name != "Second"]
+        message = "Component link 'Second' is outside"
+    else:
+        assembly.Group.append(NS(Name="LocalBody", TypeId="PartDesign::Body"))
+        message = "Unsupported Assembly member 'LocalBody'"
+    with pytest.raises(WorkspaceError, match=message):
         cad.capture_bom(root)

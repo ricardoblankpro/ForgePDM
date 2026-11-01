@@ -1,0 +1,148 @@
+{
+  "date": "2026-11-01",
+  "addon_version": "0.5.0",
+  "automated_addon_tests_passed": 160,
+  "automated_backend_tests_passed": 54,
+  "native_cad": {
+    "freecad": [
+      "1",
+      "1",
+      "4",
+      "20260928 (Git shallow)",
+      "Unknown",
+      "2026/09/28 13:46:34",
+      "(HEAD detached at 4fd3bf320)",
+      "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+    ],
+    "python": "3.11.14 | packaged by conda-forge | (main, Oct 13 2025, 14:25:33) [GCC 14.3.0]",
+    "qt": "6.8.3",
+    "addon_version": "0.5.0",
+    "checks": [
+      "repeated components get distinct stable occurrence labels",
+      "labels do not change object names or link identity",
+      "source part and placements stay unchanged",
+      "surviving occurrence is not renumbered after deletion",
+      "native copied link gets fresh UUID and next occurrence",
+      "deleted highest occurrence number is not reused",
+      "tree reordering preserves occurrence numbers",
+      "external subassembly has its own parent occurrence",
+      "subassembly child numbering restarts in its own scope",
+      "save/reopen preserves UUIDs, numbers and labels",
+      "raw reopen preserves the occurrence registry",
+      "managed refresh reapplies document heading without reallocating",
+      "repeat refresh on the opened document is a no-op",
+      "native insertion is automatically labeled after transaction completion",
+      "automatic labeling leaves existing indices stable",
+      "explicit target revision changes display without latest lookup",
+      "insertion after checkout revocation is not automatically modified",
+      "source geometry remains unchanged through all label operations"
+    ],
+    "scope": "Disposable real FreeCAD documents, save/reopen and observer; injected fixture lease; no backend writes",
+    "reopen_diagnostic": {
+      "label_before": "TreeTestAssembly",
+      "label_after": "A999901-A",
+      "registry_changed": false
+    },
+    "status": "passed"
+  },
+  "isolated_http_cad": {
+    "freecad": [
+      "1",
+      "1",
+      "4",
+      "20260928 (Git shallow)",
+      "Unknown",
+      "2026/09/28 13:46:34",
+      "(HEAD detached at 4fd3bf320)",
+      "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+    ],
+    "python": "3.11.14 | packaged by conda-forge | (main, Oct 13 2025, 14:25:33) [GCC 14.3.0]",
+    "qt": "6.8.3",
+    "addon_version": "0.5.0",
+    "checks": [
+      "new part upload derives its item/revision heading",
+      "assembly upload persists distinct repeated occurrence labels",
+      "labels preserve manifest internal object identities",
+      "owned retrieval preserves occurrence IDs and indices",
+      "retrieved labels leave every document saved cleanly",
+      "retrieved placement remains unchanged",
+      "next revision changes the managed document heading",
+      "next revision preserves prior native file bytes",
+      "historical assembly keeps revision A labels after part B exists",
+      "historical occurrence UUIDs remain pinned",
+      "historical geometry stays on exact part A",
+      "tree labeling does not create engineering BOM lines"
+    ],
+    "scope": "Actual command workflows, isolated disposable HTTP database/blobs/workspace; user session and documents restored",
+    "status": "passed"
+  },
+  "current_assembly": {
+    "checks": [
+      "current tree shows expected pinned item/revision occurrences",
+      "current occurrences have distinct UUIDs",
+      "label metadata and allocation registry uploaded cleanly",
+      "names, linked revisions, shapes, placements and grounding unchanged",
+      "linked component file bytes unchanged",
+      "engineering BOM lines and quantities unchanged",
+      "second tree refresh makes no edits"
+    ],
+    "scope": "Authorized current uploaded working assembly; actual refresh and upload toolbar commands",
+    "status": "passed",
+    "labels": [
+      [
+        "Body001",
+        "P000004-B|1",
+        "90e28682-0b19-4a2f-bdaf-8194940d257c",
+        1
+      ],
+      [
+        "Body",
+        "P000005-A|1",
+        "9ae66916-2e56-428d-a616-f42ca2dd47cf",
+        1
+      ],
+      [
+        "Body002",
+        "P000006-A|1",
+        "48ac3896-6f28-476c-9343-116091c0f538",
+        1
+      ],
+      [
+        "Body003",
+        "P000005-A|2",
+        "e1c86856-3a53-48a3-b7c1-12f2eb98db61",
+        2
+      ]
+    ],
+    "backup": "/tmp/forgepdm-before-tree-labels-hx3o0srk/assembly.FCStd",
+    "notifications": [
+      [
+        "information",
+        "Tree labels refreshed. Save/upload the working document to persist changes."
+      ],
+      [
+        "information",
+        "Uploaded the managed CAD snapshot and its exact references."
+      ]
+    ]
+  },
+  "rendered_tree": {
+    "rendered_tree_labels": [
+      "P000004-B|1",
+      "P000005-A|1",
+      "P000005-A|2",
+      "P000006-A|1"
+    ],
+    "all_rendered": true,
+    "observer_permission_active": true,
+    "document_clean": true,
+    "notifications": [
+      "Tree labels are up to date."
+    ]
+  },
+  "harnesses": [
+    "clients/freecad/tests/freecad_tree_labels_smoke.py",
+    "clients/freecad/tests/freecad_tree_labels_integration.py",
+    "clients/freecad/tests/freecad_tree_labels_current.py"
+  ]
+}

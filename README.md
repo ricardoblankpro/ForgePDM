@@ -8,6 +8,8 @@ file storage. The independently packaged FreeCAD Workbench provides responsive
 API workflows, authorized project/item browsing and historical revision selection.
 Managed CAD workspaces reconstruct pinned assembly references, and the Workbench
 can review and synchronize engineering BOMs for supported App::Link structures.
+Its tree labels show item, pinned revision and persistent per-parent occurrence
+numbers, with a refresh command for existing managed assemblies.
 Atomic check-in and operational hardening remain future work.
 
 ## Local development
@@ -38,6 +40,12 @@ Use the returned `access_token` as `Authorization: Bearer TOKEN` on `/api/v1/ite
 New items are automatically checked out to their creator for eight hours. Older Working revisions without a checkout can acquire one with `POST /api/v1/revisions/{revision_id}/checkout`. To attach a file to a checked out Working revision, use `POST /api/v1/revisions/{revision_id}/datasets` with multipart fields `file`, `dataset_type` (`native_cad`, `drawing`, `neutral`, `document`, or `other`), and optional `name`. List attachments with `GET /api/v1/revisions/{revision_id}/datasets` and download a file from the returned `download_url`. Check in with `POST /api/v1/revisions/{revision_id}/checkin` and body `{"change_note":"Initial design complete"}`, then release it with `POST /api/v1/revisions/{revision_id}/lifecycle` and body `{"target":"released"}`. A released item can get its next revision through `POST /api/v1/items/{item_id}/revisions` with a change note; the new revision is automatically checked out to its creator. Checkouts can also be renewed, inspected, or released through the `/api/v1/revisions/{revision_id}/checkout` routes. Admin override releases require a reason.
 
 For an assembly, replace its Working revision BOM using `PUT /api/v1/revisions/{revision_id}/bom` with `{"lines":[{"component_revision_id":"UUID","quantity":2,"position":1}]}`. Every line points to a specific component revision. `GET /api/v1/revisions/{revision_id}/bom?recursive=true` returns its nested structure, and `GET /api/v1/items/{item_id}/where-used` finds assemblies that use an item. Cycles are rejected, and an assembly can be released only after its direct component revisions are Released. A new assembly revision copies its previous BOM lines.
+
+Check-in notes are optional: `POST /api/v1/revisions/{revision_id}/checkin` accepts
+no body, `{}`, or an optional `change_note` of up to 2000 characters. Omitting or
+leaving the note blank preserves the existing revision note; the check-in is still
+audited and releases the owned checkout. The FreeCAD check-in command does not
+prompt for a note. Creating a new revision continues to require a change note.
 
 Uploads default to a 1 GiB limit; configure `FORGEPDM_MAX_UPLOAD_BYTES` to change it and `FORGEPDM_FILE_ROOT` to change the blob directory. The server hashes uploads, stores them under generated hash paths outside SQLite, and verifies size and hash before download.
 

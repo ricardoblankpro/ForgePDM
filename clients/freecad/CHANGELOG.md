@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.5.0 — persistent tree occurrence labels
+
+- Show managed component links as ITEM-REVISION|OCCURRENCE with persistent UUIDs,
+  parent/revision-scoped numbering and retained allocation history.
+- Preserve surviving indices after deletion and allocate fresh identities/numbers
+  for copied links. Keep names, reference pins and BOM quantities independent.
+- Add Refresh ForgePDM Tree Labels; project labels during upload and owned
+  retrieval, and after insertion under a previously verified owned checkout.
+
+## 0.4.3 — clean state after configuration retrieval
+
+- Save reconstruction metadata/link changes through FreeCAD's GUI document save,
+  preventing downloaded components from retaining a false unsaved-change flag.
+- Keep genuine edits blocked during BOM synchronization and retain modified
+  documents on failed reconstruction. Identify the affected component in errors.
+
+## 0.4.2 — native Assembly BOM support
+
+- Accept a single native Assembly container with direct whole-object App::Link
+  components; exclude its standard joint group and Joint/GroundedJoint objects.
+- Reject nested local assemblies, stray links and unknown proxies/types with
+  object-specific explanations. Keep pinned component verification and review.
+
+## 0.4.1 — check-in and toolbar fixes
+
+- Remove the change-note prompt from check-in. The updated backend accepts
+  check-in without a note and preserves an existing revision note when omitted.
+- Refresh command activation when asynchronous workflows start and finish so
+  toolbar/menu actions recover after success, cancellation and errors.
+
 ## 0.4.0 — reviewed engineering BOM synchronization
 
 - Add occurrence selection and BOM replacement review to Show ForgePDM BOM.

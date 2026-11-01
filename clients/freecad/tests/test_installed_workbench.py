@@ -40,6 +40,8 @@ gui.updateLocale = lambda: None
 sys.modules["FreeCADGui"] = gui
 app = ModuleType("FreeCAD")
 app.ActiveDocument = None
+observers = []
+app.addDocumentObserver = observers.append
 sys.modules["FreeCAD"] = app
 
 import freecad.forgepdm.init_gui as entry
@@ -52,7 +54,11 @@ wb = workbenches['ForgePDMWorkbench']
 assert Path(wb.Icon).is_file()
 
 qt = ModuleType(binding)
-qt.QtCore = SimpleNamespace(QCoreApplication=SimpleNamespace(translate=lambda context, text: text))
+class Timer:
+    timeout = SimpleNamespace(connect=lambda callback: None)
+    def setSingleShot(self, value): pass
+    def setInterval(self, value): pass
+qt.QtCore = SimpleNamespace(QCoreApplication=SimpleNamespace(translate=lambda context, text: text), QTimer=Timer)
 qt.QtGui = SimpleNamespace()
 qt.QtWidgets = SimpleNamespace()
 sys.modules[binding] = qt
@@ -62,12 +68,14 @@ expected = [
     'ForgePDM_Login', 'ForgePDM_Logout', 'ForgePDM_Upload', 'ForgePDM_Checkout',
     'ForgePDM_CheckIn', 'ForgePDM_Release', 'ForgePDM_NewRevision',
     'ForgePDM_Download', 'ForgePDM_ShowBOM',
+    'ForgePDM_RefreshTreeLabels',
 ]
 assert command_calls == wb.menu == wb.toolbar == expected
 assert wb.GetClassName() == 'Gui::PythonWorkbench'
 assert len(language_paths) == 1 and Path(language_paths[0]).is_dir()
+assert len(observers) == 1
 expected_icons = ['login', 'logout', 'upload', 'checkout', 'checkin', 'release',
-                  'new-revision', 'download', 'bom']
+                  'new-revision', 'download', 'bom', 'tree-labels']
 for command, icon in zip(registered.values(), expected_icons):
     resources = command.GetResources()
     assert resources['MenuText'] and resources['ToolTip']

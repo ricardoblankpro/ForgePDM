@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from .workspace import WorkspaceError, _safe_path
+from . import tree_labels
 
 
 def document_modified(document):
@@ -71,6 +72,54 @@ def capture(document):
     return references
 
 
+def _builtin_bom_context(document):
+    assemblies = [obj for obj in document.Objects if obj.TypeId == "Assembly::AssemblyObject"]
+    if not assemblies:
+        return set(), None
+    if len(assemblies) != 1:
+        raise WorkspaceError(
+            "BOM extraction supports one built-in Assembly container per document. "
+            "Use linked external subassemblies for nested product structure."
+        )
+    assembly = assemblies[0]
+    if getattr(assembly, "Proxy", None) is not None:
+        raise WorkspaceError(
+            "Custom native Assembly container proxies require a dedicated BOM adapter"
+        )
+    ignored = {assembly.Name}
+    members = list(assembly.Group)
+    for group in members:
+        if group.TypeId != "Assembly::JointGroup":
+            continue
+        if getattr(group, "Proxy", None) is not None:
+            raise WorkspaceError(
+                "Custom Assembly joint-group proxies require a dedicated BOM adapter"
+            )
+        ignored.add(group.Name)
+        for joint in group.Group:
+            proxy_type = type(getattr(joint, "Proxy", None))
+            if (
+                joint.TypeId != "App::FeaturePython"
+                or proxy_type.__module__ != "JointObject"
+                or proxy_type.__name__ not in ("Joint", "GroundedJoint")
+            ):
+                raise WorkspaceError(
+                    "Unsupported built-in Assembly joint '{}': {}.{}".format(
+                        joint.Name, proxy_type.__module__, proxy_type.__name__
+                    )
+                )
+            ignored.add(joint.Name)
+    for member in members:
+        if member.Name not in ignored and member.TypeId != "App::Link":
+            raise WorkspaceError(
+                "Unsupported Assembly member '{}' ({}). "
+                "This BOM adapter counts direct whole-object component links.".format(
+                    member.Name, member.TypeId
+                )
+            )
+    return ignored, {obj.Name for obj in members if obj.TypeId == "App::Link"}
+
+
 def capture_bom(document):
     """Capture candidate direct occurrences; internal links resolve to external pins.
 
@@ -78,18 +127,32 @@ def capture_bom(document):
     assemblies are single components; their documents are never flattened.
     Selection of engineering components happens in the review dialog.
     """
+    ignored, assembly_components = _builtin_bom_context(document)
     result = []
     for obj in document.Objects:
-        if obj.Name == "ForgePDM_Metadata":
+        if obj.Name == "ForgePDM_Metadata" or obj.Name in ignored:
             continue
         if getattr(obj, "Proxy", None) is not None:
-            raise WorkspaceError("Custom assembly proxies require a dedicated BOM adapter")
+            raise WorkspaceError(
+                "Unsupported BOM proxy on '{}' ({}). A dedicated adapter is required.".format(
+                    obj.Name, type(obj.Proxy).__name__
+                )
+            )
         if obj.TypeId.startswith("Assembly::") or (
             obj.TypeId.startswith("App::Link") and obj.TypeId != "App::Link"
         ):
-            raise WorkspaceError("This assembly structure requires a dedicated BOM adapter")
+            raise WorkspaceError(
+                "Unsupported BOM object '{}' ({}). A dedicated adapter is required.".format(
+                    obj.Name, obj.TypeId
+                )
+            )
         if obj.TypeId != "App::Link":
             continue
+        if assembly_components is not None and obj.Name not in assembly_components:
+            raise WorkspaceError(
+                "Component link '{}' is outside the built-in Assembly's direct members. "
+                "Nested local groups require a dedicated BOM adapter.".format(obj.Name)
+            )
         current, visited = obj, set()
         while current.Document is document and current.TypeId == "App::Link":
             if current.Name in visited:
@@ -109,8 +172,21 @@ def capture_bom(document):
             raise WorkspaceError("External link-to-link targets require a dedicated BOM adapter")
         target_document = current.Document
         metadata = target_document.getObject("ForgePDM_Metadata")
-        if document_modified(target_document) or metadata is None:
-            raise WorkspaceError("Save/upload every linked component before extracting its BOM")
+        if metadata is None:
+            raise WorkspaceError(
+                "Linked component '{}' has no ForgePDM identity. Upload it before synchronizing the BOM.".format(
+                    getattr(target_document, "Label", target_document.FileName)
+                )
+            )
+        if document_modified(target_document):
+            component = getattr(metadata, "ItemNumber", "") or target_document.FileName
+            revision = getattr(metadata, "RevisionLabel", "")
+            raise WorkspaceError(
+                "Component {} Rev {} has unsaved changes in FreeCAD. "
+                "Save it and upload changed content before synchronizing the BOM.".format(
+                    component, revision
+                )
+            )
         result.append(
             {
                 "object_name": obj.Name,
@@ -131,6 +207,7 @@ def capture_bom(document):
 
 def open_configuration(configuration, set_metadata):
     import FreeCAD as App
+    import FreeCADGui as Gui
 
     directory = Path(configuration["directory"])
     ledger = configuration["ledger"]
@@ -176,8 +253,22 @@ def open_configuration(configuration, set_metadata):
                     link.setLink(target)
                     link.Placement = placement
             document.recompute()
-            document.save()
+            if document.HasPendingTransaction:
+                document.commitTransaction()
+            tree_labels.refresh(document)
+            # App.Document.save() can leave Gui.Document.Modified set after our
+            # metadata/relink edits. The GUI save clears it only on success.
+            Gui.getDocument(document.Name).save()
+            if document_modified(document):
+                raise WorkspaceError(
+                    "Retrieved component '{}' could not be saved cleanly; "
+                    "the configuration was not completed.".format(document.Label)
+                )
         verify(configuration, documents)
+        if any(document_modified(document) for document in documents.values()):
+            raise WorkspaceError(
+                "A reconstructed component changed after saving; the configuration was not completed."
+            )
         root = documents[ledger["root_file_id"]]
         App.setActiveDocument(root.Name)
         return {"root": root, "documents": documents, "owned": owned}
@@ -212,7 +303,7 @@ def close_owned(documents):
             current = App.getDocument(document.Name)
             if current is not document:
                 continue
-            if document.isTouched():
+            if document_modified(document):
                 retained.append(document.Name)
             else:
                 App.closeDocument(document.Name)

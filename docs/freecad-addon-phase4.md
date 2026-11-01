@@ -24,8 +24,11 @@ Manual positions and split lines are displayed but replaced on approval.
 Arrays, subelements, unresolved links, local geometry/group link targets,
 external link-to-link targets, custom proxies and unsupported assembly object
 types are rejected. Local geometry is explicitly excluded. Hidden/template links
-are candidates and can be excluded by selection. This does not certify Assembly,
-Assembly3, Assembly4 or other third-party adapters.
+are candidates and can be excluded by selection. Addon 0.4.2 additionally supports
+a single native Assembly container with direct App::Link components and standard
+joints; see [the bounded adapter and live validation](freecad-builtin-assembly.md).
+Other Assembly features, Assembly3, Assembly4 and third-party adapters remain
+unverified.
 
 ## Consistency and API
 

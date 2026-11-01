@@ -1,0 +1,164 @@
+{
+  "date": "2026-11-01",
+  "reproduction_before_fix": {
+    "before": {
+      "ForgePDM_Login": true,
+      "ForgePDM_Logout": true,
+      "ForgePDM_Upload": true,
+      "ForgePDM_Checkout": true,
+      "ForgePDM_CheckIn": true,
+      "ForgePDM_Release": true,
+      "ForgePDM_NewRevision": true,
+      "ForgePDM_Download": true,
+      "ForgePDM_ShowBOM": true
+    },
+    "during": [
+      {
+        "ForgePDM_Login": false,
+        "ForgePDM_Logout": false,
+        "ForgePDM_Upload": false,
+        "ForgePDM_Checkout": false,
+        "ForgePDM_CheckIn": false,
+        "ForgePDM_Release": false,
+        "ForgePDM_NewRevision": false,
+        "ForgePDM_Download": false,
+        "ForgePDM_ShowBOM": false
+      }
+    ],
+    "after": {
+      "ForgePDM_Login": false,
+      "ForgePDM_Logout": false,
+      "ForgePDM_Upload": false,
+      "ForgePDM_Checkout": false,
+      "ForgePDM_CheckIn": false,
+      "ForgePDM_Release": false,
+      "ForgePDM_NewRevision": false,
+      "ForgePDM_Download": false,
+      "ForgePDM_ShowBOM": false
+    },
+    "busy_after": false,
+    "completed": true,
+    "error": null
+  },
+  "validation_after_fix": {
+    "freecad": [
+      "1",
+      "1",
+      "4",
+      "20260928 (Git shallow)",
+      "Unknown",
+      "2026/09/28 13:46:34",
+      "(HEAD detached at 4fd3bf320)",
+      "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+    ],
+    "python": "3.11.14 | packaged by conda-forge | (main, Oct 13 2025, 14:25:33) [GCC 14.3.0]",
+    "qt": "6.8.3",
+    "addon_version": "0.4.1",
+    "checks": [
+      "Show BOM 1: QAction clickable before invocation",
+      "Show BOM 1: correct workflow result",
+      "Show BOM 1: toolbar matches current IsActive state",
+      "Show BOM 1: commands disabled while busy",
+      "Show BOM 2: QAction clickable before invocation",
+      "Show BOM 2: correct workflow result",
+      "Show BOM 2: toolbar matches current IsActive state",
+      "Show BOM 2: commands disabled while busy",
+      "worker error: correct workflow result",
+      "worker error: toolbar matches current IsActive state",
+      "worker error: commands disabled while busy",
+      "cancellation: correct workflow result",
+      "cancellation: toolbar matches current IsActive state",
+      "cancellation: commands disabled while busy",
+      "immediate completion restores toolbar",
+      "HTTP 401 invalidates only the test client",
+      "expired session toolbar matches login-only activation",
+      "expired session keeps protected actions disabled",
+      "active assembly remains unchanged"
+    ],
+    "outcomes": [
+      {
+        "name": "Show BOM 1",
+        "after": {
+          "ForgePDM_Login": true,
+          "ForgePDM_Logout": true,
+          "ForgePDM_Upload": true,
+          "ForgePDM_Checkout": true,
+          "ForgePDM_CheckIn": true,
+          "ForgePDM_Release": true,
+          "ForgePDM_NewRevision": true,
+          "ForgePDM_Download": true,
+          "ForgePDM_ShowBOM": true
+        }
+      },
+      {
+        "name": "Show BOM 2",
+        "after": {
+          "ForgePDM_Login": true,
+          "ForgePDM_Logout": true,
+          "ForgePDM_Upload": true,
+          "ForgePDM_Checkout": true,
+          "ForgePDM_CheckIn": true,
+          "ForgePDM_Release": true,
+          "ForgePDM_NewRevision": true,
+          "ForgePDM_Download": true,
+          "ForgePDM_ShowBOM": true
+        }
+      },
+      {
+        "name": "worker error",
+        "after": {
+          "ForgePDM_Login": true,
+          "ForgePDM_Logout": true,
+          "ForgePDM_Upload": true,
+          "ForgePDM_Checkout": true,
+          "ForgePDM_CheckIn": true,
+          "ForgePDM_Release": true,
+          "ForgePDM_NewRevision": true,
+          "ForgePDM_Download": true,
+          "ForgePDM_ShowBOM": true
+        }
+      },
+      {
+        "name": "cancellation",
+        "after": {
+          "ForgePDM_Login": true,
+          "ForgePDM_Logout": true,
+          "ForgePDM_Upload": true,
+          "ForgePDM_Checkout": true,
+          "ForgePDM_CheckIn": true,
+          "ForgePDM_Release": true,
+          "ForgePDM_NewRevision": true,
+          "ForgePDM_Download": true,
+          "ForgePDM_ShowBOM": true
+        }
+      }
+    ],
+    "scope": "Actual QAction states and read-only toolbar command; injected worker failures/cancel and real HTTP 401",
+    "status": "passed",
+    "restored_toolbar": {
+      "ForgePDM_Login": true,
+      "ForgePDM_Logout": true,
+      "ForgePDM_Upload": true,
+      "ForgePDM_Checkout": true,
+      "ForgePDM_CheckIn": true,
+      "ForgePDM_Release": true,
+      "ForgePDM_NewRevision": true,
+      "ForgePDM_Download": true,
+      "ForgePDM_ShowBOM": true
+    },
+    "notifications": [
+      [
+        "error",
+        "Injected toolbar test timeout"
+      ],
+      [
+        "information",
+        "Operation canceled."
+      ],
+      [
+        "error",
+        "Your session expired or was revoked. Log in again to continue."
+      ]
+    ]
+  }
+}

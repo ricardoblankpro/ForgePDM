@@ -155,17 +155,18 @@ class RevisionService:
             ).fetchone()
         return _checkout(row) if row is not None else None
 
-    def check_in(self, user: User, revision_id: str, change_note: str) -> None:
+    def check_in(self, user: User, revision_id: str, change_note: str = "") -> None:
         change_note = change_note.strip()
-        if not change_note or len(change_note) > 2000:
-            raise ValueError("check-in note must contain 1 to 2000 characters")
+        if len(change_note) > 2000:
+            raise ValueError("check-in note must contain at most 2000 characters")
         now = _now()
         with self.database.transaction() as connection:
             self.authorization.require_edit_revision(user, revision_id, connection)
             checkout = self.require_checkout_owner(user, revision_id, connection)
             connection.execute(
-                "UPDATE item_revisions SET change_note = ?, modified_at = ? WHERE id = ?",
-                (change_note, now.isoformat(), revision_id),
+                "UPDATE item_revisions SET change_note = CASE WHEN ? = '' THEN change_note ELSE ? END, "
+                "modified_at = ? WHERE id = ?",
+                (change_note, change_note, now.isoformat(), revision_id),
             )
             connection.execute(
                 "UPDATE checkouts SET released_at = ?, release_reason = 'checked in', version = version + 1 "

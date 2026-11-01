@@ -3,6 +3,14 @@
   <context>
     <name>ForgePDM</name>
     <message>
+      <source>Refresh ForgePDM Tree Labels</source>
+      <translation>Refresh ForgePDM Tree Labels</translation>
+    </message>
+    <message>
+      <source>Show item, revision and stable occurrence numbers on managed assembly links</source>
+      <translation>Show item, revision and stable occurrence numbers on managed assembly links</translation>
+    </message>
+    <message>
       <source>Acquire / Renew Checkout</source>
       <translation>Acquire / Renew Checkout</translation>
     </message>

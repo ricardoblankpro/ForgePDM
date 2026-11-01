@@ -17,7 +17,7 @@ uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.
 uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.py build
 ```
 
-The output is `clients/freecad/dist/ForgePDM-0.4.0.zip`. Create a `ForgePDM`
+The output is `clients/freecad/dist/ForgePDM-0.5.0.zip`. Create a `ForgePDM`
 directory inside your FreeCAD user `Mod` directory and extract the archive there.
 The resulting layout must be `Mod/ForgePDM/package.xml` and
 `Mod/ForgePDM/freecad/forgepdm/init_gui.py`. Do not extract into an extra nested
@@ -42,7 +42,7 @@ Select **View → Workbench → ForgePDM**. The backend must be running and reac
 
 1. **Log In** opens a connection form with server URL, username, password and request timeout. URL, username and timeout are remembered; passwords and bearer tokens are not saved. Expired/revoked sessions prompt you to log in again.
 2. **Create / Upload Current Document** lets you choose an authorized project by number/name for a new Item, creates a managed working copy, attaches hidden item/revision metadata, and uploads a verified `native_cad` snapshot with its exact component references. Only editable projects are offered; administrators may choose a projectless Item.
-3. **Acquire / Renew Checkout**, **Check In Current Revision**, and **Release Current Revision** manage the current revision. Check-in uploads the saved native file first and then releases the checkout. The intended workflow is check-in before release; release prerequisites remain enforced by the existing backend.
+3. **Acquire / Renew Checkout**, **Check In Current Revision**, and **Release Current Revision** manage the current revision. Check-in uploads the saved native file first and then releases the checkout without prompting for a change note. The intended workflow is check-in before release; release prerequisites remain enforced by the existing backend.
 4. **Create Next Revision** creates the next Working revision in a separate managed file, updates the local metadata and uploads its native snapshot, preserving the previous revision file.
 5. **Download Item / Assembly** searches by item number, name or description (blank to browse), offers pages of matching items, then lets you select a revision, including historical revisions. Select an exact native snapshot if several exist. It retrieves the pinned CAD reference graph into a new configuration and verifies external links before completion. Missing/inaccessible components stop retrieval before opening the assembly.
 6. **Show ForgePDM BOM** displays the current revision's recursive BOM. Choose
@@ -51,11 +51,37 @@ Select **View → Workbench → ForgePDM**. The backend must be running and reac
    source occurrences and quantity changes, then explicitly approve replacement.
    This replaces all current lines, including manual lines. An empty proposal
    explicitly clears the BOM. Canceling either dialog preserves the BOM.
+7. **Refresh ForgePDM Tree Labels** updates an owned Working assembly to show
+   `P000001-B|1` on its managed component links. Save/upload persists the changes.
+   The command also verifies the checkout used for subsequent automatic insertion
+   updates. Acquire a checkout and managed working copy first.
 
 The API upload accepts one file per Dataset. Project authorization and all PDM
 rules remain on the server. Downloads require access to every referenced
 component revision. Internal UUIDs are carried by the client; you do not need
 to enter them when selecting projects, items or revisions.
+
+## Tree labels and occurrences
+
+Tree links display item number, pinned revision and occurrence, for example
+`P000001-B|1`, `P000001-B|2` or `A000003-C|1`. Numbering restarts for each exact
+item/revision inside each parent assembly; a subassembly numbers its own children.
+The suffix is an occurrence index, not a quantity or BOM position. Removing a
+link leaves a gap. Reordering leaves numbers unchanged; copied links receive
+fresh UUIDs and the next index. Item/Revision UUIDs and internal object Names
+remain the identities used by ForgePDM.
+
+Labels and allocation history are stored in CAD properties and applied during
+upload and verified retrieval. After checkout or explicit refresh has verified
+local editing permission, inserted links update automatically after the native
+operation completes. The observer waits while commands/dialogs are active and
+does no startup networking. Check-in/release disable its cached permission.
+Unmanaged, foreign, array and subelement links keep their existing labels.
+
+The document heading displays `ITEM-REVISION` through managed workflows. Raw
+FreeCAD File > Open may use the filename for that heading; stored link labels
+and numbers remain intact. Use managed retrieval or Refresh Tree Labels to
+reapply the heading. Original labels remain available in ForgePDM properties.
 
 ## Managed workspace
 
@@ -91,11 +117,21 @@ assembly proxies require a dedicated adapter and are rejected. Hidden links are
 still candidates: use explicit selection to exclude templates or construction aids.
 Save/upload changed components and then their parent before synchronizing.
 
+The built-in Assembly workbench is supported for one `Assembly::AssemblyObject`
+with direct whole-object `App::Link` components. Its standard joint group and
+`JointObject.Joint`/`GroundedJoint` objects constrain geometry and do not contribute
+BOM quantities. Nested local native assemblies, indirect component groups,
+unrecognized assembly objects and custom joint proxies are rejected explicitly.
+Use linked external subassemblies for nested product structure. This does not
+certify all built-in Assembly features or third-party assembly workbenches.
+
 ## Current limits
 
 Network requests and file transfers run in a worker with progress reporting.
 Other ForgePDM commands are disabled while a workflow is active, while FreeCAD's
-event loop remains responsive. Cancellation stops subsequent steps and removes
+event loop remains responsive. Toolbar and menu actions refresh automatically
+when the workflow finishes, including cancellation and failures.
+Cancellation stops subsequent steps and removes
 partial downloads; a blocked request may need to reach its timeout first.
 Short finalization requests cannot be canceled. Cancellation never undoes a
 server commit, and failed/uncertain mutations are never retried automatically.
@@ -108,6 +144,12 @@ silently replaced. A failed retrieval can be retried; it uses a new configuratio
 and verified cached bytes. Inspect an unreadable/unknown workspace lock instead
 of deleting it while another operation may be running.
 
+Downloaded components are saved cleanly after reconstruction. BOM synchronization
+still rejects genuine unsaved edits and identifies the affected item/revision.
+After upgrading from 0.4.2, retrieve/reopen assemblies through ForgePDM once to
+replace modification flags left in previously opened documents. Re-uploading an
+unchanged downloaded component is not required to clear this old loader issue.
+
 Upload, manifest attachment and check-in remain separate HTTP operations. A
 failed or timed-out operation may leave an uploaded dataset; inspect server state
 before retrying. Atomic check-in and mutation idempotency are Phase 5. Only
@@ -116,7 +158,7 @@ publication requires filesystem hard-link support. Local read-only protection
 is advisory. Third-party proxies, external textures and other CAD adapters are
 not certified. Windows, macOS and network shares remain unverified.
 
-Version 0.4.0 requires the Phase 3 manifest endpoints and Phase 4 BOM snapshot/
+Version 0.5.0 requires the Phase 3 manifest endpoints and Phase 4 BOM snapshot/
 synchronization endpoints. SQLite schema remains at migration 6.
 Back up the database and immutable files before updating/restarting
 the server. The backend still runs separately from FreeCAD. Restart FreeCAD after

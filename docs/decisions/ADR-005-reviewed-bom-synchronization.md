@@ -56,3 +56,12 @@ label parsing and implicit overwrite behavior are not adopted. EasyPDM remains
 a workflow reference; no third-party source is copied. The bounded adapter and
 explicit replacement keep the MVP small, at the cost of manual component selection,
 no automatic BOM refresh on upload and no certified third-party assembly support.
+
+## Native Assembly extension (addon 0.4.2)
+
+A single `Assembly::AssemblyObject` containing direct supported App::Link
+components is now recognized. Standard JointGroup/Joint/GroundedJoint objects
+are constraints and do not add engineering occurrences. Nested local native
+assemblies, custom proxies and other unsupported structures remain rejected.
+The extension does not change manifest, selection, review, quantity, lifecycle
+or concurrency rules. See [scope and evidence](../freecad-builtin-assembly.md).

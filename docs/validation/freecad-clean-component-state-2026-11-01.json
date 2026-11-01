@@ -1,0 +1,32 @@
+{
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "python": "3.11.14 | packaged by conda-forge | (main, Oct 13 2025, 14:25:33) [GCC 14.3.0]",
+  "qt": "6.8.3",
+  "addon_version": "0.4.3",
+  "checks": [
+    "retrieved root and components are not falsely modified",
+    "clean downloaded components pass complete pinned-snapshot verification",
+    "assembly checkout permits BOM editing",
+    "real edit stays modified after recompute",
+    "real unsaved edit is rejected with affected component identity",
+    "failed cleanup retains genuinely modified document",
+    "original documents and modification flags are unchanged"
+  ],
+  "scope": "Temporary verified clone of current assembly; read-only HTTP; dirty edit injected into disposable clone only",
+  "components": [
+    "P000004 / B \u2014 Body001",
+    "P000005 / A \u2014 Body",
+    "P000006 / A \u2014 Body"
+  ],
+  "status": "passed",
+  "date": "2026-11-01"
+}

@@ -13,7 +13,7 @@ from .ui import QtWidgets, ask_choice, ask_text, execute_dialog, information, wa
 from .jobs import Request
 from .resources import icon_path
 from .i18n import translate
-from . import bom, cad, workspace
+from . import bom, cad, tree_labels, tree_observer, workspace
 from .ui import select_bom_occurrences, review_bom
 
 
@@ -213,6 +213,10 @@ def _save_managed_as(document, path):
     document.save()
     if not os.path.isfile(path):
         raise workspace.WorkspaceError("FreeCAD did not create the managed working copy")
+    # Revision metadata and native Save As/relink operations can leave an auto
+    # transaction open. This owned-copy save completes that controlled operation.
+    if document.HasPendingTransaction:
+        document.commitTransaction()
     return path
 
 
@@ -245,6 +249,9 @@ def _upload_native(client, document, path, references):
             "CAD references changed while preparing the upload. Review/save the document before retrying."
         )
     metadata = _require_metadata(document)
+    yield from _authorize_tree_labels(client, document)
+    tree_labels.refresh(document)
+    _save_document(document)
     result = yield Request(
         "Uploading verified native CAD snapshot…",
         client.upload_native,
@@ -257,6 +264,18 @@ def _upload_native(client, document, path, references):
             "The saved snapshot was uploaded, but local changes remain. They were not included in that upload.",
         )
     return result
+
+
+def _authorize_tree_labels(client, document):
+    metadata = _require_metadata(document)
+    name, revision_id = document.Name, metadata.RevisionId
+    checkout = yield Request("Checking tree-label checkout…", client.get_checkout, (revision_id,))
+    document = _guard_document(name, revision_id)
+    if workspace.working_path(document.FileName, client.base_url) is None:
+        raise workspace.WorkspaceError(
+            "Create a managed working copy before refreshing tree labels"
+        )
+    tree_observer.allow_edit(document, checkout, client, Session.user)
 
 
 class Command:
@@ -427,6 +446,9 @@ class CheckoutCommand(Command):
                 "Checkout acquired; working-copy selection was canceled. No CAD file was overwritten.",
             )
             return
+        tree_observer.allow_edit(document, result, client, Session.user)
+        if tree_labels.refresh(document)["changed"]:
+            _save_document(document)
         information(
             "ForgePDM",
             "Checkout held until {}. Edit the managed working copy.".format(result["expires_at"]),
@@ -444,19 +466,17 @@ class CheckInCommand(Command):
         document = _require_document()
         metadata = _require_metadata(document)
         revision_id = metadata.RevisionId
-        note = ask_text("ForgePDM Check In", "Change note")
-        if not note:
-            return
         yield from _editable(client, metadata)
         references = cad.capture(document)
         path = yield from _ensure_working(client, document)
         if path is None:
             return
         yield from _upload_native(client, document, path, references)
+        tree_observer.revoke_revision(revision_id)
         yield Request(
             "Checking in revision…",
             client.checkin,
-            (revision_id, note),
+            (revision_id,),
             mutates=True,
             cancellable=False,
         )
@@ -471,6 +491,7 @@ class ReleaseCommand(Command):
 
     def action(self):
         revision_id = _require_metadata(_require_document()).RevisionId
+        tree_observer.revoke_revision(revision_id)
         yield Request(
             "Releasing revision…",
             Session.require_client().transition,
@@ -528,6 +549,34 @@ class NewRevisionCommand(Command):
                 result["label"]
             ),
         )
+
+
+class RefreshTreeLabelsCommand(Command):
+    icon_name = "tree-labels"
+    menu_text = "Refresh ForgePDM Tree Labels"
+    tooltip = "Show item, revision and stable occurrence numbers on managed assembly links"
+    needs_document = True
+
+    def action(self):
+        client = Session.require_client()
+        document = _require_document()
+        name = document.Name
+        metadata = _require_metadata(document)
+        revision_id = metadata.RevisionId
+        yield from _editable(client, metadata)
+        document = _guard_document(name, revision_id)
+        yield from _authorize_tree_labels(client, document)
+        result = tree_labels.refresh(document)
+        message = (
+            "Tree labels refreshed. Save/upload the working document to persist changes."
+            if result["changed"]
+            else "Tree labels are up to date."
+        )
+        if result["skipped"]:
+            message += "\nUnmanaged or unsupported links kept their labels: " + ", ".join(
+                result["skipped"]
+            )
+        information("ForgePDM", message)
 
 
 class ShowBOMCommand(Command):
