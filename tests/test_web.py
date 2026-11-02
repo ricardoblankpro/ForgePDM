@@ -22,7 +22,7 @@ def test_web_shell_and_assets_are_public_but_data_remains_authenticated(
         assert "script-src 'self'" in response.headers["content-security-policy"]
         assert response.headers["cache-control"] == "no-store"
         assert response.headers["x-content-type-options"] == "nosniff"
-        for name in ["style.css", "app.mjs", "model.mjs", "api.mjs", "mark.svg"]:
+        for name in ["style.css", "app.mjs", "model.mjs", "api.mjs", "management.mjs", "mark.svg"]:
             asset = client.get("/app/" + name)
             assert asset.status_code == 200
         assert client.get("/api/v1/items").status_code == 401

@@ -21,13 +21,14 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 | 5 | Robust checkout/check-in, lifecycle, revisions and datasets | Started: atomic part/assembly check-in with pinned manifests, fenced leases and durable replay implemented; legacy-write fencing and revision retries next |
 | 6 | Security, testing, backup/recovery and operational hardening | Consolidate production-readiness evidence |
 | 7 | Addon Manager distribution and stable deployment | Requires licensing, distribution approval and operational gates |
-| 8 | Web interface, ERPNext and future integrations | Read-only web browsing brought forward and implemented locally; editing and integrations deferred |
+| 8 | Web interface, ERPNext and future integrations | Browsing plus user/password/project administration, my checkouts and scoped activity implemented locally; engineering editing and integrations deferred |
 
 The user approved bringing basic web browsing forward while Phase 5 remains the
 next backend reliability priority. The first web increment is served at `/app/`
 and provides authorized project/item browsing, exact revision history, datasets,
-where-used and direct/multilevel BOM views. Web editing, flattened BOM tools and
-ERP integrations remain future work. See [the web GUI report](web-gui.md).
+where-used and direct/multilevel BOM views. User-approved account/project management, my checkouts and activity history
+are now implemented; see [the functional GUI report](web-management.md). Engineering
+editing, flattened BOM tools and ERP integrations remain future work. See [the web GUI report](web-gui.md).
 
 Phase 3 was explicitly authorized after Phase 2. Phase 4 provides reviewed,
 revision-aware BOM synchronization for supported App::Link structures. The

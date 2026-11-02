@@ -36,6 +36,7 @@ class User:
     display_name: str
     enabled: bool
     role: str = "user"
+    must_change_password: bool = False
 
 
 @dataclass(frozen=True, slots=True)

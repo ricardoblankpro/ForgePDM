@@ -26,7 +26,7 @@
           <p id="login-error" class="form-error" role="alert" hidden></p>
           <button id="login-button" type="submit" class="primary wide">Sign in to workspace <span aria-hidden="true">→</span></button>
         </form>
-        <div class="login-note"><span class="note-icon" aria-hidden="true">⌘</span><div><strong>Browse with confidence</strong><p>This workspace lets you explore your data. Engineering changes stay in your existing controlled workflows.</p></div></div>
+        <div class="login-note"><span class="note-icon" aria-hidden="true">⌘</span><div><strong>Browse with confidence</strong><p>Explore product data, manage your account and administer project access. Engineering changes remain in the FreeCAD workflows.</p></div></div>
         <p id="server-status" class="connection muted"><span class="status-dot"></span>Checking server…</p>
       </div><p class="login-footer">ForgePDM · Product data, connected.</p>
     </main>
@@ -38,14 +38,20 @@
       <div class="nav-section">EXPLORE</div>
       <button id="nav-catalog" class="nav-button active"><span aria-hidden="true">▦</span> Item catalog <span class="nav-shortcut">/</span></button>
       <button id="nav-projects" class="nav-button"><span aria-hidden="true">▱</span> Projects</button>
+      <button id="nav-checkouts" class="nav-button">My checkouts</button>
+      <button id="nav-project-settings" class="nav-button">Project management</button>
+      <button id="nav-activity" class="nav-button">Activity history</button>
+      <button id="nav-users" class="nav-button" hidden>Users</button>
+      <button id="nav-account" class="nav-button">My account</button>
       <div class="sidebar-rule"></div><div class="nav-section">YOUR PROJECTS</div><div id="project-links" class="project-links"></div>
-      <div class="sidebar-bottom"><span class="read-only-dot"></span><div><strong>Read-only workspace</strong><small>Explore. Trace. Understand.</small></div></div>
+      <div class="sidebar-bottom"><span class="read-only-dot"></span><div><strong>Controlled workspace</strong><small>Browse and manage your data.</small></div></div>
     </aside>
     <div class="workspace-body">
       <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong id="page-crumb">Item catalog</strong></div><div class="account"><span id="account-avatar" class="avatar"></span><span id="account-name"></span><button id="logout" class="quiet">Sign out</button></div></header>
       <main id="workspace-main" tabindex="-1">
-        <div class="page-heading"><div><span class="eyebrow">YOUR ENGINEERING DATA</span><h1 id="page-title">Item catalog</h1><p id="page-subtitle" class="muted">Find a component. Follow its history. Understand its place.</p></div><span class="view-tag">Read-only access</span></div>
+        <div class="page-heading"><div><span class="eyebrow">YOUR ENGINEERING DATA</span><h1 id="page-title">Item catalog</h1><p id="page-subtitle" class="muted">Find a component. Follow its history. Understand its place.</p></div><span class="view-tag">Controlled access</span></div>
         <div id="notice" role="alert" class="notice" hidden></div>
+        <section id="management-panel" class="management-panel" hidden aria-label="Workspace management"></section>
         <section id="projects-panel" hidden aria-label="Projects"><div id="project-cards" class="project-cards"></div></section>
         <section id="catalog-panel" aria-label="Item catalog">
           <form id="search-form" class="catalog-toolbar"><div class="search-field"><span aria-hidden="true">⌕</span><input id="search" name="q" type="search" maxlength="200" aria-label="Search items" placeholder="Search by item number, name or description…"><kbd>/</kbd></div><label class="sr-only" for="project-filter">Filter by project</label><select id="project-filter"><option value="">All accessible projects</option></select><button type="submit" class="secondary">Search</button></form>

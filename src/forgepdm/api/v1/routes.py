@@ -1,7 +1,6 @@
 """Versioned API routes for the initial item workflow."""
 
 import json
-
 from decimal import Decimal
 from pathlib import PurePosixPath
 from uuid import UUID
@@ -147,6 +146,7 @@ class DatasetManifestRequest(BaseModel):
 
 
 def current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> User:
@@ -157,7 +157,12 @@ def current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     try:
-        return auth_service.authenticate(credentials.credentials)
+        user = auth_service.authenticate(credentials.credentials)
+        if user.must_change_password and request.url.path not in {
+            "/api/v1/auth/me", "/api/v1/auth/logout", "/api/v1/auth/password"
+        }:
+            raise HTTPException(status_code=403, detail="Change your temporary password before continuing")
+        return user
     except AuthenticationError as error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -785,6 +790,7 @@ def _user_response(user: User):
         "username": user.username,
         "display_name": user.display_name,
         "role": user.role,
+        "must_change_password": user.must_change_password,
     }
 
 

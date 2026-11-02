@@ -196,6 +196,14 @@ CREATE TABLE checkin_operations (
 CREATE INDEX checkin_operations_revision_idx ON checkin_operations(revision_id);
 """
 
+MANAGEMENT_SCHEMA = """
+ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0 CHECK(must_change_password IN (0,1));
+ALTER TABLE projects ADD COLUMN customer TEXT NOT NULL DEFAULT '';
+ALTER TABLE projects ADD COLUMN due_date TEXT;
+ALTER TABLE projects ADD COLUMN description TEXT NOT NULL DEFAULT '';
+CREATE INDEX audit_events_time_idx ON audit_events(occurred_at,id);
+"""
+
 MIGRATIONS = (
     (1, SCHEMA),
     (2, AUTHORIZATION_SCHEMA),
@@ -204,6 +212,7 @@ MIGRATIONS = (
     (5, BOM_SCHEMA),
     (6, MANIFEST_SCHEMA),
     (7, ATOMIC_CHECKIN_SCHEMA),
+    (8, MANAGEMENT_SCHEMA),
 )
 
 

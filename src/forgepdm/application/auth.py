@@ -81,6 +81,7 @@ def _user(row) -> User:
         display_name=row["display_name"],
         enabled=bool(row["enabled"]),
         role=row["role"],
+        must_change_password=bool(row["must_change_password"]),
     )
 
 
@@ -91,7 +92,7 @@ class AuthService:
     def login(self, username: str, password: str) -> tuple[str, User, datetime]:
         with self.database.connection() as connection:
             row = connection.execute(
-                "SELECT id, username, display_name, enabled, role, password_hash "
+                "SELECT id, username, display_name, enabled, role, must_change_password, password_hash "
                 "FROM users WHERE username = ? COLLATE NOCASE",
                 (username.strip(),),
             ).fetchone()
@@ -129,7 +130,7 @@ class AuthService:
         now = datetime.now(timezone.utc).isoformat()
         with self.database.connection() as connection:
             row = connection.execute(
-                "SELECT u.id, u.username, u.display_name, u.enabled, u.role "
+                "SELECT u.id, u.username, u.display_name, u.enabled, u.role, u.must_change_password "
                 "FROM auth_sessions s JOIN users u ON u.id = s.user_id "
                 "WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND u.enabled = 1",
                 (_token_hash(token), now),

@@ -1,0 +1,31 @@
+{
+  "browser": "156.0.8078.47",
+  "scope": "Disposable real API/database and Chrome; no user engineering data",
+  "checks": [
+    "admin creates account with required password change",
+    "self-disable is rejected inline without losing the form",
+    "admin creates project with customer, due date and description",
+    "customer is rendered as text",
+    "admin assigns project membership through the GUI",
+    "temporary-password login shows only password-change workspace",
+    "temporary credentials cannot access engineering API",
+    "password change requires a fresh sign-in",
+    "member sees assigned project properties and no administration buttons",
+    "member project properties are read only",
+    "regular user cannot bypass hidden controls",
+    "activity user picker is scoped to accessible events",
+    "my checkout links navigate to their exact revision",
+    "activity filters return administrative audit events",
+    "admin reset revokes an existing browser session",
+    "reset password again requires mandatory change",
+    "disabled account cannot sign in",
+    "archive preserves project and removes active catalog option",
+    "admin can remove project membership",
+    "audit contains reset events without credentials",
+    "tokens and credentials stay out of persistent browser storage",
+    "mobile management page fits viewport",
+    "no uncaught browser exceptions"
+  ],
+  "errors": [],
+  "status": "passed"
+}

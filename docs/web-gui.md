@@ -1,4 +1,10 @@
-# Read-only web GUI — first increment
+# Web GUI
+
+The initial read-only browsing increment below is retained as implementation
+history. User/account/project administration, My checkouts and scoped activity
+are now implemented; see [functional workspace usage and validation](web-management.md).
+
+## Initial read-only increment
 
 Approved scope: bring basic web browsing forward from Phase 8 while Phase 5
 backend reliability remains the next backend priority.

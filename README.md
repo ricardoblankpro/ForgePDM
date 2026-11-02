@@ -73,10 +73,16 @@ Open **http://127.0.0.1:8000/app/** while the backend is running. Sign in with t
 same ForgePDM account used by the FreeCAD addon. No separate frontend server,
 JavaScript dependency installation or build is required.
 
-The read-only workspace supports authorized project/item browsing, search,
+The workspace supports authorized project/item browsing, search,
 revision history, direct/multilevel BOMs, where-used navigation and dataset file
 downloads. BOM links open their exact recorded revisions. Newer revisions are
 shown separately; the browser does not update components or engineering data.
+
+Administrators can manage users, reset passwords, maintain project properties
+(customer, due date and description), and assign project membership/roles. All
+users can change their password, inspect their checkouts and browse scoped
+activity history. New/reset accounts must change their temporary password before
+accessing data. See [usage and an independent test checklist](docs/web-management.md).
 
 Authentication tokens stay in page memory; refreshing the page requires sign-in.
 Downloads retrieve individual dataset files. Use the FreeCAD addon to reconstruct

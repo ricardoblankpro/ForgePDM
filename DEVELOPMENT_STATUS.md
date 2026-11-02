@@ -1,5 +1,30 @@
 # Development status
 
+## 2026-11-02 — Functional web management workspace
+
+- User-approved GUI priorities brought forward: admin user creation/edit/enable/
+  disable/roles, password resets and own-password changes, project properties
+  (customer, due date, description), membership/roles, My checkouts and activity.
+- Additive migration 8 preserves existing accounts/passwords/projects/leases.
+  Consistent private local metadata backup taken before applying it. New/reset
+  accounts must change their temporary password before other API access; existing
+  accounts are unchanged. Password changes/reset/disable/role changes revoke
+  sessions. Current admin role is checked inside writes; last-admin removal and
+  unsafe self-disable/demotion are rejected. No password/token data is audited.
+- Regular users see assigned project properties, their accessible unreleased
+  checkouts and scoped activity. Activity user choices derive from visible events;
+  raw event details are admin-only. Project archiving preserves data/permissions
+  and excludes the project from active catalog selectors. CAD mutations stay in
+  the existing FreeCAD workflows.
+- Validation: 98 backend tests, 228 addon tests, 3 Node model tests, 26 existing
+  browser checks and 23 management browser checks passed. Migration preservation,
+  role/visibility/session boundaries and real browser mutations use disposable
+  fixtures. Desktop/mobile screens inspected; tables scroll at readable widths.
+  Focused lint, JS syntax and wheel packaging passed.
+- Usage/test checklist: docs/web-management.md. Evidence:
+  docs/validation/web-management-browser-2026-11-02.json. Phase 5 remains incomplete;
+  the user prioritized the functional GUI before independent thorough tests.
+
 ## 2026-11-02 — Phase 5 increment 2: atomic assembly check-in (addon 0.6.1)
 
 - Native check-in now publishes exact CAD reference pins in the same transaction
@@ -216,7 +241,8 @@ before acting. Git history and the linked reports provide the detailed record.
 - Backend: FastAPI, SQLite, separate SHA-256 file storage, authentication,
   project permissions, Items/revisions/datasets, checkout leases, lifecycle,
   revision-pinned BOMs and immutable CAD dependency manifests.
-- Web GUI: read-only browser at `/app/`, served by the backend; see docs/web-gui.md.
+- Web GUI: browsing and controlled user/project/account management at `/app/`,
+  served by the backend; see docs/web-gui.md and docs/web-management.md.
 - FreeCAD addon: **0.6.1**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
@@ -278,11 +304,14 @@ Evidence:
 
 1. Read root and applicable nested `AGENTS.md`, inspect Git status and recent
    commits, and confirm the user's requested scope. Phase 5 is authorized and
-   started; the first two bounded increments are complete.
+   started; the first two bounded increments are complete. The user subsequently
+   prioritized functional web management and independent thorough testing; use
+   docs/web-management.md for the implemented GUI and suggested test sequence.
 2. For CAD issues, confirm installed addon/runtime versions and reproduce with
    the actual document structure. Distinguish mocked tests from live validation.
    Preserve existing edits, immutable snapshots and exact revision pins.
-3. Continue Phase 5 from ADR-008 and docs/phase5-reliable-checkin.md. Next,
+3. After the user's independent testing, continue Phase 5 from ADR-008 and
+   docs/phase5-reliable-checkin.md when requested. Next,
    fence remaining legacy writes and address revision-creation retries. Propose the
    next design increment before major architectural changes.
 4. Track later operational work separately: crash-orphan reconciliation,

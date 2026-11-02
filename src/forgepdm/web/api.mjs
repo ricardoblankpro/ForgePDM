@@ -18,7 +18,7 @@ export class API {
       let detail;
       try { detail = (await response.json()).detail; } catch { /* No server detail. */ }
       if (response.status === 401 && token && token === this.token) this.onExpired();
-      const message = typeof detail === "string" ? detail :
+      const message = typeof detail === "string" ? detail : Array.isArray(detail) ? detail.map(issue=>`${issue.loc?.at(-1) || "Input"}: ${issue.msg}`).join("; ") :
         response.status === 404 ? "This record is unavailable or you do not have access." :
         response.status === 401 ? "Your session has expired. Please sign in again." :
         "The request could not be completed. Please try again.";

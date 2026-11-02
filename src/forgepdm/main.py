@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from forgepdm.api.v1 import routes
+from forgepdm.api.v1 import management, routes
 from forgepdm.application.auth import AuthService
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.application.bom import BOMService
@@ -15,6 +15,7 @@ from forgepdm.application.checkins import CheckInService
 from forgepdm.application.datasets import DatasetService
 from forgepdm.application.items import ItemService
 from forgepdm.application.manifests import ManifestService
+from forgepdm.application.management import ManagementService
 from forgepdm.application.revisions import RevisionService
 from forgepdm.infrastructure.database import Database
 from forgepdm.infrastructure.storage import DEFAULT_MAX_UPLOAD_BYTES, FileStorage
@@ -33,6 +34,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     revisions = RevisionService(database, authorization)
     app = FastAPI(title="ForgePDM API", version="0.1.0")
     app.state.database = database
+    app.state.management_service = ManagementService(database)
     app.state.auth_service = AuthService(database)
     app.state.authorization_service = authorization
     app.state.catalog_service = CatalogService(database, authorization)
@@ -44,6 +46,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     app.state.dataset_service = DatasetService(database, storage, authorization, revisions)
     app.state.file_storage = storage
     app.include_router(routes.router)
+    app.include_router(management.router)
     app.mount("/app", StaticFiles(directory=Path(__file__).parent / "web", html=True), name="web")
 
     @app.middleware("http")

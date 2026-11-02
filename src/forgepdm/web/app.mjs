@@ -1,3 +1,4 @@
+import { managementUI } from "./management.mjs";
 import { API } from "./api.mjs";
 import { readRoute, routeFor, bomRows, allBomKeys, fileSize, dateLabel, stateLabel } from "./model.mjs";
 
@@ -11,6 +12,7 @@ let listVersion = 0;
 let detailVersion = 0;
 let tabVersion = 0;
 let toastTimer;
+let management;
 
 function el(tag, attrs = {}, ...children) {
   const element = document.createElement(tag);
@@ -57,6 +59,7 @@ function toast(message) {
 }
 function request(path, options = {}) { return api.request(path, { signal: session.signal, ...options }); }
 function resetSession(message = "") {
+  management?.reset();
   session.abort(); session = new AbortController(); api.token = null;
   listVersion++; detailVersion++; tabVersion++;
   Object.assign(state, { user: null, items: [], projects: [], item: null, revision: null, revisions: [], cache: {}, offset: 0, project: "", query: "", page: "catalog" });
@@ -87,6 +90,9 @@ $("#login-form").addEventListener("submit", async event => {
     $("#account-name").textContent = result.user.display_name || result.user.username;
     $("#account-avatar").textContent = (result.user.display_name || result.user.username).slice(0, 2).toUpperCase();
     $("#search").value = "";
+    for (const nav of document.querySelectorAll(".nav-button")) nav.hidden = result.user.must_change_password || (nav.id === "nav-users" && result.user.role !== "admin");
+    document.querySelector("#nav-account").hidden = false;
+    if (result.user.must_change_password) { setPage("account"); return; }
     setPage("catalog");
     renderEmptyDetail();
     loadProjects(); loadItems();
@@ -109,6 +115,9 @@ async function loadProjects() {
     const rows = await api.allPages("/projects", session.signal);
     if (currentSession !== session || !state.user) return;
     state.projects = rows;
+    if (state.project && !rows.some(project => project.id === state.project)) {
+      state.project = ""; state.offset = 0; loadItems();
+    }
     $("#project-filter").replaceChildren(el("option", { value: "" }, "All accessible projects"),
       ...rows.map(p => el("option", { value: p.id }, `${p.project_number} · ${p.name}`)));
     $("#project-filter").value = state.project;
@@ -132,12 +141,17 @@ function renderProjects() {
   $("#project-cards").replaceChildren(...(cards.length ? cards : [empty("No projects available", "Your assigned projects will appear here. Contact your administrator if you need access.")]));
 }
 function setPage(page) {
+  if (state.user?.must_change_password) page = "account";
   state.page = page;
-  const projects = page === "projects";
-  $("#projects-panel").hidden = !projects; $("#catalog-panel").hidden = projects;
-  $("#nav-projects").classList.toggle("active", projects); $("#nav-catalog").classList.toggle("active", !projects);
-  $("#page-crumb").textContent = $("#page-title").textContent = projects ? "Projects" : "Item catalog";
-  $("#page-subtitle").textContent = projects ? "Explore the projects you have access to." : "Find a component. Follow its history. Understand its place.";
+  const managed = !["projects", "catalog"].includes(page);
+  const titles = {catalog:"Item catalog", projects:"Projects", users:"Users", "project-settings":"Project management", checkouts:"My checkouts", activity:"Activity history", account:"My account"};
+  $("#projects-panel").hidden = page !== "projects";
+  $("#catalog-panel").hidden = page !== "catalog";
+  $("#management-panel").hidden = !managed;
+  for (const nav of document.querySelectorAll(".nav-button")) nav.classList.toggle("active", nav.id === `nav-${page}`);
+  $("#page-crumb").textContent = $("#page-title").textContent = titles[page] || page;
+  $("#page-subtitle").textContent = page === "projects" ? "Explore the projects you have access to." : page === "catalog" ? "Find a component. Follow its history. Understand its place." : "Manage your workspace through controlled, authorized actions.";
+  if (managed) management.open(page);
 }
 $("#nav-catalog").addEventListener("click", () => setPage("catalog"));
 $("#nav-projects").addEventListener("click", () => setPage("projects"));
@@ -286,7 +300,7 @@ function renderOverview(content) {
   if (state.revisions.length > 8) content.append(button(state.historyAll ? "Show recent revisions" : "Show all revisions", () => { state.historyAll = !state.historyAll; renderOverview(content); }, { class: "quiet" }));
 }
 function dataTable(headers, rows, className = "", label = "") {
-  return el("div", { class: "table-scroll" }, el("table", { class: `data-table ${className}`, "aria-label": label },
+  return el("div", { class: "table-scroll", tabindex:"0", "aria-label":`${label || "Data table"} · scroll for more columns` }, el("table", { class: `data-table ${className}`, "aria-label": label },
     el("thead", {}, el("tr", {}, ...headers.map(header => el("th", { scope: "col" }, header)))),
     el("tbody", {}, ...rows.map(row => el("tr", {}, ...row.map(cell => el("td", {}, cell)))))));
 }
@@ -351,6 +365,8 @@ function renderWhereUsed(content, lines) {
     dataTable(["Assembly", "Name", "Parent revision", "Quantity"], rows, "", "Where this item is used"));
 }
 
+management = managementUI({state, request, api, el, button, dataTable, dateLabel, toast, navigate, resetSession, loadProjects, signal:()=>session.signal});
+for (const page of ["users", "project-settings", "checkouts", "activity", "account"]) document.querySelector(`#nav-${page}`).addEventListener("click",()=>setPage(page));
 renderEmptyDetail();
 fetch("/health", { cache: "no-store" }).then(response => {
   if (!response.ok) throw new Error();
