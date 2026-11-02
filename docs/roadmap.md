@@ -18,7 +18,7 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 | 2 | Initialization, connectivity and catalog browsing | Implemented; [scope and validation](freecad-addon-phase2.md) |
 | 3 | Local workspace, CAD files and reference integrity | Implemented for supported whole-object App::Link and native AssemblyLink; [scope and validation](freecad-addon-phase3.md) |
 | 4 | BOM extraction and revision-aware assembly synchronization | Implemented for direct parts/native subassemblies and reviewed replacement; [scope and validation](freecad-addon-phase4.md) |
-| 5 | Robust checkout/check-in, lifecycle, revisions and datasets | Started: atomic part check-in, fenced leases and durable replay implemented; assembly/legacy-write/revision retries next |
+| 5 | Robust checkout/check-in, lifecycle, revisions and datasets | Started: atomic part/assembly check-in with pinned manifests, fenced leases and durable replay implemented; legacy-write fencing and revision retries next |
 | 6 | Security, testing, backup/recovery and operational hardening | Consolidate production-readiness evidence |
 | 7 | Addon Manager distribution and stable deployment | Requires licensing, distribution approval and operational gates |
 | 8 | Web interface, ERPNext and future integrations | Read-only web browsing brought forward and implemented locally; editing and integrations deferred |

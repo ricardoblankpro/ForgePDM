@@ -1,4 +1,4 @@
-"""Atomic metadata publication for a fenced, replayable single-part check-in."""
+"""Atomic metadata publication for a fenced, replayable native check-in."""
 
 import hashlib
 import json
@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 from forgepdm.application import revisions as revision_clock
 from forgepdm.application.datasets import _media_type, _safe_filename
+from forgepdm.application.manifests import REFERENCE_FIELDS, ManifestService
 from forgepdm.domain.entities import Conflict, Forbidden, NotFound
 
 
@@ -35,14 +36,6 @@ class CheckInService:
         if actor is None or not actor["enabled"]:
             raise Forbidden("an enabled user is required")
         self.authorization.require_edit_revision(user, revision_id, connection)
-        kind = connection.execute(
-            "SELECT i.kind FROM items i JOIN item_revisions r ON r.item_id=i.id WHERE r.id=?",
-            (revision_id,),
-        ).fetchone()["kind"]
-        if kind != "part":
-            raise Conflict(
-                "atomic native check-in currently supports parts without external references"
-            )
         checkout = self.revisions.require_checkout_owner(user, revision_id, connection)
         if checkout.id != checkout_id or checkout.version != checkout_version:
             raise Conflict("checkout changed; the original check-in lease is no longer valid")
@@ -74,6 +67,7 @@ class CheckInService:
         media_type,
         source,
         change_note="",
+        references=None,
     ):
         operation_id = str(UUID(operation_id))
         revision_id = str(UUID(revision_id))
@@ -88,6 +82,7 @@ class CheckInService:
         change_note = change_note.strip()
         if len(change_note) > 2000:
             raise ValueError("check-in note must contain at most 2000 characters")
+        references = ManifestService._references([] if references is None else references)
         intent = {
             "revision_id": revision_id,
             "checkout_id": checkout_id,
@@ -98,6 +93,8 @@ class CheckInService:
             "media_type": media_type,
             "change_note": change_note,
         }
+        if references:
+            intent["references"] = references
         fingerprint = hashlib.sha256(
             json.dumps(intent, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()
@@ -121,6 +118,7 @@ class CheckInService:
             checkout = self._fence(
                 connection, user, revision_id, checkout_id, expected_checkout_version
             )
+            ManifestService.validate_targets(connection, user, self.authorization, references)
             now = revision_clock._now()
             timestamp = now.isoformat()
             dataset_id, file_id = str(uuid4()), str(uuid4())
@@ -149,6 +147,13 @@ class CheckInService:
                 "INSERT INTO dataset_manifests(dataset_id,source_file_id,profile,created_by,created_at) VALUES (?,?,'freecad-app-link-v1',?,?)",
                 (dataset_id, file_id, user.id, timestamp),
             )
+            for reference in references:
+                connection.execute(
+                    "INSERT INTO dataset_references(id,dataset_id,object_name,property_name,"
+                    "target_revision_id,target_dataset_id,target_file_id,target_object_name) "
+                    "VALUES (?,?,?,?,?,?,?,?)",
+                    (str(uuid4()), dataset_id, *(reference[field] for field in REFERENCE_FIELDS)),
+                )
             connection.execute(
                 "UPDATE item_revisions SET change_note=CASE WHEN ?='' THEN change_note ELSE ? END, modified_at=? WHERE id=?",
                 (change_note, change_note, timestamp, revision_id),
@@ -173,7 +178,7 @@ class CheckInService:
                     "dataset.manifest_attached",
                     "Dataset",
                     dataset_id,
-                    {"source_file_id": file_id, "references": 0},
+                    {"source_file_id": file_id, "references": len(references)},
                 ),
                 (
                     "revision.checked_in",

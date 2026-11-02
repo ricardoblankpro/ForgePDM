@@ -70,7 +70,7 @@ class Client:
         self.manifests[dataset] = {
             "source_file_id": file,
             "profile": "freecad-app-link-v1",
-            "references": [],
+            "references": operation.get("references", []),
         }
         self.checkout = None
         self.after_send()
@@ -229,3 +229,68 @@ def test_late_recovery_does_not_overwrite_newer_local_operation(tmp_path):
         part_checkin.checkin(*args)
     assert journal(path)["operation_id"] != client.sent[0]["operation_id"]
     assert len(client.results) == 1
+
+
+def test_assembly_retry_retains_original_pins_after_component_and_local_edits(tmp_path):
+    from test_workspace import Client as GraphClient, native as linked_native
+
+    client, path, args = case(tmp_path)
+    graph = GraphClient()
+    graph.base_url = client.base_url
+    revision, dataset, file = graph.add(native())
+    configuration = ws.retrieve(graph, tmp_path, revision, dataset, file)
+    ws.finish(graph, configuration)
+    child_path = str(
+        Path(configuration["directory"]) / configuration["ledger"]["documents"][0]["path"]
+    )
+    child = graph.get_revision(revision)
+    references = [
+        {
+            "object_name": "Subassembly",
+            "property_name": "LinkedObject",
+            "target_object_name": "Box",
+            "target_revision_id": revision,
+            "target_item_id": child["item_id"],
+            "target_path": child_path,
+        }
+    ]
+    path.write_bytes(linked_native([("Subassembly", child_path, "Box")]))
+    client.lose_response = True
+    with pytest.raises(ForgePDMError):
+        part_checkin.checkin(*args, references)
+    pending = journal(path)
+    pins = pending["references"]
+    assert pins[0]["target_file_id"] == file and pins[0]["target_dataset_id"] == dataset
+    assert "target_path" not in pins[0]
+    # The old operation resolves using its original pins even if components are now unavailable.
+    Path(child_path).unlink()
+    path.write_bytes(native('<Note value="different assembly"/>'))
+    result = part_checkin.resume(*args)
+    assert result["local_changes_remain"] and len(client.sent) == 1
+    assert ws.binding(path, client.base_url)["entry"]["references"] == pins
+
+
+def test_changed_manifest_after_commit_is_not_acknowledged(tmp_path):
+    client, path, args = case(tmp_path)
+
+    def wrong_manifest():
+        next(iter(client.manifests.values()))["references"] = [{"object_name": "unexpected"}]
+
+    client.after_send = wrong_manifest
+    with pytest.raises(ws.WorkspaceError, match="manifest is inconsistent"):
+        part_checkin.checkin(*args)
+    assert journal(path)["state"] == "committed"
+    assert (tmp_path / journal(path)["snapshot_path"]).exists()
+
+
+def test_060_pending_journal_without_references_is_still_recoverable(tmp_path):
+    client, path, args = case(tmp_path)
+    client.lose_response = True
+    with pytest.raises(ForgePDMError):
+        part_checkin.checkin(*args)
+    previous = journal(path)
+    del previous["references"]
+    ws._atomic_json(path.parent / part_checkin.JOURNAL, previous)
+    result = part_checkin.resume(*args)
+    assert result["operation_id"] == previous["operation_id"]
+    assert journal(path)["state"] == "acknowledged" and len(client.sent) == 1

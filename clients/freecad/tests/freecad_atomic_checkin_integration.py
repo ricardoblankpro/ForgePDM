@@ -41,7 +41,7 @@ def run(App, Gui, directory):
     main_thread = get_ident()
     worker_threads = []
     messages = []
-    choice = {"restart": False}
+    choice = {"restart": False, "kind": "part"}
 
     def check(label, value):
         assert value, label
@@ -86,8 +86,8 @@ def run(App, Gui, directory):
 
         def choose(title, prompt, options, *args):
             if title == "New ForgePDM Item":
-                return "part"
-            if title == "Interrupted Part Check-in":
+                return choice["kind"]
+            if title == "Interrupted Check-in":
                 return (
                     "Start new check-in from current document"
                     if choice["restart"]
@@ -259,6 +259,83 @@ def run(App, Gui, directory):
         check(
             "journal contains no password or bearer token",
             config["password"] not in journal_text and client.token not in journal_text,
+        )
+        # Publish an assembly and a parent with repeated external subassembly links.
+        choice["kind"] = "assembly"
+        sub = App.newDocument("AtomicSubassemblyFixture")
+        sub.saveAs(str(case / "subassembly.FCStd"))
+        group = sub.addObject("Assembly::AssemblyObject", "Assembly")
+        link = sub.addObject("App::Link", "PartLink")
+        link.setLink(box)
+        group.addObject(link)
+        sub.recompute()
+        sub.saveAs(str(case / "subassembly.FCStd"))
+        drive(commands.UploadCommand().action())
+        drive(commands.CheckInCommand().action())
+        sub_meta = sub.getObject("ForgePDM_Metadata")
+        sub_journal = json.loads((Path(sub.FileName).parent / part_checkin.JOURNAL).read_text())
+        check(
+            "subassembly atomic check-in retains exact part dataset pin",
+            len(sub_journal["references"]) == 1
+            and sub_journal["references"][0]["target_dataset_id"]
+            == final["result"]["dataset"]["id"],
+        )
+        parent = App.newDocument("AtomicParentFixture")
+        parent.saveAs(str(case / "parent.FCStd"))
+        parent_group = parent.addObject("Assembly::AssemblyObject", "Assembly")
+        for name in ("SubassemblyOne", "SubassemblyTwo"):
+            occurrence = parent.addObject("Assembly::AssemblyLink", name)
+            occurrence.LinkedObject = group
+            parent_group.addObject(occurrence)
+        parent.recompute()
+        parent.saveAs(str(case / "parent.FCStd"))
+        drive(commands.UploadCommand().action())
+        parent_meta = parent.getObject("ForgePDM_Metadata")
+        parent_revision = parent_meta.RevisionId
+        parent_before = worker(client.list_datasets, parent_revision)
+        fault["mode"] = "lost"
+        try:
+            drive(commands.CheckInCommand().action())
+        except api.ForgePDMError as error:
+            check(
+                "assembly lost response leaves recoverable operation",
+                error.code == "connection_failed",
+            )
+        else:
+            raise AssertionError("Assembly lost-response injection did not fail")
+        parent_path = Path(parent.FileName)
+        pending_parent = json.loads((parent_path.parent / part_checkin.JOURNAL).read_text())
+        check(
+            "repeated subassembly occurrences retain exact original pins",
+            {"SubassemblyOne", "SubassemblyTwo"}.issubset(
+                {ref["object_name"] for ref in pending_parent["references"]}
+            )
+            and all(
+                ref["target_revision_id"] == sub_meta.RevisionId
+                and ref["target_dataset_id"] == sub_journal["result"]["dataset"]["id"]
+                for ref in pending_parent["references"]
+            ),
+        )
+        parent_group.Label = "Local unsaved assembly edit"
+        parent.recompute()
+        drive(commands.CheckInCommand().action())
+        acknowledged = json.loads((parent_path.parent / part_checkin.JOURNAL).read_text())
+        check(
+            "assembly retry publishes no duplicate and preserves unsaved edits",
+            len(worker(client.list_datasets, parent_revision)) == len(parent_before) + 1
+            and parent_group.Label == "Local unsaved assembly edit"
+            and cad.document_modified(parent),
+        )
+        manifest = worker(client.get_manifest, acknowledged["result"]["dataset"]["id"])
+        check(
+            "server assembly manifest and recovered ledger match recorded pins",
+            manifest["references"] == pending_parent["references"]
+            and workspace.binding(parent_path, client.base_url)["entry"]["references"]
+            == manifest["references"],
+        )
+        check(
+            "assembly check-in releases only the parent lease",
+            worker(client.get_checkout, parent_revision) is None,
         )
         report["status"] = "passed"
     except BaseException as error:

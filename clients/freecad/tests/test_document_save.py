@@ -147,7 +147,8 @@ def test_checkin_uploads_and_releases_without_prompting_for_a_note(commands, mon
     metadata = SimpleNamespace(RevisionId="revision", ItemId="item")
     calls = []
     client = SimpleNamespace(
-        checkin=lambda revision: calls.append(("checkin", revision)),
+        resume_part_checkin=lambda *args: None,
+        checkin_part=lambda *args: calls.append(("atomic", args[0])) or {},
         get_revision=lambda revision: {"item_id": "item", "item_kind": "assembly"},
     )
 
@@ -158,22 +159,24 @@ def test_checkin_uploads_and_releases_without_prompting_for_a_note(commands, mon
         yield from ()
         return document.FileName
 
-    def upload(*args):
-        calls.append(("upload", args[2]))
-        yield from ()
+    monkeypatch.setattr(commands, "_guard_document", lambda *args: document)
+    monkeypatch.setattr(commands, "_authorize_tree_labels", editable)
+    monkeypatch.setattr(commands.tree_labels, "refresh", lambda *args: None)
+    monkeypatch.setattr(commands, "_save_document", lambda doc: doc.save())
+    monkeypatch.setattr(commands.cad, "document_modified", lambda doc: False)
 
     monkeypatch.setattr(commands, "_require_document", lambda: document)
     monkeypatch.setattr(commands, "_require_metadata", lambda doc: metadata)
     monkeypatch.setattr(commands.Session, "require_client", lambda: client)
     monkeypatch.setattr(commands, "_editable", editable)
     monkeypatch.setattr(commands, "_ensure_working", ensure_working)
-    monkeypatch.setattr(commands, "_upload_native", upload)
     monkeypatch.setattr(commands.cad, "capture", lambda doc: [])
     monkeypatch.setattr(commands, "ask_text", lambda *args: pytest.fail("unexpected note prompt"))
     monkeypatch.setattr(commands, "information", lambda *args: None)
     commands.CheckInCommand().Activated()
     assert not commands._test_errors
-    assert calls == [("upload", document.FileName), ("checkin", "revision")]
+    assert calls == [("atomic", document.FileName)]
+    assert document.saved == [("save", document.FileName)]
 
 
 def test_tree_refresh_checks_checkout_before_changing_labels(commands, monkeypatch):

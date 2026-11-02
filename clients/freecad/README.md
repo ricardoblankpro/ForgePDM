@@ -152,7 +152,8 @@ unchanged downloaded component is not required to clear this old loader issue.
 
 Upload, manifest attachment and check-in remain separate HTTP operations. A
 failed or timed-out operation may leave an uploaded dataset; inspect server state
-before retrying. Atomic check-in and mutation idempotency are Phase 5. Only
+before retrying. Atomic native check-in is now implemented in Phase 5; other
+mutation idempotency work remains. Only
 native CAD files are transferred automatically, and the verified-cache download
 publication requires filesystem hard-link support. Local read-only protection
 is advisory. Third-party proxies, external textures and other CAD adapters are
@@ -235,11 +236,13 @@ link would follow a selected occurrence, select its dependent occurrences too or
 replace the dependent link independently. Invalid mappings and detected joint
 errors are rejected or rolled back. Inspect geometry and joints before saving.
 
-### Reliable part check-in (0.6.0)
+### Reliable native check-in (0.6.1)
 
-Check In uses the new atomic operation for parts without external CAD references.
-Update/restart the backend together with this addon. Assemblies and parts with
-external references retain the existing workflow pending the next Phase 5 slice.
+Check In uses one atomic operation for parts and supported assemblies, including
+pinned external CAD references. Update/restart the backend together with this
+addon. Servers without the explicit atomic-manifest route reject assembly uploads;
+there is no downgrade to the earlier multi-request check-in. Separate Create /
+Upload operations still use the legacy workflow.
 
 If the connection fails, use Check In again: it resolves the recorded operation
 and retries the same saved snapshot when needed. It does not silently upload newer

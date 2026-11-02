@@ -1,5 +1,7 @@
 """Versioned API routes for the initial item workflow."""
 
+import json
+
 from decimal import Decimal
 from pathlib import PurePosixPath
 from uuid import UUID
@@ -380,8 +382,9 @@ def release_checkout(
     return _checkout_response(checkout)
 
 
+@router.post("/revisions/{revision_id}/checkin-native-with-references")
 @router.post("/revisions/{revision_id}/checkin-native")
-def atomic_part_checkin(
+def atomic_native_checkin(
     revision_id: UUID,
     request: Request,
     file: UploadFile = MultipartFile(...),
@@ -391,9 +394,13 @@ def atomic_part_checkin(
     content_hash: str = Form(..., pattern=r"^[0-9a-f]{64}$"),
     byte_size: int = Form(..., gt=0),
     change_note: str = Form(default="", max_length=2000),
+    references_json: str = Form(default="[]", max_length=10_000_000),
     user: User = Depends(current_user),
 ):
     try:
+        references = json.loads(references_json)
+        if not isinstance(references, list):
+            raise ValueError("CAD references must be a list")
         return request.app.state.checkin_service.check_in(
             user=user,
             revision_id=str(revision_id),
@@ -406,6 +413,7 @@ def atomic_part_checkin(
             media_type=file.content_type,
             source=file.file,
             change_note=change_note,
+            references=references,
         )
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error

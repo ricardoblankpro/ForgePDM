@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.1 — 2026-11-02
+
+- Extend atomic check-in to assemblies and external-reference parts. Publish
+  exact occurrence/revision/dataset/file pins together with native bytes, audits
+  and fenced checkout release. Preserve these pins through retries and recovery.
+- Use an explicit manifest endpoint so older servers cannot ignore references.
+  Update/restart the backend with the addon; no legacy check-in fallback.
+- Validate real nested native AssemblyLink occurrences, generated child links,
+  lost responses and retained unsaved edits in isolated FreeCAD/HTTP tests.
+
 ## 0.6.0 — 2026-11-02
 
 - Eligible part check-in now uses one fenced, replayable backend operation.

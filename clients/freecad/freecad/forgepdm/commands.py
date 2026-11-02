@@ -477,10 +477,10 @@ class CheckInCommand(Command):
         if revision["item_id"] != metadata.ItemId:
             raise workspace.WorkspaceError("Document item/revision metadata is inconsistent")
         actor_id = (Session.user or {}).get("id")
-        if revision["item_kind"] == "part":
+        if revision["item_kind"] in ("part", "assembly"):
             try:
                 recovered = yield Request(
-                    "Resolving previous part check-in…",
+                    "Resolving previous check-in…",
                     client.resume_part_checkin,
                     (document.FileName, revision_id, metadata.ItemId, actor_id),
                     mutates=True,
@@ -489,7 +489,7 @@ class CheckInCommand(Command):
                 if error.status != 409:
                     raise
                 choice = ask_choice(
-                    "Interrupted Part Check-in",
+                    "Interrupted Check-in",
                     "The previous operation has a stale checkout. Keep its snapshot, or start a new operation from the current document?",
                     ["Keep pending snapshot", "Start new check-in from current document"],
                     "Keep pending snapshot",
@@ -513,7 +513,7 @@ class CheckInCommand(Command):
                 else:
                     information(
                         "ForgePDM",
-                        "The previous part check-in was confirmed. No duplicate dataset was created.",
+                        "The previous check-in was confirmed. No duplicate dataset was created.",
                     )
                 return
         yield from _editable(client, metadata)
@@ -521,36 +521,29 @@ class CheckInCommand(Command):
         path = yield from _ensure_working(client, document)
         if path is None:
             return
-        if revision["item_kind"] == "part" and not references:
-            document = _guard_document(document.Name, revision_id)
-            yield from _authorize_tree_labels(client, document)
-            tree_labels.refresh(document)
-            _save_document(document)
-            result = yield Request(
-                "Checking in verified part snapshot…",
-                client.checkin_part,
-                (path, revision_id, metadata.ItemId, actor_id),
-                mutates=True,
+        document = _guard_document(document.Name, revision_id)
+        if cad.capture(document) != references:
+            raise workspace.WorkspaceError(
+                "CAD references changed; review the document before retrying"
             )
-            tree_observer.revoke_revision(revision_id)
-            if result.get("local_changes_remain") or cad.document_modified(document):
-                warning(
-                    "ForgePDM",
-                    "The snapshot was checked in. Local edits remain and were not included.",
-                )
-            else:
-                information("ForgePDM", "Part snapshot checked in atomically")
-            return
-        yield from _upload_native(client, document, path, references)
-        tree_observer.revoke_revision(revision_id)
-        yield Request(
-            "Checking in revision…",
-            client.checkin,
-            (revision_id,),
+        yield from _authorize_tree_labels(client, document)
+        tree_labels.refresh(document)
+        _save_document(document)
+        result = yield Request(
+            "Checking in verified CAD snapshot…",
+            client.checkin_part,
+            (path, revision_id, metadata.ItemId, actor_id, references),
             mutates=True,
-            cancellable=False,
         )
-        information("ForgePDM", "Revision checked in")
+        tree_observer.revoke_revision(revision_id)
+        if result.get("local_changes_remain") or cad.document_modified(document):
+            warning(
+                "ForgePDM",
+                "The snapshot was checked in. Local edits remain and were not included.",
+            )
+        else:
+            information("ForgePDM", "CAD snapshot checked in atomically")
+        return
 
 
 class ReleaseCommand(Command):

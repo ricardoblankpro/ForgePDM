@@ -432,11 +432,24 @@ class ForgePDMClient:
                 "byte_size",
             )
         ]
-        return self._multipart_file(
-            "/api/v1/revisions/{}/checkin-native".format(self._quote(operation["revision_id"])),
-            snapshot_path,
-            fields,
+        if operation.get("references"):
+            fields.append(("references_json", json.dumps(operation["references"], sort_keys=True)))
+        suffix = (
+            "checkin-native-with-references" if operation.get("references") else "checkin-native"
         )
+        try:
+            return self._multipart_file(
+                "/api/v1/revisions/{}/{}".format(self._quote(operation["revision_id"]), suffix),
+                snapshot_path,
+                fields,
+            )
+        except ForgePDMError as error:
+            if operation.get("references") and error.status == 404 and str(error) == "Not Found":
+                raise ForgePDMError(
+                    "Update/restart the backend: atomic CAD reference check-in is unavailable",
+                    code="unsupported_server",
+                ) from error
+            raise
 
     def resume_part_checkin(self, path, revision_id, item_id, actor_id):
         from .part_checkin import resume
@@ -448,10 +461,10 @@ class ForgePDMClient:
 
         return abandon(self, path, revision_id, item_id, actor_id)
 
-    def checkin_part(self, path, revision_id, item_id, actor_id):
+    def checkin_part(self, path, revision_id, item_id, actor_id, references=()):
         from .part_checkin import checkin
 
-        return checkin(self, path, revision_id, item_id, actor_id)
+        return checkin(self, path, revision_id, item_id, actor_id, references)
 
     def download_file(self, file_id, destination, expected_hash=None, expected_size=None):
         if not self.token:

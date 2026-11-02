@@ -198,7 +198,7 @@ def test_changes_during_upload_are_rechecked_inside_final_transaction(backend, c
     assert counts(backend) == (0, 0, 0, 0)
 
 
-def test_other_actor_cannot_recover_result_and_assemblies_are_not_in_first_slice(backend):
+def test_other_actor_cannot_recover_result_and_viewers_cannot_checkin(backend):
     item = create_item(backend)
     args = intent(backend, item)
     service(backend).check_in(**args)
@@ -207,8 +207,6 @@ def test_other_actor_cannot_recover_result_and_assemblies_are_not_in_first_slice
             backend.users["editor2"], item.current_revision_id, args["operation_id"]
         )
     assembly = create_item(backend, kind="assembly")
-    with pytest.raises(Conflict, match="supports parts"):
-        service(backend).check_in(**intent(backend, assembly))
     with pytest.raises(Forbidden):
         service(backend).check_in(**intent(backend, assembly, user=backend.users["viewer"]))
 
@@ -407,3 +405,141 @@ def test_additive_migration_preserves_existing_revision_checkout_and_dataset(bac
     with backend.database.connection() as connection:
         assert connection.execute("SELECT COUNT(*) FROM checkin_operations").fetchone()[0] == 0
         assert connection.execute("SELECT COUNT(*) FROM audit_events").fetchone()[0] == audit_before
+
+
+def reference_target(backend, kind="part", references=None):
+    item = create_item(backend, kind=kind)
+    result = service(backend).check_in(**intent(backend, item, references=references))
+    return {
+        "object_name": "Component",
+        "property_name": "LinkedObject",
+        "target_revision_id": item.current_revision_id,
+        "target_dataset_id": result["dataset"]["id"],
+        "target_file_id": result["dataset"]["files"][0]["id"],
+        "target_object_name": "Assembly" if kind == "assembly" else "Box",
+    }
+
+
+def test_atomic_nested_assembly_pins_and_replay(backend):
+    from forgepdm.application.manifests import ManifestService
+
+    part = reference_target(backend)
+    subassembly = reference_target(backend, "assembly", [part])
+    parent = create_item(backend, kind="assembly")
+    repeated = dict(subassembly, object_name="SecondOccurrence")
+    args = intent(backend, parent, references=[repeated, subassembly])
+    result = service(backend).check_in(**args)
+    manifest = ManifestService(backend.database, backend.authorization, backend.revisions).get(
+        args["user"], result["dataset"]["id"]
+    )
+    assert manifest["references"] == [subassembly, repeated]
+    assert counts(backend) == (3, 3, 3, 3)
+    assert (
+        service(backend).check_in(
+            **dict(args, source=io.BytesIO(DATA), references=[subassembly, repeated])
+        )
+        == result
+    )
+    with pytest.raises(Conflict, match="different content or intent"):
+        service(backend).check_in(**dict(args, source=io.BytesIO(DATA), references=[part]))
+    assert counts(backend) == (3, 3, 3, 3)
+
+
+@pytest.mark.parametrize("fault", ["revision", "file", "missing", "permission", "database"])
+def test_assembly_reference_failure_rolls_back_entire_publication(backend, fault):
+    target = reference_target(backend)
+    parent = create_item(backend, kind="assembly")
+    args = intent(backend, parent, references=[dict(target)])
+    before = counts(backend)
+    if fault == "revision":
+        args["references"][0]["target_revision_id"] = parent.current_revision_id
+    elif fault == "file":
+        args["references"][0]["target_file_id"] = str(uuid4())
+    elif fault == "missing":
+        args["references"][0]["target_dataset_id"] = str(uuid4())
+    elif fault == "database":
+        with backend.database.transaction() as connection:
+            connection.execute(
+                "CREATE TRIGGER reject_edge BEFORE INSERT ON dataset_references BEGIN SELECT RAISE(ABORT, 'injected edge failure'); END"
+            )
+    else:
+        # Revoke access after staging starts, before the serialized final gate.
+        original = backend.authorization.require_read_revision
+
+        def deny_target(user, revision, connection=None):
+            if revision == target["target_revision_id"]:
+                raise Forbidden("target access revoked")
+            return original(user, revision, connection)
+
+        backend.authorization.require_read_revision = deny_target
+    with pytest.raises((Conflict, NotFound, Forbidden, sqlite3.IntegrityError)):
+        service(backend).check_in(**args)
+    assert counts(backend) == before
+    assert backend.revisions.current_checkout(args["user"], parent.current_revision_id) is not None
+    with backend.database.connection() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM dataset_references").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("references", [None, {}, "wrong", [1], [{"object_name": "x"}]])
+def test_malformed_atomic_references_are_rejected(backend, references):
+    item = create_item(backend, kind="assembly")
+    if references is None:
+        references = [
+            {
+                "object_name": "x",
+                "property_name": "LinkedObject",
+                "target_revision_id": 12,
+                "target_dataset_id": str(uuid4()),
+                "target_file_id": str(uuid4()),
+                "target_object_name": "Box",
+            }
+        ]
+    with pytest.raises(ValueError):
+        service(backend).check_in(**intent(backend, item, references=references))
+    assert counts(backend) == (0, 0, 0, 0)
+
+
+def test_atomic_assembly_api_manifest_and_malformed_json(backend, monkeypatch, tmp_path):
+    import json
+
+    from forgepdm.main import create_app
+
+    monkeypatch.setenv("FORGEPDM_FILE_ROOT", str(tmp_path / "api-files"))
+    target = reference_target(backend)
+    parent = create_item(backend, kind="assembly")
+    args = intent(backend, parent)
+    token, _, _ = backend.auth.login("editor", TEST_PASSWORD)
+    headers = {"Authorization": "Bearer " + token}
+    fields = {
+        key: str(args[key])
+        for key in (
+            "operation_id",
+            "expected_checkout_id",
+            "expected_checkout_version",
+            "content_hash",
+            "byte_size",
+        )
+    }
+    with TestClient(create_app(backend.database.path)) as client:
+        endpoint = f"/api/v1/revisions/{parent.current_revision_id}/checkin-native-with-references"
+        before = counts(backend)
+        for value in ["{bad", "null", "{}", "[null]", '[{"target_revision_id":1}]']:
+            response = client.post(
+                endpoint,
+                headers=headers,
+                data=dict(fields, references_json=value),
+                files={"file": ("model.FCStd", DATA)},
+            )
+            assert response.status_code == 422, response.text
+            assert counts(backend) == before
+        response = client.post(
+            endpoint,
+            headers=headers,
+            data=dict(fields, references_json=json.dumps([target])),
+            files={"file": ("model.FCStd", DATA)},
+        )
+        assert response.status_code == 200, response.text
+        manifest = client.get(
+            f"/api/v1/datasets/{response.json()['dataset']['id']}/manifest", headers=headers
+        )
+        assert manifest.json()["references"] == [target]

@@ -1,5 +1,28 @@
 # Development status
 
+## 2026-11-02 — Phase 5 increment 2: atomic assembly check-in (addon 0.6.1)
+
+- Native check-in now publishes exact CAD reference pins in the same transaction
+  as file/dataset/manifest, audits, note, fenced lease release and replay result.
+  Validate target permissions and exact revision/dataset/file membership at the
+  final gate. Shared validation preserves legacy manifest cycle checks.
+- Durable client journals retain normalized pins; recovery uses the original
+  snapshot and manifest, verifies the server manifest, and reconciles exact pins
+  to the local ledger. Prior 0.6.0 empty-manifest journals/fingerprints remain
+  compatible. BOM synchronization remains a separate explicit action.
+- Nonempty manifests use an explicit new checkin-native-with-references route,
+  preventing older servers from silently dropping unknown manifest form fields.
+  No migration or legacy check-in fallback.
+- Validation: 89 backend and 228 addon tests passed, strict lint for modified
+  implementation/tests, addon layout check and addon/backend builds passed.
+  Isolated live FreeCAD/HTTP harness passed 28 checks, including nested native
+  AssemblyLink occurrences, generated saved child links, lost response, exact pin
+  recovery, no duplicates and preserved unsaved edits. User session/data preserved.
+  Evidence: docs/validation/phase5-atomic-assembly-checkin-2026-11-02.json.
+- Both installed addon profiles updated with backups; runtime command reloaded.
+  Phase 5 remains incomplete: legacy-write fencing, revision-creation idempotency
+  and recovery/orphan diagnostics remain. See ADR-008 and the Phase 5 plan.
+
 ## 2026-11-02 — Phase 5 increment 1: reliable part check-in (addon 0.6.0)
 
 - Added fenced atomic native part check-in and actor-scoped operation status API.
@@ -194,11 +217,12 @@ before acting. Git history and the linked reports provide the detailed record.
   project permissions, Items/revisions/datasets, checkout leases, lifecycle,
   revision-pinned BOMs and immutable CAD dependency manifests.
 - Web GUI: read-only browser at `/app/`, served by the backend; see docs/web-gui.md.
-- FreeCAD addon: **0.6.0**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.6.1**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
-  structures. Phase 5 has started with atomic single-part check-in, fencing
-  and durable replay; assemblies and remaining writes are still pending. The original MVP roadmap has different phase numbering: use the active
+  structures. Phase 5 implements atomic part/assembly check-in, pinned manifests,
+  fenced leases and durable replay; legacy-write fencing and revision retries
+  remain pending. The original MVP roadmap has different phase numbering: use the active
   development-direction table in [the roadmap](docs/roadmap.md).
 - Live validation has used Linux FreeCAD **1.1.4**, Python **3.11.14**,
   Qt **6.8.3**. Other runtime/platform combinations remain unverified.
@@ -254,13 +278,12 @@ Evidence:
 
 1. Read root and applicable nested `AGENTS.md`, inspect Git status and recent
    commits, and confirm the user's requested scope. Phase 5 is authorized and
-   started; the first bounded increment is complete.
+   started; the first two bounded increments are complete.
 2. For CAD issues, confirm installed addon/runtime versions and reproduce with
    the actual document structure. Distinguish mocked tests from live validation.
    Preserve existing edits, immutable snapshots and exact revision pins.
 3. Continue Phase 5 from ADR-008 and docs/phase5-reliable-checkin.md. Next,
-   extend atomic check-in to assemblies and their pinned manifests, then fence
-   remaining legacy writes and address revision-creation retries. Propose the
+   fence remaining legacy writes and address revision-creation retries. Propose the
    next design increment before major architectural changes.
 4. Track later operational work separately: crash-orphan reconciliation,
    backup/restore, production security, clean-start/platform acceptance and

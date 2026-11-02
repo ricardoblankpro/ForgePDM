@@ -1,4 +1,4 @@
-"""Durable, credential-free recovery for one atomic part check-in operation."""
+"""Durable, credential-free recovery for one atomic native check-in operation."""
 
 import json
 from pathlib import Path
@@ -32,6 +32,7 @@ def _load(value, client, revision_id, item_id, actor_id):
         )
     if operation.get("state") not in ("prepared", "committed", "acknowledged"):
         raise ws.WorkspaceError("Unknown check-in journal state; it was preserved")
+    operation.setdefault("references", [])
     UUID(operation["operation_id"])
     relative = Path(operation["snapshot_path"])
     if (
@@ -50,6 +51,8 @@ def _guard_current(value, operation):
     if journal.is_symlink():
         raise ws.WorkspaceError("Check-in journal must not be a symlink")
     current = json.loads(journal.read_text())
+    if current.get("references", []) != operation.get("references", []):
+        raise ws.WorkspaceError("Pending CAD references changed; journal was preserved")
     for field in (
         "operation_id",
         "content_hash",
@@ -77,7 +80,7 @@ def _resolve(client, value, operation):
             raise ws.WorkspaceError(
                 "The pending check-in snapshot changed; no replacement bytes were uploaded"
             )
-        fcstd.validate(snapshot, [])
+        fcstd.validate(snapshot, operation.get("references", []))
         result = client.upload_part_checkin(str(snapshot), operation)
     dataset = result.get("dataset", {})
     files = dataset.get("files", [])
@@ -104,11 +107,9 @@ def _resolve(client, value, operation):
         manifest is None
         or manifest["source_file_id"] != record["id"]
         or manifest["profile"] != "freecad-app-link-v1"
-        or manifest["references"]
+        or manifest["references"] != operation.get("references", [])
     ):
-        raise ws.WorkspaceError(
-            "The committed part manifest is inconsistent; journal was preserved"
-        )
+        raise ws.WorkspaceError("The committed CAD manifest is inconsistent; journal was preserved")
     try:
         changed = (
             ws.digest(value["directory"] / operation["source_path"], client._checkpoint)[0]
@@ -128,7 +129,7 @@ def _resolve(client, value, operation):
             content_hash=record["content_hash"],
             byte_size=record["byte_size"],
             working_hash=record["content_hash"],
-            references=[],
+            references=operation.get("references", []),
         )
         ws._atomic_json(value["directory"] / ws.MANIFEST, ledger)
         operation["state"] = "acknowledged"
@@ -157,13 +158,13 @@ def resume(client, path, revision_id, item_id, actor_id):
     return _resolve(client, value, operation) if operation else None
 
 
-def checkin(client, path, revision_id, item_id, actor_id):
+def checkin(client, path, revision_id, item_id, actor_id, references=()):
     result = resume(client, path, revision_id, item_id, actor_id)
     if result is not None:
         return result
     checkout = client.get_checkout(revision_id)
     if not checkout or checkout["user_id"] != actor_id:
-        raise ws.WorkspaceError("Acquire your own checkout before checking in this part")
+        raise ws.WorkspaceError("Acquire your own checkout before checking in this revision")
     value = ws.binding(path, client.base_url, require_uploaded=False)
     with ws.locked(value["root"], client.base_url):
         operation = _load(value, client, revision_id, item_id, actor_id)
@@ -175,10 +176,19 @@ def checkin(client, path, revision_id, item_id, actor_id):
         ):
             operation = None
         if operation is None:
-            saved = ws.snapshot(client, path, [])
+            bound = ws.bind_references(client, references)
+            saved = ws.snapshot(client, path, bound)
+            serialized = sorted(
+                [
+                    {key: value for key, value in ref.items() if key != "target_path"}
+                    for ref in bound
+                ],
+                key=lambda ref: (ref["object_name"], ref["property_name"]),
+            )
             Path(saved["directory"]).chmod(0o700)
             Path(saved["path"]).chmod(0o400)
             operation = dict(
+                references=serialized,
                 format=1,
                 state="prepared",
                 server_url=client.base_url,

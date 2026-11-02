@@ -268,3 +268,48 @@ def test_atomic_part_upload_keeps_original_operation_and_lease_fields(api):
     assert calls[0][0] == "/api/v1/revisions/revision/checkin-native"
     assert dict(calls[0][2])["expected_checkout_version"] == "2"
     assert dict(calls[0][2])["operation_id"] == "operation"
+
+
+def test_atomic_manifest_upload_uses_explicit_route_and_exact_json(api):
+    import json
+
+    client = api.ForgePDMClient("http://forgepdm.test")
+    references = [{"object_name": "Subassembly", "target_revision_id": "pinned"}]
+    operation = dict(
+        revision_id="revision",
+        operation_id="operation",
+        expected_checkout_id="lease",
+        expected_checkout_version=2,
+        content_hash="a" * 64,
+        byte_size=10,
+        references=references,
+    )
+    calls = []
+    client._multipart_file = lambda *args: calls.append(args) or {}
+    client.upload_part_checkin("/tmp/snapshot.FCStd", operation)
+    assert calls[0][0] == "/api/v1/revisions/revision/checkin-native-with-references"
+    assert json.loads(dict(calls[0][2])["references_json"]) == references
+
+
+def test_old_server_cannot_silently_drop_atomic_manifest(api):
+    client = api.ForgePDMClient("http://forgepdm.test")
+    operation = dict(
+        revision_id="revision",
+        operation_id="operation",
+        expected_checkout_id="lease",
+        expected_checkout_version=1,
+        content_hash="a" * 64,
+        byte_size=10,
+        references=[{"object_name": "Assembly"}],
+    )
+    calls = []
+
+    def missing(*args):
+        calls.append(args)
+        raise api.ForgePDMError("Not Found", status=404)
+
+    client._multipart_file = missing
+    with pytest.raises(api.ForgePDMError, match="Update/restart"):
+        client.upload_part_checkin("/tmp/snapshot.FCStd", operation)
+    assert len(calls) == 1
+    assert calls[0][0].endswith("/checkin-native-with-references")

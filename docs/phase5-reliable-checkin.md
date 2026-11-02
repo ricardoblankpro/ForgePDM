@@ -92,9 +92,38 @@ setup. Credentials stay in that private temporary fixture, never in this report.
 
 ## Remaining Phase 5 work
 
-1. Extend atomic publication to assembly manifests and exact reference validation.
+1. Assembly manifests and exact reference validation are implemented in increment 2 below.
 2. Fence remaining legacy dataset/manifest/check-in writes and review compatibility.
 3. Make new-revision creation/retries recoverable without duplicate revisions.
 4. Add broader interrupted-operation diagnostics and recovery/cleanup acceptance.
 5. Expand multiuser/process and real assembly failure evidence. Backup/restore,
    security review and production distribution remain separate roadmap gates.
+
+## Implemented increment 2 — atomic assembly manifests (addon 0.6.1)
+
+Extend the same operation to assemblies and external-reference parts. Normalize
+and fingerprint exact occurrence/revision/dataset/file/object identities; validate
+target permissions and membership in the final transaction. Insert all reference
+rows alongside dataset, manifest, audit, lease release and replay result. BOM
+synchronization stays separate. No revision or dataset is replaced with latest.
+
+Clients with nonempty manifests use the new explicit
+`checkin-native-with-references` route, so older servers reject the operation
+instead of silently ignoring its manifest field. Empty manifests retain the
+existing route and fingerprint for 0.6.0 compatibility. No migration is needed.
+
+Keep the existing private journal filename and format, defaulting missing
+references to empty for previous part operations. Store normalized pins before
+sending; retries use that recorded manifest and snapshot even if components or
+current local links later change. Acknowledgment checks the server manifest and
+copies exact pins into the local ledger. Broader legacy upload fencing and
+revision creation idempotency remain subsequent increments.
+
+Validation: 89 backend tests and 228 addon tests pass; addon layout validation,
+addon ZIP and backend wheel builds pass. The live harness passes 28 checks with
+FreeCAD 1.1.4 / Qt 6.8.3, including repeated native AssemblyLink occurrences and
+their generated saved child links. It loses a successful assembly response,
+recovers the original pins without duplicate publication, and retains unsaved
+assembly edits. No user engineering data is used or changed.
+
+Evidence: [assembly live report](validation/phase5-atomic-assembly-checkin-2026-11-02.json).

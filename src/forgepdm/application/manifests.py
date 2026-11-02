@@ -44,11 +44,13 @@ class ManifestService:
 
     @staticmethod
     def _references(references):
+        if not isinstance(references, list):
+            raise ValueError("CAD references must be a list")  # noqa: TRY004 - API validation contract
         if len(references) > 10000:
             raise ValueError("too many CAD references")
         result, seen = [], set()
         for reference in references:
-            if set(reference) != set(REFERENCE_FIELDS):
+            if not isinstance(reference, dict) or set(reference) != set(REFERENCE_FIELDS):
                 raise ValueError("invalid reference fields")
             entry = dict(reference)
             for field in ("object_name", "property_name", "target_object_name"):
@@ -63,6 +65,8 @@ class ManifestService:
             if entry["property_name"] != "LinkedObject":
                 raise ValueError("unsupported CAD reference property")
             for field in ("target_revision_id", "target_dataset_id", "target_file_id"):
+                if not isinstance(entry[field], str):
+                    raise ValueError("reference identities must be UUID strings")  # noqa: TRY004 - API validation contract
                 entry[field] = str(UUID(entry[field]))
             key = (entry["object_name"], entry["property_name"])
             if key in seen:
@@ -70,6 +74,28 @@ class ManifestService:
             seen.add(key)
             result.append(entry)
         return sorted(result, key=lambda value: (value["object_name"], value["property_name"]))
+
+    @classmethod
+    def validate_targets(cls, connection, user, authorization, references, dataset_id=None):
+        """Validate exact immutable pins in the caller's transaction."""
+        for reference in references:
+            target = cls._dataset(connection, reference["target_dataset_id"])
+            authorization.require_read_revision(user, target["revision_id"], connection)
+            if target["dataset_type"] != "native_cad":
+                raise Conflict("CAD references require a native CAD target dataset")
+            cls._dataset(connection, reference["target_dataset_id"], reference["target_file_id"])
+            if target["revision_id"] != reference["target_revision_id"]:
+                raise Conflict("referenced dataset belongs to a different revision")
+            # Traverse immutable dataset edges, rather than substituting an
+            # item's current revision or confusing CAD dependencies with BOM.
+            cycle = connection.execute(
+                "WITH RECURSIVE descendants(id) AS (SELECT ? UNION SELECT r.target_dataset_id "
+                "FROM dataset_references r JOIN descendants d ON r.dataset_id=d.id) "
+                "SELECT 1 FROM descendants WHERE id=? LIMIT 1",
+                (reference["target_dataset_id"], dataset_id),
+            ).fetchone()
+            if cycle is not None:
+                raise Conflict("CAD dataset reference cycle is not allowed")
 
     def attach(self, user, dataset_id, source_file_id, references, profile=PROFILE):
         if profile != PROFILE:
@@ -95,26 +121,7 @@ class ManifestService:
                 ):
                     raise Conflict("dataset reference manifest is immutable; upload a new dataset")
                 return current
-            for reference in references:
-                target = self._dataset(connection, reference["target_dataset_id"])
-                self.authorization.require_read_revision(user, target["revision_id"], connection)
-                if target["dataset_type"] != "native_cad":
-                    raise Conflict("CAD references require a native CAD target dataset")
-                self._dataset(
-                    connection, reference["target_dataset_id"], reference["target_file_id"]
-                )
-                if target["revision_id"] != reference["target_revision_id"]:
-                    raise Conflict("referenced dataset belongs to a different revision")
-                # Traverse immutable dataset edges, rather than substituting an
-                # item's current revision or confusing CAD dependencies with BOM.
-                cycle = connection.execute(
-                    "WITH RECURSIVE descendants(id) AS (SELECT ? UNION SELECT r.target_dataset_id "
-                    "FROM dataset_references r JOIN descendants d ON r.dataset_id=d.id) "
-                    "SELECT 1 FROM descendants WHERE id=? LIMIT 1",
-                    (reference["target_dataset_id"], dataset_id),
-                ).fetchone()
-                if cycle is not None:
-                    raise Conflict("CAD dataset reference cycle is not allowed")
+            self.validate_targets(connection, user, self.authorization, references, dataset_id)
             now = datetime.now(UTC).isoformat()
             connection.execute(
                 "INSERT INTO dataset_manifests(dataset_id,source_file_id,profile,created_by,created_at) "

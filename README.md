@@ -54,16 +54,17 @@ Uploads default to a 1 GiB limit; configure `FORGEPDM_MAX_UPLOAD_BYTES` to chang
 
 Keep the server bound to loopback. Authentication is now implemented, but transport security, login rate limiting, production secret/backup operations, and a security review are still outstanding; do not expose this early service to an untrusted network or use sensitive production data yet.
 
-## Reliable part check-in
+## Reliable native check-in
 
-Addon 0.6.0 uses `POST /api/v1/revisions/{revision_id}/checkin-native` for parts
-without external CAD references. One fenced, idempotent operation publishes the
-native dataset/empty manifest and checks in the revision together. The operation
-status endpoint resolves lost responses; the addon keeps a credential-free
-snapshot journal for recovery. Existing API operations remain compatible.
+Addon 0.6.1 checks in parts and supported assemblies with one fenced, idempotent
+operation. Native bytes, pinned reference manifest and checkout release publish
+together. The operation status endpoint and private snapshot journal recover lost
+responses without duplicate datasets or substitution of newer local edits.
+Nonempty manifests use the explicit `checkin-native-with-references` route;
+update/restart the backend together with the addon.
 
-This is the first Phase 5 increment: assembly check-in and remaining legacy writes
-still use the earlier multi-request workflow. See [transaction boundaries, API
+Phase 5 remains in progress: separate legacy upload/manifest writes and revision
+creation still need further reliability work. See [transaction boundaries, API
 fields and remaining work](docs/phase5-reliable-checkin.md).
 
 ## Web GUI

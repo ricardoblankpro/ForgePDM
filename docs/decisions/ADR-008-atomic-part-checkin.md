@@ -70,3 +70,19 @@ when the new endpoint is unavailable.
   permission/lease changes during upload, replay after a new checkout, key
   collisions and concurrent worker/process requests. No user CAD data is used
   for destructive tests.
+
+## Increment 2 — 2026-11-02
+
+The user authorized continuing Phase 5. Extend the same transaction/replay boundary
+to supported assemblies and external-reference parts. Normalize and fingerprint
+the full manifest; validate exact targets with current permissions in the final
+transaction and insert all dependency rows before publishing. New datasets can
+reference only existing datasets, so immutable edges cannot create a cycle through
+the newly allocated dataset. Existing manifest attachment retains its cycle check.
+
+Keep empty-manifest fingerprints and prior journal records compatible. Persist
+pins with the original snapshot and acknowledge only after the returned server
+manifest matches. Nonempty manifests use a new explicit HTTP route to avoid old
+servers silently ignoring an unknown multipart field. CAD capture remains the
+adapter's responsibility; BOM synchronization stays separate. Legacy write fencing
+and revision-creation retries remain subsequent increments.
