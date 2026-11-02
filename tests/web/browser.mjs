@@ -1,0 +1,140 @@
+// Run against tests/web/serve.py. Never target a real user's production workspace.
+import assert from "node:assert/strict";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+const caseDirectory = process.argv[2];
+if (!caseDirectory) throw new Error("Pass the disposable fixture directory.");
+const config = JSON.parse(await readFile(path.join(caseDirectory, "connection.json"), "utf8"));
+const driver = process.env.FORGEPDM_PLAYWRIGHT || "/tmp/forgepdm-web-qa/node_modules/playwright-core/index.mjs";
+const { chromium } = await import(pathToFileURL(driver));
+const browser = await chromium.launch({ executablePath: process.env.FORGEPDM_BROWSER || "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
+const page = await context.newPage();
+const report = { browser: browser.version(), scope: "Real Chrome and isolated FastAPI/database/storage fixtures; no production data modified", checks: [], pageErrors: [], writes: [] };
+const check = (name, condition = true) => { assert.ok(condition, name); report.checks.push(name); };
+page.on("pageerror", error => report.pageErrors.push(error.message));
+page.on("request", req => {
+  if (!["GET", "HEAD"].includes(req.method()) && !req.url().endsWith("/auth/login") && !req.url().endsWith("/auth/logout")) report.writes.push({ method: req.method(), url: req.url() });
+});
+await page.addInitScript(() => {
+  window.webCSPViolations = [];
+  document.addEventListener("securitypolicyviolation", event => window.webCSPViolations.push(event.violatedDirective));
+});
+async function login() {
+  await page.locator("#username").fill(config.username);
+  await page.locator("#password").fill(config.password);
+  const response = page.waitForResponse(r => r.url().endsWith("/auth/login") && r.status() === 200);
+  await page.locator("#login-button").click();
+  const token = (await (await response).json()).access_token;
+  await page.locator("#workspace").waitFor({ state: "visible" });
+  await page.locator(".item-row").first().waitFor();
+  return token;
+}
+async function openItem(item, revision) {
+  await page.evaluate(({ id, revision }) => { location.hash = new URLSearchParams({ item: id, ...(revision ? { revision } : {}) }).toString(); }, { id: item.id, revision });
+  await page.waitForFunction(({ id, revision }) => {
+    const picker = document.querySelector("#revision-picker");
+    return document.querySelector(".detail-title-line h2")?.textContent === id && picker && (!revision || picker.value === revision);
+  }, { id: item.number, revision });
+}
+try {
+  await page.goto(`${config.url}/app/`);
+  await page.locator("#server-status").filter({ hasText: "online" }).waitFor();
+  await page.screenshot({ path: path.join(caseDirectory, "login-desktop.png"), fullPage: true });
+  check("login shell loads without credentials or fixture content", !(await page.locator("body").innerText()).includes(config.part.number));
+  await page.locator("#username").fill(config.username);
+  await page.locator("#password").fill("wrong-password");
+  await page.locator("#login-button").click();
+  await page.locator("#login-error").filter({ hasText: "incorrect" }).waitFor();
+  check("bad password remains on login and is cleared", await page.locator("#password").inputValue() === "");
+  let token = await login();
+  await page.waitForFunction(() => document.querySelector("#project-filter").options.length === 3);
+  check("authorized projects only", !(await page.locator("#project-filter").innerText()).includes("PRIVATE"));
+  await page.screenshot({ path: path.join(caseDirectory, "catalog-desktop.png"), fullPage: true });
+  await openItem(config.root, config.root.revision);
+  await page.getByRole("tab", { name: "Bill of materials", exact: true }).click();
+  await page.locator(".bom-table tbody tr").nth(2).waitFor();
+  check("multilevel BOM preserves per-parent quantities", await page.locator(".bom-table tbody tr").count() === 3 && await page.locator(".bom-table tbody tr").nth(1).locator("td").nth(2).innerText() === "4");
+  await page.screenshot({ path: path.join(caseDirectory, "bom-desktop.png"), fullPage: true });
+  await page.getByRole("button", { name: "Direct", exact: true }).click();
+  check("direct BOM excludes descendants", await page.locator(".bom-table tbody tr").count() === 2);
+  await page.getByRole("button", { name: "Multilevel", exact: true }).click();
+  await page.getByRole("button", { name: "Collapse all", exact: true }).click();
+  check("collapse hides nested rows", await page.locator(".bom-table tbody tr").count() === 2);
+  await page.getByRole("button", { name: "Expand all", exact: true }).click();
+  check("expand restores nested rows", await page.locator(".bom-table tbody tr").count() === 3);
+  await page.locator(".bom-table").getByRole("button", { name: config.part.number, exact: true }).first().click();
+  await page.waitForFunction(revision => document.querySelector("#revision-picker")?.value === revision, config.part.revision);
+  check("BOM navigation opens pinned historical A instead of latest B", await page.locator(".revision-note").innerText().then(text => text.includes("Current revision B")));
+  await page.getByRole("tab", { name: "Files & datasets", exact: true }).click();
+  await page.getByRole("button", { name: "Download inspection.txt", exact: true }).waitFor();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download inspection.txt", exact: true }).click();
+  const download = await downloadPromise;
+  check("authenticated download filename and bytes", download.suggestedFilename() === "inspection.txt" && (await readFile(await download.path(), "utf8")) === "ForgePDM browser download verified.\n");
+  await page.getByRole("tab", { name: "Where used", exact: true }).click();
+  await page.locator("#tab-content tbody tr").nth(1).waitFor();
+  check("where-used shows both accessible parent assemblies", await page.locator("#tab-content tbody tr").count() === 2);
+  await page.getByRole("button", { name: config.sub.number, exact: true }).click();
+  await page.waitForFunction(revision => document.querySelector("#revision-picker")?.value === revision, config.sub.revision);
+  check("where-used opens exact parent revision");
+  await openItem(config.part, config.part.new_revision);
+  await page.getByRole("tab", { name: "Files & datasets", exact: true }).click();
+  await page.getByRole("heading", { name: "No files attached" }).waitFor();
+  check("dataset list belongs to selected B rather than older A");
+  await openItem(config.injection);
+  check("item names render as text without executing HTML", await page.locator(".detail-name").textContent() === '<img src=x onerror="window.webInjected=true">' && !(await page.evaluate(() => window.webInjected)) && await page.locator("#detail img").count() === 0);
+  await page.evaluate(id => { location.hash = new URLSearchParams({ item: id }).toString(); }, config.private.id);
+  await page.locator("#detail .inline-error").waitFor();
+  check("private item is not disclosed", !(await page.locator("#detail").innerText()).includes("Confidential"));
+  await page.locator("#project-filter").selectOption(config.projects.tools);
+  await page.waitForFunction(number => document.querySelectorAll(".item-row").length === 1 && document.querySelector(".item-row")?.textContent.includes(number), config.tool.number);
+  check("project filter scopes item results");
+  await page.getByRole("button", { name: "Projects", exact: true }).click();
+  check("project cards use authorized project data", await page.locator(".project-card").count() === 2);
+  await page.locator(".project-card").filter({ hasText: "PRJ-DESIGN" }).getByRole("button").click();
+  await page.waitForFunction(() => document.querySelectorAll(".item-row").length === 20);
+  await page.locator("#next").click();
+  await page.locator("#page-number").filter({ hasText: "Page 2" }).waitFor();
+  check("pagination advances within authorized project", await page.locator("#previous").isEnabled() && await page.locator(".item-row").count() < 20);
+  await page.locator("#search").fill(config.root.number);
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll(".item-row").length === 1);
+  check("search resets pagination", await page.locator("#page-number").innerText() === "Page 1");
+  await openItem(config.root, config.root.revision);
+  await page.getByRole("tab", { name: "Bill of materials", exact: true }).click();
+  await page.locator(".bom-table").waitFor();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: path.join(caseDirectory, "bom-mobile.png"), fullPage: true });
+  check("mobile layout has no document-wide horizontal overflow", await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  check("no persistent bearer storage", await page.evaluate(() => Object.keys(localStorage).length === 0 && Object.keys(sessionStorage).length === 0));
+  check("no content security policy violations", (await page.evaluate(() => window.webCSPViolations)).length === 0);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await page.locator("#login-screen").waitFor({ state: "visible" });
+  check("logout clears protected UI state", await page.locator(".item-row").count() === 0 && await page.locator("#project-filter option").count() === 1);
+  token = await login();
+  await page.reload();
+  await page.locator("#login-screen").waitFor({ state: "visible" });
+  check("refresh requires login because token is memory-only");
+  token = await login();
+  await fetch(`${config.url}/api/v1/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+  token = null;
+  await page.locator("#search").fill("bracket");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.locator("#login-screen").waitFor({ state: "visible" });
+  check("expired/revoked session clears data and asks for sign-in", await page.locator("#login-error").innerText().then(text => text.includes("expired")) && await page.locator(".item-row").count() === 0);
+  check("browser performs no engineering writes", report.writes.length === 0);
+  check("no uncaught browser exceptions", report.pageErrors.length === 0);
+  report.status = "passed";
+} catch (error) {
+  report.status = "failed"; report.error = error.message;
+  await page.screenshot({ path: path.join(caseDirectory, "failure.png"), fullPage: true });
+  throw error;
+} finally {
+  await writeFile(path.join(caseDirectory, "browser-report.json"), JSON.stringify(report, null, 2) + "\n");
+  await browser.close();
+}
+console.log(`Browser QA passed: ${report.checks.length} checks.`);

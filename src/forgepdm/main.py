@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from forgepdm.api.v1 import routes
 from forgepdm.application.auth import AuthService
@@ -41,6 +42,21 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     app.state.dataset_service = DatasetService(database, storage, authorization, revisions)
     app.state.file_storage = storage
     app.include_router(routes.router)
+    app.mount("/app", StaticFiles(directory=Path(__file__).parent / "web", html=True), name="web")
+
+    @app.middleware("http")
+    async def web_headers(request, call_next):
+        response = await call_next(request)
+        if request.url.path == "/app" or request.url.path.startswith("/app/"):
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; script-src 'self'; style-src 'self'; "
+                "img-src 'self'; connect-src 'self'; object-src 'none'; "
+                "base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+            )
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["Referrer-Policy"] = "no-referrer"
+            response.headers["Cache-Control"] = "no-store"
+        return response
 
     @app.get("/health")
     def health():

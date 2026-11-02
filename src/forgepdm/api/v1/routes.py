@@ -241,12 +241,19 @@ def list_projects(
 @router.get("/items")
 def search_items(
     q: str = Query(default="", max_length=200),
+    project_id: UUID | None = None,
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     user: User = Depends(current_user),
     catalog: CatalogService = Depends(get_catalog_service),
 ):
-    return catalog.search_items(user, query=q, limit=limit, offset=offset)
+    return catalog.search_items(
+        user,
+        query=q,
+        project_id=str(project_id) if project_id else None,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/items/{item_id}/revisions")

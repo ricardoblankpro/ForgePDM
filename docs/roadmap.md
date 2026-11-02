@@ -16,12 +16,18 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 | 0 | Architecture review and governance | Baseline assessment and phase approvals recorded |
 | 1 | Modern FreeCAD addon packaging | Implemented; live loading and part workflows tested |
 | 2 | Initialization, connectivity and catalog browsing | Implemented; [scope and validation](freecad-addon-phase2.md) |
-| 3 | Local workspace, CAD files and reference integrity | Implemented for whole-object App::Link; [scope and validation](freecad-addon-phase3.md) |
-| 4 | BOM extraction and revision-aware assembly synchronization | Implemented for the bounded App::Link profile; [scope and validation](freecad-addon-phase4.md) |
+| 3 | Local workspace, CAD files and reference integrity | Implemented for supported whole-object App::Link and native AssemblyLink; [scope and validation](freecad-addon-phase3.md) |
+| 4 | BOM extraction and revision-aware assembly synchronization | Implemented for direct parts/native subassemblies and reviewed replacement; [scope and validation](freecad-addon-phase4.md) |
 | 5 | Robust checkout/check-in, lifecycle, revisions and datasets | Close atomicity, fencing and retry/idempotency gaps |
 | 6 | Security, testing, backup/recovery and operational hardening | Consolidate production-readiness evidence |
 | 7 | Addon Manager distribution and stable deployment | Requires licensing, distribution approval and operational gates |
-| 8 | Web interface, ERPNext and future integrations | Build on stable authoritative APIs |
+| 8 | Web interface, ERPNext and future integrations | Read-only web browsing brought forward and implemented locally; editing and integrations deferred |
+
+The user approved bringing basic web browsing forward while Phase 5 remains the
+next backend reliability priority. The first web increment is served at `/app/`
+and provides authorized project/item browsing, exact revision history, datasets,
+where-used and direct/multilevel BOM views. Web editing, flattened BOM tools and
+ERP integrations remain future work. See [the web GUI report](web-gui.md).
 
 Phase 3 was explicitly authorized after Phase 2. Phase 4 provides reviewed,
 revision-aware BOM synchronization for supported App::Link structures. The

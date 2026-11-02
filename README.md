@@ -54,6 +54,23 @@ Uploads default to a 1 GiB limit; configure `FORGEPDM_MAX_UPLOAD_BYTES` to chang
 
 Keep the server bound to loopback. Authentication is now implemented, but transport security, login rate limiting, production secret/backup operations, and a security review are still outstanding; do not expose this early service to an untrusted network or use sensitive production data yet.
 
+## Web GUI
+
+Open **http://127.0.0.1:8000/app/** while the backend is running. Sign in with the
+same ForgePDM account used by the FreeCAD addon. No separate frontend server,
+JavaScript dependency installation or build is required.
+
+The read-only workspace supports authorized project/item browsing, search,
+revision history, direct/multilevel BOMs, where-used navigation and dataset file
+downloads. BOM links open their exact recorded revisions. Newer revisions are
+shown separately; the browser does not update components or engineering data.
+
+Authentication tokens stay in page memory; refreshing the page requires sign-in.
+Downloads retrieve individual dataset files. Use the FreeCAD addon to reconstruct
+a complete assembly configuration with its pinned component files.
+
+See [web GUI design, validation and limitations](docs/web-gui.md).
+
 ## Project map
 
 - `src/forgepdm/domain/`: framework-independent entities and domain errors.

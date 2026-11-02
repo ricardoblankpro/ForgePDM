@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Browse ForgePDM items, revisions, files and product structures.">
+  <title>ForgePDM · Engineering workspace</title>
+  <link rel="icon" type="image/svg+xml" href="./mark.svg">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <section id="login-screen" class="login-screen">
+    <div class="login-story">
+      <a class="brand brand-light" href="./"><img src="./mark.svg" alt="" width="34" height="34"><span>FORGE<span class="brand-soft">PDM</span></span></a>
+      <div class="story-copy"><span class="eyebrow light">ENGINEERING WORKSPACE</span><h1>Every part.<br>Every revision.<br><span>In context.</span></h1><p>A shared view of your product data, from the smallest component to the complete assembly.</p></div>
+      <svg class="assembly-art" viewBox="0 0 480 330" fill="none" aria-hidden="true"><g stroke="#607186" stroke-width="1.2"><path d="m60 210 170-97 180 104-170 97zM60 194l170-97 180 104M60 194v16m350-9v16M240 298v16"/><path d="m95 150 135-77 145 84-135 77zM95 138l135-77 145 84M95 138v12m280-5v12M240 222v12"/><path d="m150 66 80-46 90 52-80 46zM150 54l80-46 90 52M150 54v12m170-6v12M240 106v12"/><path d="M150 74v46m170-40v40m-80 6v67M95 160v26m280-19v26m-135 51v43" stroke-dasharray="4 5"/></g><g stroke="#f1a46b" stroke-width="2"><ellipse cx="230" cy="54" rx="22" ry="12"/><ellipse cx="230" cy="133" rx="35" ry="20"/><path d="m168 217 19-11 20 12-19 11zM283 218l19-11 20 12-19 11z"/></g><g fill="#bdc8d6"><circle cx="136" cy="153" r="3"/><circle cx="331" cy="164" r="3"/><circle cx="232" cy="211" r="3"/></g></svg>
+      <div class="story-footer"><span class="status-dot"></span>Built around your engineering workflow<span>FreeCAD connected</span></div>
+    </div>
+    <main class="login-main" id="main">
+      <div class="login-card"><span class="eyebrow">WORKSPACE ACCESS</span><h2>Welcome to ForgePDM</h2><p class="muted">Sign in with the account you use in FreeCAD.</p>
+        <form id="login-form">
+          <label for="username">Username</label><input id="username" name="username" autocomplete="username" required autofocus>
+          <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required>
+          <p id="login-error" class="form-error" role="alert" hidden></p>
+          <button id="login-button" type="submit" class="primary wide">Sign in to workspace <span aria-hidden="true">→</span></button>
+        </form>
+        <div class="login-note"><span class="note-icon" aria-hidden="true">⌘</span><div><strong>Browse with confidence</strong><p>This workspace lets you explore your data. Engineering changes stay in your existing controlled workflows.</p></div></div>
+        <p id="server-status" class="connection muted"><span class="status-dot"></span>Checking server…</p>
+      </div><p class="login-footer">ForgePDM · Product data, connected.</p>
+    </main>
+  </section>
+  <div id="workspace" class="workspace" hidden>
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <a class="brand brand-light" href="./"><img src="./mark.svg" alt="" width="30" height="30"><span>FORGE<span class="brand-soft">PDM</span></span></a>
+      <div class="workspace-label"><span class="status-dot"></span>Engineering workspace</div>
+      <div class="nav-section">EXPLORE</div>
+      <button id="nav-catalog" class="nav-button active"><span aria-hidden="true">▦</span> Item catalog <span class="nav-shortcut">/</span></button>
+      <button id="nav-projects" class="nav-button"><span aria-hidden="true">▱</span> Projects</button>
+      <div class="sidebar-rule"></div><div class="nav-section">YOUR PROJECTS</div><div id="project-links" class="project-links"></div>
+      <div class="sidebar-bottom"><span class="read-only-dot"></span><div><strong>Read-only workspace</strong><small>Explore. Trace. Understand.</small></div></div>
+    </aside>
+    <div class="workspace-body">
+      <header class="topbar"><div class="breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong id="page-crumb">Item catalog</strong></div><div class="account"><span id="account-avatar" class="avatar"></span><span id="account-name"></span><button id="logout" class="quiet">Sign out</button></div></header>
+      <main id="workspace-main" tabindex="-1">
+        <div class="page-heading"><div><span class="eyebrow">YOUR ENGINEERING DATA</span><h1 id="page-title">Item catalog</h1><p id="page-subtitle" class="muted">Find a component. Follow its history. Understand its place.</p></div><span class="view-tag">Read-only access</span></div>
+        <div id="notice" role="alert" class="notice" hidden></div>
+        <section id="projects-panel" hidden aria-label="Projects"><div id="project-cards" class="project-cards"></div></section>
+        <section id="catalog-panel" aria-label="Item catalog">
+          <form id="search-form" class="catalog-toolbar"><div class="search-field"><span aria-hidden="true">⌕</span><input id="search" name="q" type="search" maxlength="200" aria-label="Search items" placeholder="Search by item number, name or description…"><kbd>/</kbd></div><label class="sr-only" for="project-filter">Filter by project</label><select id="project-filter"><option value="">All accessible projects</option></select><button type="submit" class="secondary">Search</button></form>
+          <div class="catalog-layout"><section class="catalog-list" aria-label="Items"><div class="list-heading"><span>ITEMS</span><span id="list-count"></span></div><div id="items-list" class="items-list" aria-live="polite"></div><div class="pagination"><button id="previous" class="quiet" disabled>← Previous</button><span id="page-number"></span><button id="next" class="quiet" disabled>Next →</button></div></section><section id="detail" class="detail" aria-label="Item details" aria-live="polite"></section></div>
+        </section>
+      </main>
+      <footer class="workspace-footer"><span><span class="status-dot"></span>Connected to ForgePDM</span><span>Exact revisions. Clear relationships.</span></footer>
+    </div>
+  </div>
+  <div id="toast" role="status" class="toast" hidden></div>
+</body>
+</html>

@@ -42,7 +42,7 @@ class CatalogService:
             project["can_edit"] = bool(project["can_edit"])
         return result
 
-    def search_items(self, user: User, *, query="", limit=50, offset=0):
+    def search_items(self, user: User, *, query="", project_id=None, limit=50, offset=0):
         self._bounds(limit, offset)
         query = query.strip()
         if len(query) > 200:
@@ -55,10 +55,28 @@ class CatalogService:
                 "WHERE (?='admin' OR EXISTS (SELECT 1 FROM project_items pi "
                 "JOIN project_memberships pm ON pm.project_id=pi.project_id "
                 "WHERE pi.item_id=i.id AND pm.user_id=?)) "
+                "AND (? IS NULL OR EXISTS (SELECT 1 FROM project_items scope "
+                "JOIN projects p ON p.id=scope.project_id WHERE scope.item_id=i.id "
+                "AND scope.project_id=? AND p.archived=0 AND (?='admin' OR EXISTS "
+                "(SELECT 1 FROM project_memberships member WHERE member.project_id=p.id "
+                "AND member.user_id=?)))) "
                 "AND (?='' OR instr(lower(i.number),lower(?))>0 "
                 "OR instr(lower(i.name),lower(?))>0 OR instr(lower(i.description),lower(?))>0) "
                 "ORDER BY i.number, i.id LIMIT ? OFFSET ?",
-                (user.role, user.id, query, query, query, query, limit + 1, offset),
+                (
+                    user.role,
+                    user.id,
+                    project_id,
+                    project_id,
+                    user.role,
+                    user.id,
+                    query,
+                    query,
+                    query,
+                    query,
+                    limit + 1,
+                    offset,
+                ),
             ).fetchall()
         return self._page(rows, limit, offset)
 

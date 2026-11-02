@@ -1,5 +1,29 @@
 # Development status
 
+## 2026-11-02 — Read-only web GUI (first increment)
+
+- Brought basic Phase 8 web browsing forward with user approval; Phase 5 remains
+  the next backend reliability priority. Updated the active roadmap accordingly.
+- New same-origin `/app/` client: login/logout, authorized projects/items, search
+  and paging, exact revision history, direct/multilevel BOMs, datasets/downloads
+  and where-used. Uses the existing bearer API and no frontend runtime/build deps.
+- Added optional authorized project_id item filter. Hidden-project membership is
+  not disclosed, including items shared into another accessible project. Existing
+  unfiltered API behavior remains unchanged. No schema or CAD-client changes.
+- Tokens stay in page memory; logout/expiry clears protected UI. Refresh requires
+  sign-in. No engineering-data edits, automatic revision adoption or BOM writes.
+- 57 backend tests, 3 Node model tests and 26 isolated real Chrome checks passed.
+  Desktop/mobile screenshots inspected; authenticated file bytes, XSS text, CSP,
+  private-item access, historical pins and session expiry verified. Wheel includes
+  all six assets. Targeted new/changed-file checks pass; broad lint has existing
+  unrelated findings. Evidence: docs/validation/web-gui-browser-2026-11-02.json.
+- Local backend restarted with its existing database/storage and loopback binding;
+  `/health` and `/app/` return 200. No production engineering records modified.
+- Limits: no web editing, flattened view, CAD rendering or full configuration
+  downloads. Individual large downloads use browser Blobs. Browser deployment is
+  local only; production security/backup and Phase 5 transaction work remain.
+- Design/usage/QA: docs/web-gui.md; README links the local GUI.
+
 ## 2026-11-02 — General component replacement (addon 0.5.8)
 
 - Added Replace Component menu/toolbar command with part/assembly-number or name
@@ -140,6 +164,7 @@ before acting. Git history and the linked reports provide the detailed record.
 - Backend: FastAPI, SQLite, separate SHA-256 file storage, authentication,
   project permissions, Items/revisions/datasets, checkout leases, lifecycle,
   revision-pinned BOMs and immutable CAD dependency manifests.
+- Web GUI: read-only browser at `/app/`, served by the backend; see docs/web-gui.md.
 - FreeCAD addon: **0.5.8**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
