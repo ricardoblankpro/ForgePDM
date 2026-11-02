@@ -38,6 +38,7 @@ import freecad.forgepdm.api
 import freecad.forgepdm.session
 import freecad.forgepdm.fcstd
 import freecad.forgepdm.workspace
+import freecad.forgepdm.part_checkin
 import freecad.forgepdm.cad
 from freecad.forgepdm.resources import icon_path
 from pathlib import Path
@@ -54,13 +55,13 @@ assert not {'FreeCAD', 'FreeCADGui', 'PySide', 'PySide6', 'forgepdm', 'sqlite3'}
         timeout=15,
     )
     # Validation also works against the extracted distribution, not just source.
-    assert addon_tools.validate(installed) == "0.5.8"
+    assert addon_tools.validate(installed) == "0.6.0"
 
 
 @pytest.mark.parametrize(
     ("old", "new"),
     [
-        ("<version>0.5.8</version>", "<version>0.1.1</version>"),
+        ("<version>0.6.0</version>", "<version>0.1.1</version>"),
         ("<format-does-not-exist/>", ""),
         ("<classname>ForgePDMWorkbench</classname>", "<classname>DifferentWorkbench</classname>"),
         ("<name>ForgePDM</name>", ""),

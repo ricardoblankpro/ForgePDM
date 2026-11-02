@@ -334,12 +334,17 @@ class ForgePDMClient:
         if not self.token:
             raise ForgePDMError("Log in to ForgePDM before uploading")
         file_path = os.path.abspath(file_path)
-        filename = os.path.basename(file_path)
         fields = [("dataset_type", dataset_type)]
         if name:
             fields.append(("name", name))
-        boundary = "----ForgePDM" + uuid.uuid4().hex
         endpoint = "/api/v1/revisions/{}/datasets".format(self._quote(revision_id))
+        return self._multipart_file(endpoint, file_path, fields)
+
+    def _multipart_file(self, endpoint, file_path, fields):
+        if not self.token:
+            raise ForgePDMError("Log in to ForgePDM before uploading")
+        filename = os.path.basename(file_path)
+        boundary = "----ForgePDM" + uuid.uuid4().hex
         file_header = (
             (
                 '--{0}\r\nContent-Disposition: form-data; name="file"; filename="{1}"\r\n'
@@ -397,6 +402,56 @@ class ForgePDMClient:
             ) from error
         finally:
             connection.close()
+
+    def part_checkin_status(self, revision_id, operation_id):
+        try:
+            return self._json_request(
+                "GET",
+                "/api/v1/revisions/{}/checkin-operations/{}".format(
+                    self._quote(revision_id), self._quote(operation_id)
+                ),
+            )
+        except ForgePDMError as error:
+            if error.status == 404 and str(error) == "Not Found":
+                raise ForgePDMError(
+                    "Update/restart the backend: atomic part check-in is unavailable",
+                    code="unsupported_server",
+                ) from error
+            if error.status == 404:
+                return None
+            raise
+
+    def upload_part_checkin(self, snapshot_path, operation):
+        fields = [
+            (key, str(operation[key]))
+            for key in (
+                "operation_id",
+                "expected_checkout_id",
+                "expected_checkout_version",
+                "content_hash",
+                "byte_size",
+            )
+        ]
+        return self._multipart_file(
+            "/api/v1/revisions/{}/checkin-native".format(self._quote(operation["revision_id"])),
+            snapshot_path,
+            fields,
+        )
+
+    def resume_part_checkin(self, path, revision_id, item_id, actor_id):
+        from .part_checkin import resume
+
+        return resume(self, path, revision_id, item_id, actor_id)
+
+    def abandon_part_checkin(self, path, revision_id, item_id, actor_id):
+        from .part_checkin import abandon
+
+        return abandon(self, path, revision_id, item_id, actor_id)
+
+    def checkin_part(self, path, revision_id, item_id, actor_id):
+        from .part_checkin import checkin
+
+        return checkin(self, path, revision_id, item_id, actor_id)
 
     def download_file(self, file_id, destination, expected_hash=None, expected_size=None):
         if not self.token:

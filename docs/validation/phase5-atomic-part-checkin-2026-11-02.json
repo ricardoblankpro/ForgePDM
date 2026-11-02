@@ -1,0 +1,41 @@
+{
+  "addon_version": "0.6.0",
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "python": "3.11.14 | packaged by conda-forge | (main, Oct 13 2025, 14:25:33) [GCC 14.3.0]",
+  "qt": "6.8.3",
+  "checks": [
+    "lost response is surfaced without losing recovery journal",
+    "server completed one dataset despite lost response",
+    "successful server transaction released checkout",
+    "local pending journal contains original lease and snapshot",
+    "retry recovers committed result without uploading again",
+    "unsaved local edits survive recovery",
+    "user is told local edits were not included",
+    "recovered ledger is bound to exact committed bytes",
+    "recovery journal is acknowledged",
+    "new checkout and explicit check-in create a distinct operation",
+    "current document saves cleanly after normal atomic check-in",
+    "repeated completed check-in does not duplicate datasets",
+    "interrupted pre-commit transfer leaves checkout held and no dataset",
+    "renewed lease rejects original pending operation without new data",
+    "explicit restart archives old snapshot and commits current bytes",
+    "rejected old operation has no server completion record",
+    "only accepted operations produced native datasets",
+    "accepted snapshot bytes match current saved file",
+    "final checkout released and document clean",
+    "completed old operation remains queryable",
+    "all HTTP and file transfer operations stayed on workers",
+    "journal contains no password or bearer token"
+  ],
+  "scope": "Isolated HTTP database/storage/workspace; actual GUI commands; injected transport faults only",
+  "status": "passed"
+}

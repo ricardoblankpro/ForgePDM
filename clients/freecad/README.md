@@ -234,3 +234,20 @@ to parts or guessing new joint mappings is not supported. If an unselected inter
 link would follow a selected occurrence, select its dependent occurrences too or
 replace the dependent link independently. Invalid mappings and detected joint
 errors are rejected or rolled back. Inspect geometry and joints before saving.
+
+### Reliable part check-in (0.6.0)
+
+Check In uses the new atomic operation for parts without external CAD references.
+Update/restart the backend together with this addon. Assemblies and parts with
+external references retain the existing workflow pending the next Phase 5 slice.
+
+If the connection fails, use Check In again: it resolves the recorded operation
+and retries the same saved snapshot when needed. It does not silently upload newer
+local edits as the old operation. If the server already committed, the result is
+recovered without another dataset or checkout release. Local edits are preserved
+and reported as not included.
+
+If a pending attempt's checkout was renewed or replaced, the command offers to
+keep its snapshot or explicitly start a new operation from the current document.
+The old uncommitted snapshot is archived for review. No passwords/tokens are
+written into recovery journals. See [Phase 5 details](../../docs/phase5-reliable-checkin.md).

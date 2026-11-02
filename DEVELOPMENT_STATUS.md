@@ -1,5 +1,34 @@
 # Development status
 
+## 2026-11-02 — Phase 5 increment 1: reliable part check-in (addon 0.6.0)
+
+- Added fenced atomic native part check-in and actor-scoped operation status API.
+  One metadata transaction publishes File/Dataset/empty manifest, optional note,
+  audits, checkout release and immutable replay result. Migration 7 is additive;
+  consistent private backup taken before applying it to the local database.
+- Recheck lease owner, exact ID/version, expiry, lifecycle and permissions after
+  staging, inside the final serialized transaction. Retries return the recorded
+  result and do not release a later checkout. Eight-hour/note rules unchanged.
+- Addon keeps a credential-free durable snapshot journal. Recover pending/committed
+  results before saving current edits; preserve and report edits not included.
+  Superseded uncommitted leases require an explicit restart; old snapshots are
+  archived. Assemblies/external-reference parts remain on the legacy workflow.
+- Isolated live FreeCAD/HTTP validation passed 22 checks: response loss, duplicate-
+  free recovery, retained edits, interrupted transfer, renewal rejection, explicit
+  restart and worker-thread HTTP. User engineering data/session preserved.
+- Backend tests include independent process races, rollback, changed intent/bytes,
+  stale/expired/reacquired checkout tokens, permissions, limits and migration
+  preservation. Addon tests cover journal/ledger failures and unsupported servers.
+- Validation: 77 backend, 223 addon and 3 web model tests passed; 38 targeted
+  addon tests also passed after the final private-snapshot/fsync adjustment.
+  Addon layout validation and backend/addon package builds passed.
+- Both local addon profiles updated with backups; Check In command/client reloaded.
+  Design and scope: ADR-008 and docs/phase5-reliable-checkin.md. Live evidence:
+  docs/validation/phase5-atomic-part-checkin-2026-11-02.json.
+- Limits: blob promotion can leave unreferenced blobs after failure; no orphan
+  deletion/reconciliation added. Assembly atomicity, legacy-write fencing and
+  revision-creation retry/idempotency remain Phase 5 follow-ups.
+
 ## 2026-11-02 — Read-only web GUI (first increment)
 
 - Brought basic Phase 8 web browsing forward with user approval; Phase 5 remains
@@ -165,11 +194,11 @@ before acting. Git history and the linked reports provide the detailed record.
   project permissions, Items/revisions/datasets, checkout leases, lifecycle,
   revision-pinned BOMs and immutable CAD dependency manifests.
 - Web GUI: read-only browser at `/app/`, served by the backend; see docs/web-gui.md.
-- FreeCAD addon: **0.5.8**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.6.0**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
-  structures. Phase 5 (atomic check-in, fencing and idempotency) remains future
-  work. The original MVP roadmap has different phase numbering: use the active
+  structures. Phase 5 has started with atomic single-part check-in, fencing
+  and durable replay; assemblies and remaining writes are still pending. The original MVP roadmap has different phase numbering: use the active
   development-direction table in [the roadmap](docs/roadmap.md).
 - Live validation has used Linux FreeCAD **1.1.4**, Python **3.11.14**,
   Qt **6.8.3**. Other runtime/platform combinations remain unverified.
@@ -224,14 +253,15 @@ Evidence:
 ## Next session
 
 1. Read root and applicable nested `AGENTS.md`, inspect Git status and recent
-   commits, and confirm the user's requested scope. No next phase is currently
-   authorized by this handoff.
+   commits, and confirm the user's requested scope. Phase 5 is authorized and
+   started; the first bounded increment is complete.
 2. For CAD issues, confirm installed addon/runtime versions and reproduce with
    the actual document structure. Distinguish mocked tests from live validation.
    Preserve existing edits, immutable snapshots and exact revision pins.
-3. Propose the Phase 5 design before major architectural changes. Existing
-   upload/check-in operations are not yet an atomic end-to-end transaction;
-   retry/idempotency, checkout fencing and concurrency evidence remain priorities.
+3. Continue Phase 5 from ADR-008 and docs/phase5-reliable-checkin.md. Next,
+   extend atomic check-in to assemblies and their pinned manifests, then fence
+   remaining legacy writes and address revision-creation retries. Propose the
+   next design increment before major architectural changes.
 4. Track later operational work separately: crash-orphan reconciliation,
    backup/restore, production security, clean-start/platform acceptance and
    distribution gates. Refer to the roadmap rather than treating this prototype

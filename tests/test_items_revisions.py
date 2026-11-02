@@ -9,8 +9,11 @@ from conftest import create_item
 
 def test_migrations_are_repeatable_and_item_creation_is_atomic(backend):
     with backend.database.connection() as connection:
-        versions = [row["version"] for row in connection.execute("SELECT version FROM schema_version ORDER BY version")]
-    assert versions == [1, 2, 3, 4, 5, 6]
+        versions = [
+            row["version"]
+            for row in connection.execute("SELECT version FROM schema_version ORDER BY version")
+        ]
+    assert versions == [1, 2, 3, 4, 5, 6, 7]
 
     first = create_item(backend, kind="part")
     second = create_item(backend, kind="assembly", name="Test Assembly")
@@ -27,9 +30,7 @@ def test_migrations_are_repeatable_and_item_creation_is_atomic(backend):
 def test_checkout_is_exclusive_and_expired_lease_can_be_reclaimed(backend):
     item = create_item(backend)
     with pytest.raises(Conflict):
-        backend.revisions.acquire_checkout(
-            backend.users["editor2"], item.current_revision_id
-        )
+        backend.revisions.acquire_checkout(backend.users["editor2"], item.current_revision_id)
 
     past = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
     with backend.database.transaction() as connection:

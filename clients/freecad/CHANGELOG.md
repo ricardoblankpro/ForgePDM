@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0 — 2026-11-02
+
+- Eligible part check-in now uses one fenced, replayable backend operation.
+  Persist a credential-free journal and immutable snapshot to recover timeouts,
+  interrupted transfers and local ledger failures without duplicate datasets.
+- Recheck exact checkout ID/version after upload; preserve original pending
+  snapshots and require explicit restart when their lease is superseded.
+- Assemblies and parts with external references retain the existing multi-request
+  check-in path pending the next Phase 5 increment. Update the backend together
+  with this addon; no automatic downgrade to legacy part check-in is performed.
+
+
 ## 0.5.8 — 2026-11-02
 
 - Add Replace Component with item-number/name search, explicit revision and

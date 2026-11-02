@@ -380,6 +380,57 @@ def release_checkout(
     return _checkout_response(checkout)
 
 
+@router.post("/revisions/{revision_id}/checkin-native")
+def atomic_part_checkin(
+    revision_id: UUID,
+    request: Request,
+    file: UploadFile = MultipartFile(...),
+    operation_id: UUID = Form(...),
+    expected_checkout_id: UUID = Form(...),
+    expected_checkout_version: int = Form(..., ge=1),
+    content_hash: str = Form(..., pattern=r"^[0-9a-f]{64}$"),
+    byte_size: int = Form(..., gt=0),
+    change_note: str = Form(default="", max_length=2000),
+    user: User = Depends(current_user),
+):
+    try:
+        return request.app.state.checkin_service.check_in(
+            user=user,
+            revision_id=str(revision_id),
+            operation_id=str(operation_id),
+            expected_checkout_id=str(expected_checkout_id),
+            expected_checkout_version=expected_checkout_version,
+            content_hash=content_hash,
+            byte_size=byte_size,
+            filename=file.filename,
+            media_type=file.content_type,
+            source=file.file,
+            change_note=change_note,
+        )
+    except NotFound as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except Forbidden as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except Conflict as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except UploadTooLarge as error:
+        raise HTTPException(status_code=413, detail=str(error)) from error
+    except (EmptyUpload, ValueError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    finally:
+        file.file.close()
+
+
+@router.get("/revisions/{revision_id}/checkin-operations/{operation_id}")
+def part_checkin_status(
+    revision_id: UUID, operation_id: UUID, request: Request, user: User = Depends(current_user)
+):
+    try:
+        return request.app.state.checkin_service.status(user, str(revision_id), str(operation_id))
+    except (NotFound, Forbidden) as error:
+        raise HTTPException(status_code=404, detail="check-in operation not found") from error
+
+
 @router.post(
     "/revisions/{revision_id}/checkin",
     status_code=status.HTTP_204_NO_CONTENT,

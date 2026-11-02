@@ -11,6 +11,7 @@ from forgepdm.application.auth import AuthService
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.application.bom import BOMService
 from forgepdm.application.catalog import CatalogService
+from forgepdm.application.checkins import CheckInService
 from forgepdm.application.datasets import DatasetService
 from forgepdm.application.items import ItemService
 from forgepdm.application.manifests import ManifestService
@@ -38,6 +39,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     app.state.bom_service = BOMService(database, authorization, revisions)
     app.state.item_service = ItemService(database)
     app.state.revision_service = revisions
+    app.state.checkin_service = CheckInService(database, storage, authorization, revisions)
     app.state.manifest_service = ManifestService(database, authorization, revisions)
     app.state.dataset_service = DatasetService(database, storage, authorization, revisions)
     app.state.file_storage = storage

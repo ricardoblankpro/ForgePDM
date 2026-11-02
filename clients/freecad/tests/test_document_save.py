@@ -144,9 +144,12 @@ def test_writable_document_saves_in_place(commands, monkeypatch, tmp_path):
 
 def test_checkin_uploads_and_releases_without_prompting_for_a_note(commands, monkeypatch):
     document = Document("/tmp/managed.FCStd")
-    metadata = SimpleNamespace(RevisionId="revision")
+    metadata = SimpleNamespace(RevisionId="revision", ItemId="item")
     calls = []
-    client = SimpleNamespace(checkin=lambda revision: calls.append(("checkin", revision)))
+    client = SimpleNamespace(
+        checkin=lambda revision: calls.append(("checkin", revision)),
+        get_revision=lambda revision: {"item_id": "item", "item_kind": "assembly"},
+    )
 
     def editable(*args):
         yield from ()

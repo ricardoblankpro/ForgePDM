@@ -183,6 +183,19 @@ CREATE TABLE dataset_references (
 CREATE INDEX dataset_reference_target_idx ON dataset_references(target_dataset_id);
 """
 
+ATOMIC_CHECKIN_SCHEMA = """
+CREATE TABLE checkin_operations (
+    actor_id TEXT NOT NULL REFERENCES users(id),
+    operation_id TEXT NOT NULL,
+    revision_id TEXT NOT NULL REFERENCES item_revisions(id),
+    fingerprint TEXT NOT NULL CHECK(length(fingerprint) = 64),
+    result_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY(actor_id, operation_id)
+);
+CREATE INDEX checkin_operations_revision_idx ON checkin_operations(revision_id);
+"""
+
 MIGRATIONS = (
     (1, SCHEMA),
     (2, AUTHORIZATION_SCHEMA),
@@ -190,6 +203,7 @@ MIGRATIONS = (
     (4, CHECKOUT_SCHEMA),
     (5, BOM_SCHEMA),
     (6, MANIFEST_SCHEMA),
+    (7, ATOMIC_CHECKIN_SCHEMA),
 )
 
 
@@ -252,4 +266,3 @@ class Database:
             raise
         finally:
             connection.close()
-

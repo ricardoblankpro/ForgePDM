@@ -471,10 +471,75 @@ class CheckInCommand(Command):
         document = _require_document()
         metadata = _require_metadata(document)
         revision_id = metadata.RevisionId
+        revision = yield Request(
+            "Inspecting check-in revision…", client.get_revision, (revision_id,)
+        )
+        if revision["item_id"] != metadata.ItemId:
+            raise workspace.WorkspaceError("Document item/revision metadata is inconsistent")
+        actor_id = (Session.user or {}).get("id")
+        if revision["item_kind"] == "part":
+            try:
+                recovered = yield Request(
+                    "Resolving previous part check-in…",
+                    client.resume_part_checkin,
+                    (document.FileName, revision_id, metadata.ItemId, actor_id),
+                    mutates=True,
+                )
+            except ForgePDMError as error:
+                if error.status != 409:
+                    raise
+                choice = ask_choice(
+                    "Interrupted Part Check-in",
+                    "The previous operation has a stale checkout. Keep its snapshot, or start a new operation from the current document?",
+                    ["Keep pending snapshot", "Start new check-in from current document"],
+                    "Keep pending snapshot",
+                )
+                if choice != "Start new check-in from current document":
+                    return
+                yield Request(
+                    "Archiving the uncommitted snapshot…",
+                    client.abandon_part_checkin,
+                    (document.FileName, revision_id, metadata.ItemId, actor_id),
+                    cancellable=False,
+                )
+                recovered = None
+            if recovered is not None:
+                tree_observer.revoke_revision(revision_id)
+                if recovered.get("local_changes_remain") or cad.document_modified(document):
+                    warning(
+                        "ForgePDM",
+                        "The previous snapshot is checked in. Local edits remain and were not included; acquire a checkout before uploading them.",
+                    )
+                else:
+                    information(
+                        "ForgePDM",
+                        "The previous part check-in was confirmed. No duplicate dataset was created.",
+                    )
+                return
         yield from _editable(client, metadata)
         references = cad.capture(document)
         path = yield from _ensure_working(client, document)
         if path is None:
+            return
+        if revision["item_kind"] == "part" and not references:
+            document = _guard_document(document.Name, revision_id)
+            yield from _authorize_tree_labels(client, document)
+            tree_labels.refresh(document)
+            _save_document(document)
+            result = yield Request(
+                "Checking in verified part snapshot…",
+                client.checkin_part,
+                (path, revision_id, metadata.ItemId, actor_id),
+                mutates=True,
+            )
+            tree_observer.revoke_revision(revision_id)
+            if result.get("local_changes_remain") or cad.document_modified(document):
+                warning(
+                    "ForgePDM",
+                    "The snapshot was checked in. Local edits remain and were not included.",
+                )
+            else:
+                information("ForgePDM", "Part snapshot checked in atomically")
             return
         yield from _upload_native(client, document, path, references)
         tree_observer.revoke_revision(revision_id)

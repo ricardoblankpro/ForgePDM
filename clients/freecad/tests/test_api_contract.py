@@ -233,3 +233,38 @@ def test_newer_revisions_filters_sequence_and_obsolete_and_pages(api):
     assert calls == [0, 100]
     with pytest.raises(ValueError):
         client.newer_revisions("other", "B")
+
+
+def test_part_checkin_status_does_not_fall_back_when_server_is_old(api):
+    client = api.ForgePDMClient("http://forgepdm.test")
+
+    def missing(*args):
+        raise api.ForgePDMError("Not Found", status=404)
+
+    client._json_request = missing
+    with pytest.raises(api.ForgePDMError, match="Update/restart"):
+        client.part_checkin_status("revision", "operation")
+
+    def pending(*args):
+        raise api.ForgePDMError("check-in operation not found", status=404)
+
+    client._json_request = pending
+    assert client.part_checkin_status("revision", "operation") is None
+
+
+def test_atomic_part_upload_keeps_original_operation_and_lease_fields(api):
+    client = api.ForgePDMClient("http://forgepdm.test")
+    operation = {
+        "revision_id": "revision",
+        "operation_id": "operation",
+        "expected_checkout_id": "lease",
+        "expected_checkout_version": 2,
+        "content_hash": "a" * 64,
+        "byte_size": 10,
+    }
+    calls = []
+    client._multipart_file = lambda *args: calls.append(args) or {"status": "completed"}
+    client.upload_part_checkin("/tmp/snapshot.FCStd", operation)
+    assert calls[0][0] == "/api/v1/revisions/revision/checkin-native"
+    assert dict(calls[0][2])["expected_checkout_version"] == "2"
+    assert dict(calls[0][2])["operation_id"] == "operation"

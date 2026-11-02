@@ -38,6 +38,14 @@ def _atomic_json(path, data):
             output.flush()
             os.fsync(output.fileno())
         os.replace(temporary, path)
+        try:
+            directory_fd = os.open(path.parent, os.O_RDONLY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        except OSError:
+            pass  # Directory fsync is unavailable on some supported file systems.
     finally:
         Path(temporary).unlink(missing_ok=True)
 
@@ -276,6 +284,8 @@ def snapshot(client, path, references):
             while chunk := source.read(1024 * 1024):
                 client._checkpoint()
                 target.write(chunk)
+            target.flush()
+            os.fsync(target.fileno())
         if digest(destination, client._checkpoint) != (expected, size) or digest(
             path, client._checkpoint
         ) != (expected, size):
