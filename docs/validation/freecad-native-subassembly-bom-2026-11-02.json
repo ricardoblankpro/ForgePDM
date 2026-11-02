@@ -1,0 +1,19 @@
+{
+  "parent": "A000002",
+  "occurrences": [
+    {
+      "object_name": "Assembly001",
+      "component_label": "A000001 / A \u2014 Assembly",
+      "target_revision_id": "53408751-68a3-47f8-859b-3df98ce5ee94"
+    }
+  ],
+  "proposal": [
+    {
+      "component_revision_id": "53408751-68a3-47f8-859b-3df98ce5ee94",
+      "quantity": 1,
+      "position": 1
+    }
+  ],
+  "files_preserved": true,
+  "bom_written": false
+}

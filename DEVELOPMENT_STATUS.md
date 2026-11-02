@@ -1,5 +1,21 @@
 # Development status
 
+## 2026-11-02 — Direct native subassembly BOMs (addon 0.5.5)
+
+- BOM synchronization now captures direct parts and native AssemblyLink
+  subassemblies, excluding their generated child links/groups from quantities.
+  Repeated occurrences group by exact revision. Child assemblies retain their
+  independent BOMs; no recursive CAD flattening or automatic child writes.
+- Preserved uploaded snapshot/pin verification, selection/review, checkout and
+  optimistic concurrency checks. No backend/schema changes.
+- 178 addon tests passed; targeted lint, manifest check and build passed.
+- Both installed addon profiles updated with backups; CAD adapter reloaded.
+  Live A000002-A produced A000001-A x 1 only, passing real HTTP snapshot/pin
+  preparation. All open file hashes and the stored empty BOM were preserved.
+  User can complete synchronization through the normal selection/review UI.
+- Evidence: docs/validation/freecad-native-subassembly-bom-2026-11-02.json;
+  supported boundaries documented in docs/freecad-builtin-assembly.md.
+
 ## 2026-11-02 — Native AssemblyLink Python binding (addon 0.5.4)
 
 - Reproduced the setLink binding failure on Assembly::AssemblyLink in a
@@ -54,7 +70,7 @@ before acting. Git history and the linked reports provide the detailed record.
 - Backend: FastAPI, SQLite, separate SHA-256 file storage, authentication,
   project permissions, Items/revisions/datasets, checkout leases, lifecycle,
   revision-pinned BOMs and immutable CAD dependency manifests.
-- FreeCAD addon: **0.5.4**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.5.5**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 (atomic check-in, fencing and idempotency) remains future

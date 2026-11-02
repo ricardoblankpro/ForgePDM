@@ -185,3 +185,88 @@ def test_native_subassembly_rebase_uses_property_and_invalidates_cached_path():
     assert updates == [None, target]
     assert link.LinkedObject is target
     assert link.Placement is placement
+
+
+def subassembly_document():
+    root, assembly, joints, grounded = builtin_document()
+    subdocument = NS(
+        FileName="/tmp/sub.FCStd",
+        isTouched=lambda: False,
+        getObject=lambda name: NS(ItemId="sub", RevisionId="sub-revision"),
+    )
+    target = NS(Name="Assembly", TypeId="Assembly::AssemblyObject", Document=subdocument)
+    projected = NS(
+        Name="GeneratedPart",
+        TypeId="App::Link",
+        Document=root,
+        LinkedObject=NS(Document=subdocument),
+        Group=[],
+    )
+    projected_joints = NS(
+        Name="GeneratedJoints", TypeId="Assembly::JointGroup", Document=root, Group=[]
+    )
+    sub = NS(
+        Name="Sub",
+        TypeId="Assembly::AssemblyLink",
+        Document=root,
+        LinkedObject=target,
+        Group=[projected, projected_joints],
+    )
+    root.Objects.extend([sub, projected, projected_joints])
+    assembly.Group.append(sub)
+    return root, assembly, sub, projected
+
+
+def test_native_bom_contains_direct_parts_and_subassembly_without_generated_children():
+    root, assembly, sub, projected = subassembly_document()
+    refs = cad.capture_bom(root)
+    assert [r["object_name"] for r in refs] == ["First", "Second", "Sub"]
+    assert refs[-1]["target_revision_id"] == "sub-revision"
+    assert refs[-1]["target_object_name"] == "Assembly"
+    repeat = NS(**vars(sub))
+    repeat.Name = "RepeatedSub"
+    repeat.Group = []
+    root.Objects.append(repeat)
+    assembly.Group.append(repeat)
+    refs = cad.capture_bom(root)
+    assert [r["target_revision_id"] for r in refs].count("sub-revision") == 2
+
+
+@pytest.mark.parametrize("fault", ["local", "missing", "subelement", "array", "overlap", "stray"])
+def test_native_bom_rejects_invalid_subassembly_boundaries(fault):
+    root, assembly, sub, projected = subassembly_document()
+    if fault == "local":
+        sub.LinkedObject.Document = root
+    elif fault == "missing":
+        sub.LinkedObject = None
+    elif fault == "subelement":
+        sub.LinkedObject = (sub.LinkedObject, ["Face1"])
+    elif fault == "array":
+        sub.ElementCount = 2
+    elif fault == "overlap":
+        assembly.Group.append(projected)
+    else:
+        sub.Group.remove(projected)
+    with pytest.raises(WorkspaceError):
+        cad.capture_bom(root)
+
+
+def test_native_subassembly_repeats_group_into_one_exact_revision_line():
+    from uuid import uuid4
+    from freecad.forgepdm import bom
+
+    root, assembly, sub, projected = subassembly_document()
+    revision = str(uuid4())
+    sub.LinkedObject.Document.getObject = lambda name: NS(ItemId=str(uuid4()), RevisionId=revision)
+    repeat = NS(**vars(sub))
+    repeat.Name, repeat.Group = "RepeatedSub", []
+    root.Objects.append(repeat)
+    assembly.Group.append(repeat)
+    refs = [r for r in cad.capture_bom(root) if r["object_name"] in ("Sub", "RepeatedSub")]
+    proposal = bom.propose_lines(
+        {"profile": "freecad-app-link-v1", "references": refs},
+        [(r["object_name"], r["property_name"]) for r in refs],
+    )
+    assert [line.as_payload() for line in proposal] == [
+        {"component_revision_id": revision, "quantity": 2, "position": 1}
+    ]

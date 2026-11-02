@@ -73,3 +73,32 @@ success/error notifications were captured to avoid blocking the harness; selecti
 and consent dialogs ran normally with automated input. Both installed profiles
 were backed up outside `Mod` and updated to 0.4.2; the active CAD module was reloaded
 in the current session. Other FreeCAD versions and platforms remain unverified.
+
+## Native subassembly BOMs — addon 0.5.5
+
+Synchronization captures the immediate parts (`App::Link`) and subassemblies
+(`Assembly::AssemblyLink`) of the native assembly container. Each subassembly
+links a whole external `Assembly::AssemblyObject`. Its generated local child
+links and joint groups are excluded from the parent's engineering occurrences.
+A generated member cannot also be a direct component of the parent. Stray links,
+local nested assembly containers, missing/subelement targets and arrays remain
+unsupported rather than being silently counted.
+
+Repeated direct occurrences group by exact component revision. Each assembly
+revision owns its own immediate BOM; synchronization does not descend into source
+subassembly documents or write their BOMs. Multilevel reads expand the stored
+revision-pinned child BOMs through the existing recursive backend endpoint. A
+child assembly whose BOM has not been synchronized has no expanded child lines.
+This differs from flattening the CAD dependency manifest, which also records
+references needed to reconstruct the native file and is not an engineering BOM.
+No backend/schema change is needed; selection, review, uploaded snapshot checks,
+checkout ownership and concurrency tokens remain in force.
+
+Validation: 178 addon tests passed, including mixed direct parts/subassemblies,
+repeated subassembly aggregation and invalid membership/target cases. Lint,
+manifest check and distribution build passed. In live FreeCAD, A000002 Rev A
+produced exactly one candidate: A000001 Rev A, quantity 1; its seven projected
+part links were excluded. Real HTTP preparation verified the uploaded pins.
+The existing empty BOM and all open document file hashes were preserved; final
+BOM replacement remains available through the ordinary selection/review dialog.
+See [the live report](validation/freecad-native-subassembly-bom-2026-11-02.json).

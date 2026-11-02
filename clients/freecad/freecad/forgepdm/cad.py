@@ -79,6 +79,29 @@ def capture(document):
     return references
 
 
+def _subassembly_generated_members(document, link):
+    """Exclude native projected children; the linked assembly owns their BOM."""
+    target = link.LinkedObject
+    if (
+        target is None
+        or isinstance(target, tuple)
+        or target.Document is document
+        or target.TypeId != "Assembly::AssemblyObject"
+        or getattr(link, "ElementCount", 0)
+    ):
+        raise WorkspaceError("Native subassembly must link a whole external Assembly object")
+    generated, pending = set(), list(link.Group)
+    while pending:
+        child = pending.pop()
+        if child.Document is not document or child.Name in generated:
+            continue
+        if child.Name == link.Name:
+            raise WorkspaceError("Native subassembly contains a generated member cycle")
+        generated.add(child.Name)
+        pending.extend(getattr(child, "Group", []))
+    return generated
+
+
 def _builtin_bom_context(document):
     assemblies = [obj for obj in document.Objects if obj.TypeId == "Assembly::AssemblyObject"]
     if not assemblies:
@@ -116,15 +139,28 @@ def _builtin_bom_context(document):
                     )
                 )
             ignored.add(joint.Name)
+    components = {
+        obj.Name for obj in members if obj.TypeId in ("App::Link", "Assembly::AssemblyLink")
+    }
+    generated = set()
     for member in members:
-        if member.Name not in ignored and member.TypeId != "App::Link":
+        if member.TypeId == "Assembly::AssemblyLink":
+            generated.update(_subassembly_generated_members(document, member))
+    if generated & (components | ignored):
+        raise WorkspaceError("Generated subassembly members overlap direct assembly members")
+    ignored.update(generated)
+    for member in members:
+        if member.Name not in ignored and member.TypeId not in (
+            "App::Link",
+            "Assembly::AssemblyLink",
+        ):
             raise WorkspaceError(
                 "Unsupported Assembly member '{}' ({}). "
                 "This BOM adapter counts direct whole-object component links.".format(
                     member.Name, member.TypeId
                 )
             )
-    return ignored, {obj.Name for obj in members if obj.TypeId == "App::Link"}
+    return ignored, components
 
 
 def capture_bom(document):
@@ -145,7 +181,7 @@ def capture_bom(document):
                     obj.Name, type(obj.Proxy).__name__
                 )
             )
-        if obj.TypeId.startswith("Assembly::") or (
+        if (obj.TypeId.startswith("Assembly::") and obj.TypeId != "Assembly::AssemblyLink") or (
             obj.TypeId.startswith("App::Link") and obj.TypeId != "App::Link"
         ):
             raise WorkspaceError(
@@ -153,7 +189,7 @@ def capture_bom(document):
                     obj.Name, obj.TypeId
                 )
             )
-        if obj.TypeId != "App::Link":
+        if obj.TypeId not in ("App::Link", "Assembly::AssemblyLink"):
             continue
         if assembly_components is not None and obj.Name not in assembly_components:
             raise WorkspaceError(
@@ -161,7 +197,10 @@ def capture_bom(document):
                 "Nested local groups require a dedicated BOM adapter.".format(obj.Name)
             )
         current, visited = obj, set()
-        while current.Document is document and current.TypeId == "App::Link":
+        while current.Document is document and current.TypeId in (
+            "App::Link",
+            "Assembly::AssemblyLink",
+        ):
             if current.Name in visited:
                 raise WorkspaceError("Internal CAD link cycle")
             visited.add(current.Name)
@@ -175,7 +214,7 @@ def capture_bom(document):
             raise WorkspaceError(
                 "Internal links to local geometry have no pinned component identity"
             )
-        if current.TypeId == "App::Link":
+        if current.TypeId in ("App::Link", "Assembly::AssemblyLink"):
             raise WorkspaceError("External link-to-link targets require a dedicated BOM adapter")
         target_document = current.Document
         metadata = target_document.getObject("ForgePDM_Metadata")

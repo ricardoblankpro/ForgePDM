@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.5 — 2026-11-02
+
+- Synchronize native assembly BOMs from direct parts and AssemblyLink
+  subassemblies. Exclude generated subassembly children from parent quantities.
+- Preserve exact revision pins, repeated occurrence quantities, snapshot checks
+  and explicit selection/review. Subassemblies own their independent BOMs.
+
+
 ## 0.5.4 — 2026-11-02
 
 - Rebase native AssemblyLink references through their LinkedObject property;
