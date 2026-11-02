@@ -12,6 +12,9 @@ Its tree labels show item, pinned revision and persistent per-parent occurrence
 numbers, with a refresh command for existing managed assemblies.
 Atomic check-in and operational hardening remain future work.
 
+See [Development status](DEVELOPMENT_STATUS.md) for the current handoff, recent
+fixes, validation evidence and remaining work.
+
 ## Local development
 
 Requires Python 3.11+ and `uv`.

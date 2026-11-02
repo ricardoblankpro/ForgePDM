@@ -39,6 +39,7 @@ Do not assume these references are identical. Document architectural differences
 
 ## Development workflow
 
+- Read `DEVELOPMENT_STATUS.md` at the start of a development session. Update it after significant changes with current behavior, validation evidence, known limitations and next steps; keep credentials and transient session details out of it.
 - Inspect existing code before making changes.
 - Propose a plan before major architectural changes.
 - Implement small, testable increments.

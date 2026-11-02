@@ -1,0 +1,96 @@
+# Development status
+
+Updated after addon 0.5.1 was pushed to `master` in commit `2ac9c3e`.
+This is a handoff for future sessions; verify the current checkout and runtime
+before acting. Git history and the linked reports provide the detailed record.
+
+## Current implementation
+
+- Backend: FastAPI, SQLite, separate SHA-256 file storage, authentication,
+  project permissions, Items/revisions/datasets, checkout leases, lifecycle,
+  revision-pinned BOMs and immutable CAD dependency manifests.
+- FreeCAD addon: **0.5.1**, modern `freecad.forgepdm` namespace; communicates
+  through HTTP without importing backend business logic.
+- Development-direction Phases 1–4 are implemented for the documented supported
+  structures. Phase 5 (atomic check-in, fencing and idempotency) remains future
+  work. The original MVP roadmap has different phase numbering: use the active
+  development-direction table in [the roadmap](docs/roadmap.md).
+- Live validation has used Linux FreeCAD **1.1.4**, Python **3.11.14**,
+  Qt **6.8.3**. Other runtime/platform combinations remain unverified.
+
+## Recent behavior and fixes
+
+- Passwords accept at least four characters, including numeric passwords.
+  Local CLI commands support password resets and role changes; see the README.
+- Check-in does not prompt for a change note. An omitted note preserves the
+  existing revision note. Creating a new revision still requires a note.
+- Asynchronous commands refresh FreeCAD command activation when they finish,
+  preventing the toolbar from remaining gray until another command runs.
+- Show BOM displays the stored engineering BOM. CAD synchronization is a
+  separate reviewed action: it verifies saved/uploaded snapshots and exact
+  component revisions before proposing replacement lines.
+- The bounded native Assembly adapter supports direct whole-object App::Link
+  components and excludes standard joints from quantities. Unsupported layouts
+  require an adapter; this is not general support for every assembly workbench.
+- Tree labels use `ITEM-REVISION|OCCURRENCE`, for example `P000005-A|2`.
+  Numbers are scoped to the immediate parent and exact component revision;
+  persistent UUIDs and allocation history preserve surviving occurrences.
+  Deleted indices are not reused. Display labels never determine PDM identity.
+- Addon 0.4.3 changed reconstruction to GUI document save so the GUI Modified
+  flag clears correctly. Version 0.5.1 additionally recomputes after tree-label
+  projection: legacy FeaturePython metadata can remain Touched after a save.
+  Both clean-state guards remain enforced; unresolved edits are not discarded.
+
+## Latest validation
+
+- **162 addon tests passed** after the 0.5.1 fix. The preceding 0.5.0 validation
+  recorded **54 backend tests passed**; the latest fix did not change backend code.
+- Manifest/package build and targeted lint checks passed for 0.5.1.
+- The exact assembly snapshot that failed on retrieved component `P000005-A`
+  was retried through the actual registered Download command in live FreeCAD.
+  The root and three component documents opened cleanly, all four occurrence
+  links used their exact pinned revisions, and previous open documents and file
+  bytes were preserved. Dialog choices/notifications were automated; real CAD,
+  worker and HTTP paths executed.
+- Both local FreeCAD addon profiles were backed up and updated to 0.5.1.
+  The running CAD module was reloaded. Do not assume a future runtime still has
+  the same version, active documents, authenticated session or running services.
+
+Evidence:
+
+- [Legacy snapshot download](docs/validation/freecad-legacy-label-download-2026-11-01.json)
+- [Tree labels and occurrence identity](docs/freecad-tree-labels.md)
+- [Phase 4 BOM synchronization](docs/freecad-addon-phase4.md)
+- [Native Assembly profile](docs/freecad-builtin-assembly.md)
+- [Detailed runtime validation](clients/freecad/Documentation/validation.md)
+- [Addon changelog](clients/freecad/CHANGELOG.md)
+
+## Next session
+
+1. Read root and applicable nested `AGENTS.md`, inspect Git status and recent
+   commits, and confirm the user's requested scope. No next phase is currently
+   authorized by this handoff.
+2. For CAD issues, confirm installed addon/runtime versions and reproduce with
+   the actual document structure. Distinguish mocked tests from live validation.
+   Preserve existing edits, immutable snapshots and exact revision pins.
+3. Propose the Phase 5 design before major architectural changes. Existing
+   upload/check-in operations are not yet an atomic end-to-end transaction;
+   retry/idempotency, checkout fencing and concurrency evidence remain priorities.
+4. Track later operational work separately: crash-orphan reconciliation,
+   backup/restore, production security, clean-start/platform acceptance and
+   distribution gates. Refer to the roadmap rather than treating this prototype
+   as production-ready.
+
+## Verification commands
+
+Run from the repository root:
+
+```sh
+uv run --project clients/freecad --extra dev pytest clients/freecad/tests -q
+uv run --group dev pytest tests -q
+uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.py check
+uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.py build
+```
+
+Use the runtime harnesses documented in the validation guide when real FreeCAD
+verification is required. Never store passwords or bearer tokens in this file.
