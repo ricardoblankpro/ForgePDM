@@ -136,15 +136,54 @@ def _scopes(document):
     return scope
 
 
-def _records(document, metadata):
+def _projected_labels(document, metadata):
+    """Generated AssemblyLink children display their pinned source occurrence.
+
+    They belong to the external assembly's registry, not the local parent's.
+    Labels are copied for presentation only; never parsed to recover identity.
+    """
+    projected = {}
+    server = getattr(metadata, "ServerUrl", "")
+    for assembly in document.Objects:
+        if assembly.TypeId != "Assembly::AssemblyLink":
+            continue
+        source = getattr(assembly, "LinkedObject", None)
+        if source is None or isinstance(source, tuple) or source.Document is document:
+            continue
+        source_metadata = source.Document.getObject("ForgePDM_Metadata")
+        if not server or getattr(source_metadata, "ServerUrl", "") != server:
+            continue
+        for child in assembly.Group:
+            if child.Document is not document or child.TypeId not in (
+                "App::Link",
+                "Assembly::AssemblyLink",
+            ):
+                continue
+            target = child.LinkedObject
+            if (
+                target is None
+                or isinstance(target, tuple)
+                or target.Document is not source.Document
+            ):
+                raise WorkspaceError("Generated subassembly child has an unexpected source")
+            if child.Name in projected and projected[child.Name] != target.Label:
+                raise WorkspaceError("Ambiguous generated subassembly child label")
+            projected[child.Name] = target.Label
+    return projected
+
+
+def _records(document, metadata, projected):
     scope = _scopes(document)
     records, skipped = [], []
     server = getattr(metadata, "ServerUrl", "")
     for obj in document.Objects:
-        if obj.TypeId != "App::Link":
+        if obj.Name in projected or obj.TypeId not in ("App::Link", "Assembly::AssemblyLink"):
             continue
         current, visited = obj, set()
-        while current.Document is document and current.TypeId == "App::Link":
+        while current.Document is document and current.TypeId in (
+            "App::Link",
+            "Assembly::AssemblyLink",
+        ):
             if current.Name in visited:
                 raise WorkspaceError("CAD link cycle prevents tree occurrence numbering")
             visited.add(current.Name)
@@ -203,7 +242,8 @@ def refresh(document):
         for field in ("ItemId", "RevisionId", "ItemNumber", "RevisionLabel")
     ):
         return {"changed": False, "labels": [], "skipped": []}
-    records, skipped = _records(document, metadata)
+    projected = _projected_labels(document, metadata)
+    records, skipped = _records(document, metadata, projected)
     planned, encoded = allocate(records, getattr(metadata, STATE, ""), metadata.ItemId)
     root_label = "{}-{}".format(metadata.ItemNumber, metadata.RevisionLabel)
     changed = document.Label != root_label or getattr(metadata, STATE, "") != encoded
@@ -215,6 +255,7 @@ def refresh(document):
             or getattr(obj, "ForgePDMOccurrenceNumber", 0) != row["number"]
             or getattr(obj, "ForgePDMOccurrenceKey", "") != row["key"]
         )
+    changed |= any(document.getObject(name).Label != label for name, label in projected.items())
     if not changed:
         return {"changed": False, "labels": [row["label"] for row in planned], "skipped": skipped}
     # Validate property types before opening the transaction, preserving conflicts.
@@ -242,6 +283,8 @@ def refresh(document):
             )
             _property(obj, "ForgePDMOccurrenceKey", FIELDS["ForgePDMOccurrenceKey"], row["key"])
             obj.Label = row["label"]
+        for name, label in projected.items():
+            document.getObject(name).Label = label
         document.commitTransaction()
     except BaseException:
         document.abortTransaction()

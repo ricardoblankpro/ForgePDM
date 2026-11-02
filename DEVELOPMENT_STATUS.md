@@ -1,5 +1,50 @@
 # Development status
 
+## 2026-11-02 — Native AssemblyLink Python binding (addon 0.5.4)
+
+- Reproduced the setLink binding failure on Assembly::AssemblyLink in a
+  disposable live FreeCAD copy. Native references now use LinkedObject property
+  assignment; rebasing clears/reassigns the property to invalidate cached paths.
+  Reconstruction also uses property assignment for this native type.
+- Live installed-code Save As probe preserved all eight exact reference paths
+  and all 29 objects. 170 addon tests, targeted lint, package check/build passed.
+- Both addon profiles updated with backups; running CAD module reloaded.
+- Repaired the failed working copy in place and retried the registered Upload
+  command successfully. A000002-A saved cleanly with all eight references
+  validated and all generated child labels matching the source subassembly.
+
+## 2026-11-02 — Native subassembly labels (addon 0.5.3)
+
+- Generated AssemblyLink children now project their pinned source occurrence
+  labels; only the inserted assembly receives a parent occurrence allocation.
+  Source registries, link targets and previous allocation history are preserved.
+- Live FreeCAD verification: all seven generated part labels matched their
+  exact source occurrences (P000004-B, P000005-A, P000006-A), and the inserted
+  assembly displayed A000001-A|1. Existing downloaded configuration was repaired
+  in memory; its saved file hash remained unchanged. Normal refresh correctly
+  required a working copy for persistent edits.
+- 169 addon tests passed; targeted lint, package validation and build passed.
+  Both installed profiles updated with backups. Native insertion observer now
+  recognizes AssemblyLink. Native subassembly BOM support remains separate.
+
+## 2026-11-02 — Native subassembly upload fix (addon 0.5.2)
+
+- FreeCAD native insertion creates `Assembly::AssemblyLink`, which the exact
+  `App::Link` checks previously skipped/rejected. Capture, rebasing, FCStd
+  inspection and reconstruction now accept this explicit native link type.
+  Subelement/array serialization checks remain enforced.
+- Installed in both local addon profiles and reloaded in running FreeCAD.
+  The actual registered Upload command succeeded for the open assembly,
+  recording its subassembly link and seven generated child references.
+  The document remained clean after upload. No credentials recorded.
+- Validation: 167 addon tests passed; targeted lint, manifest validation and
+  0.5.2 distribution build passed. Added capture, rewrite and rejection tests.
+- Limitation: native AssemblyLink BOM synchronization/tree label projection
+  remains outside the direct App::Link adapter. A live download roundtrip for
+  this new native link type has not yet been validated. Follow up on generated
+  child ownership before extending BOM counting; do not flatten subassemblies.
+
+
 Updated after addon 0.5.1 was pushed to `master` in commit `2ac9c3e`.
 This is a handoff for future sessions; verify the current checkout and runtime
 before acting. Git history and the linked reports provide the detailed record.
@@ -9,7 +54,7 @@ before acting. Git history and the linked reports provide the detailed record.
 - Backend: FastAPI, SQLite, separate SHA-256 file storage, authentication,
   project permissions, Items/revisions/datasets, checkout leases, lifecycle,
   revision-pinned BOMs and immutable CAD dependency manifests.
-- FreeCAD addon: **0.5.1**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.5.4**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 (atomic check-in, fencing and idempotency) remains future

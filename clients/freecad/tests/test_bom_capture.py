@@ -140,3 +140,48 @@ def test_builtin_adapter_rejects_ambiguous_members_with_context(fault):
         message = "Unsupported Assembly member 'LocalBody'"
     with pytest.raises(WorkspaceError, match=message):
         cad.capture_bom(root)
+
+
+def test_native_subassembly_upload_captures_exact_document_pin():
+    root, child, first, second = documents()
+    first.TypeId = "Assembly::AssemblyLink"
+    first.LinkedObject.TypeId = "Assembly::AssemblyObject"
+    references = cad.capture(root)
+    assert len(references) == 1
+    assert references[0]["object_name"] == "First"
+    assert references[0]["target_revision_id"] == "revision"
+    assert references[0]["target_path"] == child.FileName
+
+
+def test_native_subassembly_rebase_uses_property_and_invalidates_cached_path():
+    root, child, first, second = documents()
+    target = first.LinkedObject
+    updates = []
+
+    class NativeLink:
+        Name = "Native"
+        TypeId = "Assembly::AssemblyLink"
+        Placement = object()
+        _target = target
+
+        @property
+        def LinkedObject(self):
+            return self._target
+
+        @LinkedObject.setter
+        def LinkedObject(self, value):
+            updates.append(value)
+            self._target = value
+
+        def setLink(self, value):
+            raise AttributeError("<no object bound to built-in method setLink>")
+
+    link = NativeLink()
+    placement = link.Placement
+    root.Objects = [link]
+    root.getObject = lambda name: link
+    root.recompute = lambda: None
+    cad.rebase_links(root)
+    assert updates == [None, target]
+    assert link.LinkedObject is target
+    assert link.Placement is placement

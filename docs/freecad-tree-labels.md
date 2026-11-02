@@ -99,3 +99,14 @@ Both installed addon profiles were backed up and updated; the running session
 registered the additional command and observer. Other OS/FreeCAD versions,
 third-party assembly adapters and long-running multiuser lease changes remain
 outside this live certification. No repository push or public release is implied.
+
+## Native subassembly presentation (0.5.3)
+
+A native `Assembly::AssemblyLink` receives its assembly item/revision occurrence
+in the parent registry. Its generated child links project the labels of their
+exact `LinkedObject` occurrences in the pinned source subassembly. They do not
+receive new part numbers from the parent registry. Source documents and link
+targets remain unchanged; labels are presentation, never an identity parser.
+Downloaded configurations receive this projection during reconstruction. Existing
+open configurations can be corrected in memory; persisting edits requires a
+managed working copy through the normal checkout/upload workflow.

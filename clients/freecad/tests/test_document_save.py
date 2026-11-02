@@ -318,6 +318,7 @@ def test_managed_save_rebases_external_links_after_filename_changes(commands, tm
     events = []
 
     class Link:
+        Name = "Link"
         TypeId = "App::Link"
         LinkedObject = target
         Placement = object()
@@ -327,6 +328,7 @@ def test_managed_save_rebases_external_links_after_filename_changes(commands, tm
             self.LinkedObject = value
 
     document.Objects = [Link()]
+    document.getObject = lambda name: document.Objects[0]
     destination = tmp_path / "working.FCStd"
     placement = document.Objects[0].Placement
     commands._save_managed_as(document, str(destination))

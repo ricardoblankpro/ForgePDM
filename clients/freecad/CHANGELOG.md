@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.4 — 2026-11-02
+
+- Rebase native AssemblyLink references through their LinkedObject property;
+  FreeCAD's inherited setLink Python binding fails for this native type.
+- Use native property assignment when restoring pinned AssemblyLink targets.
+
+
+## 0.5.3 — 2026-11-02
+
+- Project native subassembly generated child labels from the exact linked source
+  occurrences instead of assigning the subassembly identity to every part.
+- Allocate a parent occurrence for the AssemblyLink itself and observe native
+  subassembly insertion for deferred label refresh.
+
+
+## 0.5.2 — 2026-11-02
+
+- Accept whole-object native `Assembly::AssemblyLink` references during upload,
+  path rebasing and pinned reconstruction. Keep subelement/array rejection.
+- Native subassembly BOM synchronization remains outside the current direct
+  App::Link BOM adapter.
+
+
 ## 0.5.1 — legacy component retrieval after tree-label projection
 
 - Recompute loader-created occurrence metadata before saving reconstructed

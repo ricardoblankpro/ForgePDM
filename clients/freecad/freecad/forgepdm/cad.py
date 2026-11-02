@@ -16,15 +16,22 @@ def document_modified(document):
 
 def rebase_links(document):
     """Refresh FreeCAD's cached relative paths after changing FileName."""
-    for obj in document.Objects:
-        if obj.TypeId != "App::Link":
+    for name in [obj.Name for obj in document.Objects]:
+        obj = document.getObject(name)
+        if obj is None or obj.TypeId not in ("App::Link", "Assembly::AssemblyLink"):
             continue
         target = obj.LinkedObject
         if target is None or isinstance(target, tuple) or target.Document is document:
             continue
         placement = obj.Placement
-        obj.setLink(None)
-        obj.setLink(target)
+        if obj.TypeId == "Assembly::AssemblyLink":
+            # Native AssemblyLink has no usable Python setLink binding. Clearing
+            # the XLink property also invalidates its cached relative file path.
+            obj.LinkedObject = None
+            obj.LinkedObject = target
+        else:
+            obj.setLink(None)
+            obj.setLink(target)
         obj.Placement = placement
     document.recompute()
 
@@ -32,7 +39,7 @@ def rebase_links(document):
 def capture(document):
     references = []
     for obj in document.Objects:
-        if obj.TypeId != "App::Link":
+        if obj.TypeId not in ("App::Link", "Assembly::AssemblyLink"):
             continue
         target = obj.LinkedObject
         if target is None:
@@ -244,13 +251,20 @@ def open_configuration(configuration, set_metadata):
                 link = document.getObject(reference["object_name"])
                 target_document = documents[reference["target_file_id"]]
                 target = target_document.getObject(reference["target_object_name"])
-                if link is None or link.TypeId != "App::Link" or target is None:
+                if (
+                    link is None
+                    or link.TypeId not in ("App::Link", "Assembly::AssemblyLink")
+                    or target is None
+                ):
                     raise WorkspaceError(
                         "A recorded CAD object is missing from its pinned native file"
                     )
                 if link.LinkedObject is not target:
                     placement = link.Placement
-                    link.setLink(target)
+                    if link.TypeId == "Assembly::AssemblyLink":
+                        link.LinkedObject = target
+                    else:
+                        link.setLink(target)
                     link.Placement = placement
             document.recompute()
             if document.HasPendingTransaction:

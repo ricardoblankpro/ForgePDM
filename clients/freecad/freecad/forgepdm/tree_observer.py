@@ -76,7 +76,7 @@ class TreeObserver:
             self.timer.start()
 
     def slotCreatedObject(self, obj):
-        if obj.TypeId == "App::Link":
+        if obj.TypeId in ("App::Link", "Assembly::AssemblyLink"):
             self.queue(obj.Document)
 
     def slotChangedObject(self, obj, property_name):
@@ -95,7 +95,7 @@ class TreeObserver:
         if obj.Name == "ForgePDM_Metadata":
             for parent in App.listDocuments().values():
                 if can_edit(parent) and any(
-                    link.TypeId == "App::Link"
+                    link.TypeId in ("App::Link", "Assembly::AssemblyLink")
                     and getattr(getattr(link, "LinkedObject", None), "Document", None) is document
                     for link in parent.Objects
                 ):

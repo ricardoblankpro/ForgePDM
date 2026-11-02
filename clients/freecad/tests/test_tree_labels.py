@@ -247,3 +247,45 @@ def test_pending_native_operation_prevents_partial_label_mutation():
     assert first.Label == "First"
     assert not hasattr(first, "ForgePDMOccurrenceId")
     assert not root.transactions
+
+
+def test_native_subassembly_children_preserve_source_occurrence_labels_and_registry():
+    source, part, first, second, group = assembly()
+    labels.refresh(source)
+    source_state = source.getObject("ForgePDM_Metadata").TreeOccurrenceState
+    root = Document(item=str(uuid4()), number="A000002")
+    copies = [
+        root.add("Generated" + obj.Name, "App::Link", LinkedObject=obj) for obj in (first, second)
+    ]
+    for obj in copies:
+        obj.Label = "A000001-A|7"  # Labels produced by the old adapter.
+    nested = root.add(
+        "Subassembly", "Assembly::AssemblyLink", LinkedObject=group, Group=list(copies)
+    )
+    root.add("Assembly", "Assembly::AssemblyObject", Group=[nested])
+    targets = [obj.LinkedObject for obj in copies]
+    labels.refresh(root)
+    assert nested.Label == "A000001-A|1"
+    assert [obj.Label for obj in copies] == [first.Label, second.Label]
+    assert [obj.Label for obj in copies] == ["P000001-B|1", "P000001-B|2"]
+    state = json.loads(root.getObject("ForgePDM_Metadata").TreeOccurrenceState)
+    assert {owner["name"] for owner in state["owners"].values()} == {"Subassembly"}
+    assert source.getObject("ForgePDM_Metadata").TreeOccurrenceState == source_state
+    assert [obj.LinkedObject for obj in copies] == targets
+    assert not labels.refresh(root)["changed"]
+    # Source occurrence numbers need not be consecutive or follow local creation order.
+    second.Label = "P000001-B|8"
+    nested.Group.reverse()
+    labels.refresh(root)
+    assert copies[1].Label == "P000001-B|8"
+
+
+def test_native_subassembly_children_with_wrong_source_fail_before_mutation():
+    source, part, first, second, group = assembly()
+    root = Document()
+    generated = root.add("Generated", "App::Link", LinkedObject=first.LinkedObject)
+    root.add("Subassembly", "Assembly::AssemblyLink", LinkedObject=group, Group=[generated])
+    with pytest.raises(WorkspaceError, match="unexpected source"):
+        labels.refresh(root)
+    assert not root.transactions
+    assert generated.Label == "Generated"

@@ -55,7 +55,7 @@ def inspect(path):
                 if not link.get("file"):
                     continue
                 if (
-                    objects.get(obj.get("name")) != "App::Link"
+                    objects.get(obj.get("name")) not in ("App::Link", "Assembly::AssemblyLink")
                     or prop.get("name") != "LinkedObject"
                     or prop.get("type") != "App::PropertyXLink"
                     or link.get("sub")

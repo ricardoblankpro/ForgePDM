@@ -448,3 +448,43 @@ def test_native_zip_member_traversal_is_rejected(tmp_path):
         archive.writestr("../outside", b"unsafe")
     with pytest.raises(fcstd.CADIntegrityError, match="unsafe member"):
         fcstd.inspect(source)
+
+
+@pytest.mark.parametrize("type_id", ["App::Link", "Assembly::AssemblyLink"])
+def test_native_whole_object_link_types_preserve_manifest_and_rewrite(tmp_path, type_id):
+    source = tmp_path / "source.FCStd"
+    with ZipFile(io.BytesIO(native([("Link", "/old.FCStd", "Assembly")]))) as archive:
+        xml = archive.read("Document.xml").replace(
+            b'type="App::Link"', ('type="' + type_id + '"').encode()
+        )
+    with ZipFile(source, "w") as archive:
+        archive.writestr("Document.xml", xml)
+    _, references = fcstd.inspect(source)
+    assert references[0]["target_object_name"] == "Assembly"
+    manifest = [
+        {
+            "object_name": "Link",
+            "property_name": "LinkedObject",
+            "target_object_name": "Assembly",
+            "target_file_id": "child",
+        }
+    ]
+    destination = tmp_path / "rewritten.FCStd"
+    fcstd.rewrite(source, destination, manifest, {"child": tmp_path / "child.FCStd"})
+    _, rewritten = fcstd.validate(destination, manifest)
+    assert rewritten[0]["file"] == "child.FCStd"
+
+
+@pytest.mark.parametrize("attribute", ['sub="Face1"', 'count="1"'])
+def test_native_assembly_link_subelements_remain_rejected(tmp_path, attribute):
+    source = tmp_path / "source.FCStd"
+    with ZipFile(io.BytesIO(native([("Link", "/old.FCStd", "Assembly")]))) as archive:
+        xml = (
+            archive.read("Document.xml")
+            .replace(b'type="App::Link"', b'type="Assembly::AssemblyLink"')
+            .replace(b"<XLink ", ("<XLink " + attribute + " ").encode())
+        )
+    with ZipFile(source, "w") as archive:
+        archive.writestr("Document.xml", xml)
+    with pytest.raises(fcstd.CADIntegrityError, match="Unsupported external"):
+        fcstd.inspect(source)
