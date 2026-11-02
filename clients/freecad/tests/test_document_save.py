@@ -345,3 +345,132 @@ def test_reference_change_during_preparation_stops_before_upload(commands, monke
     workflow = commands._upload_native(SimpleNamespace(), document, "unused.FCStd", [])
     with pytest.raises(commands.workspace.WorkspaceError, match="references changed"):
         next(workflow)
+
+
+def test_new_revision_opens_distinct_document_and_preserves_live_parent_targets(
+    commands, monkeypatch, tmp_path
+):
+    source = Document(tmp_path / "source.FCStd")
+    source_metadata = SimpleNamespace(
+        ItemId="item", ItemNumber="PART", RevisionId="A", RevisionLabel="A"
+    )
+    source.getObject = lambda name: source_metadata
+    clone = Document(tmp_path / "new.FCStd")
+    clone.Name = "NewRevision"
+    clone.HasPendingTransaction = True
+    clone.commitTransaction = lambda: setattr(clone, "HasPendingTransaction", False)
+    clone_metadata = SimpleNamespace(
+        ItemId="item", ItemNumber="PART", RevisionId="A", RevisionLabel="A"
+    )
+    clone.getObject = lambda name: clone_metadata
+    parent = SimpleNamespace(LinkedObject=SimpleNamespace(Document=source))
+    events = []
+    client = SimpleNamespace(
+        base_url="http://forgepdm.test",
+        get_item=lambda item: {
+            "current_revision_id": "A",
+            "current_revision": {"lifecycle_state": "released"},
+        },
+        validate_references=lambda refs: None,
+        prepare_working=lambda root: clone.FileName,
+        copy_revision_source=lambda *args: events.append(("copy", args)),
+        create_next_revision=lambda *args: {"id": "B", "label": "B"},
+    )
+    monkeypatch.setattr(commands.Session, "require_client", lambda: client)
+    monkeypatch.setattr(commands, "_require_document", lambda: source)
+    monkeypatch.setattr(commands, "_guard_document", lambda *args: source)
+    monkeypatch.setattr(commands, "ask_text", lambda *args: "New geometry")
+    monkeypatch.setattr(commands, "_choose_workspace", lambda *args: str(tmp_path))
+    monkeypatch.setattr(commands.cad, "document_modified", lambda doc: False)
+    monkeypatch.setattr(commands.cad, "capture", lambda doc: [])
+    monkeypatch.setattr(commands.FreeCAD, "openDocument", lambda path: clone, raising=False)
+    monkeypatch.setattr(
+        commands.FreeCAD,
+        "setActiveDocument",
+        lambda name: events.append(("active", name)),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        commands,
+        "_set_metadata",
+        lambda doc, **values: vars(doc.getObject("metadata")).update(values),
+    )
+    monkeypatch.setattr(commands, "_save_document", lambda doc: events.append(("save", doc)))
+
+    def upload(client, doc, path, refs):
+        events.append(("upload", doc))
+        yield from ()
+
+    monkeypatch.setattr(commands, "_upload_native", upload)
+    monkeypatch.setattr(commands, "information", lambda *args: None)
+    commands.NewRevisionCommand().Activated()
+    assert not commands._test_errors
+    assert source_metadata.RevisionId == "A"
+    assert source.FileName == str(tmp_path / "source.FCStd")
+    assert parent.LinkedObject.Document is source
+    assert clone_metadata.RevisionId == "B"
+    assert not clone.HasPendingTransaction
+    assert ("upload", clone) in events
+    assert not source.saved
+
+
+@pytest.mark.parametrize("dirty", [True, False])
+def test_new_revision_rejects_dirty_or_historical_source_before_server_mutation(
+    commands, monkeypatch, dirty
+):
+    source = Document("/tmp/source.FCStd")
+    source.getObject = lambda name: SimpleNamespace(
+        ItemId="item", ItemNumber="PART", RevisionId="A", RevisionLabel="A"
+    )
+    client = SimpleNamespace(get_item=lambda item: {"current_revision_id": "B"})
+    monkeypatch.setattr(commands.Session, "require_client", lambda: client)
+    monkeypatch.setattr(commands, "_require_document", lambda: source)
+    monkeypatch.setattr(commands.cad, "document_modified", lambda doc: dirty)
+    monkeypatch.setattr(commands, "ask_text", lambda *args: "New revision")
+    commands.NewRevisionCommand().Activated()
+    assert len(commands._test_errors) == 1
+    assert not source.saved
+
+
+def test_bom_notice_preserves_pinned_revision_and_multilevel_formatting(commands):
+    child = {
+        "position": 1,
+        "item_number": "PART",
+        "item_name": "Part",
+        "revision_label": "A",
+        "quantity": "2",
+        "lifecycle_state": "released",
+        "component_revision_id": "part-A",
+    }
+    parent = dict(child, item_number="SUB", component_revision_id="sub-A", children=[child])
+    text = commands._format_bom([parent], updates={"part-A": "B"})
+    assert "PART Part RevA  x2  released  [Newer revision available: B]" in text
+    assert "\n  1. PART" in text
+    assert child["revision_label"] == "A"
+
+
+@pytest.mark.parametrize("fault", ["dirty", "released", "checkout"])
+def test_replace_revision_guards_parent_before_loading_replacement(commands, monkeypatch, fault):
+    document = Document("/tmp/working/model.FCStd")
+    metadata = SimpleNamespace(
+        ItemId="assembly", ItemNumber="ASM", RevisionId="assembly-A", RevisionLabel="A"
+    )
+    document.getObject = lambda name: metadata
+    client = SimpleNamespace(
+        get_revision=lambda key: {
+            "item_id": "assembly",
+            "lifecycle_state": "released" if fault == "released" else "working",
+        }
+    )
+    monkeypatch.setattr(commands.Session, "require_client", lambda: client)
+    monkeypatch.setattr(commands, "_require_document", lambda: document)
+    monkeypatch.setattr(commands.cad, "document_modified", lambda doc: fault == "dirty")
+
+    def authorize(*args):
+        raise commands.workspace.WorkspaceError("Acquire your own checkout")
+        yield
+
+    monkeypatch.setattr(commands, "_authorize_tree_labels", authorize)
+    commands.ReplaceRevisionCommand().Activated()
+    assert len(commands._test_errors) == 1
+    assert not document.saved

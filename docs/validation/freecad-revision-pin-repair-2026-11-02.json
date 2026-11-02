@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "restored_labels": [
+    "P000006-A|1",
+    "P000006-A|2"
+  ],
+  "part_B_file_preserved": true,
+  "bom_preserved": true,
+  "newer_revision_notice": "1. P000005 model RevA  x2  working\n2. P000004 model RevB  x3  working\n3. P000006 model RevA  x2  released  [Newer revision available: B]",
+  "assembly_saved_clean": true,
+  "actual_bom_dialog_verified": true
+}

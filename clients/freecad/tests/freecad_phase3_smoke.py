@@ -160,6 +160,7 @@ def run(case_directory):
         old_hash = workspace.digest(old_path)
         App.setActiveDocument(first.Name)
         drive(commands.NewRevisionCommand())
+        first = App.ActiveDocument
         first.Box.Length = 15
         first.recompute()
         upload(first)

@@ -174,3 +174,51 @@ def login_form(values):
     result = (server.text().strip(), username.text().strip(), password.text(), timeout.value())
     password.clear()
     return result
+
+
+def select_replacement_occurrences(references, selected_names):
+    dialog = QtWidgets.QDialog(parent_window())
+    dialog.setWindowTitle("Replace with New Revision — Occurrences")
+    dialog.resize(650, 420)
+    layout = QtWidgets.QVBoxLayout(dialog)
+    layout.addWidget(QtWidgets.QLabel("Choose the direct component occurrences to replace."))
+    checks = []
+    for reference in references:
+        check = QtWidgets.QCheckBox(reference["occurrence_label"])
+        check.setChecked(not selected_names or reference["object_name"] in selected_names)
+        layout.addWidget(check)
+        checks.append((check, reference["object_name"]))
+    buttons = QtWidgets.QDialogButtonBox(
+        QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel, parent=dialog
+    )
+    buttons.accepted.connect(dialog.accept)
+    buttons.rejected.connect(dialog.reject)
+    layout.addWidget(buttons)
+    if not execute_dialog(dialog):
+        return None
+    return [name for check, name in checks if check.isChecked()]
+
+
+def review_component_replacement(source_label, target_revision, occurrences, snapshot):
+    message = (
+        "Replace {} with revision {} ({})?\n\n{}\n\n"
+        "Snapshot: {}\n\n"
+        "Placements and link objects will be retained. Inspect geometry and joints afterward.\n"
+        "Save/upload and synchronize the BOM separately to persist the change."
+    ).format(
+        source_label,
+        target_revision["label"],
+        target_revision["lifecycle_state"],
+        "\n".join(occurrences),
+        snapshot,
+    )
+    return (
+        QtWidgets.QMessageBox.question(
+            parent_window(),
+            "Review Component Revision Replacement",
+            message,
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No,
+        )
+        == QtWidgets.QMessageBox.Yes
+    )

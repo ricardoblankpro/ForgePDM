@@ -86,5 +86,13 @@
       <source>Upload saved content and release your checkout</source>
       <translation>Upload saved content and release your checkout</translation>
     </message>
+    <message>
+      <source>Replace with New Revision…</source>
+      <translation>Replace with New Revision…</translation>
+    </message>
+    <message>
+      <source>Review and replace direct component occurrences with an exact newer revision</source>
+      <translation>Review and replace direct component occurrences with an exact newer revision</translation>
+    </message>
   </context>
 </TS>

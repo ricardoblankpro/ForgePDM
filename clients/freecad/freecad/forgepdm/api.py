@@ -181,6 +181,42 @@ class ForgePDMClient:
 
         return prepare_working(self.base_url, root)
 
+    def copy_revision_source(self, source, destination, references):
+        from .workspace import copy_revision_source
+
+        return copy_revision_source(source, destination, references, self._checkpoint)
+
+    def newer_revisions(self, item_id, source_revision_id):
+        source = self.get_revision(source_revision_id)
+        if source["item_id"] != item_id:
+            raise ValueError("Component revision does not belong to the selected item")
+        revisions, offset = [], 0
+        while True:
+            self._checkpoint()
+            page = self.list_revisions(item_id, limit=100, offset=offset)
+            revisions.extend(
+                row
+                for row in page["items"]
+                if row["sequence"] > source["sequence"] and row["lifecycle_state"] != "obsolete"
+            )
+            if not page["has_more"]:
+                return revisions
+            offset += 100
+
+    def bom_revision_updates(self, lines):
+        """Report newer revisions without changing any stored or CAD references."""
+        items, updates, pending = {}, {}, list(lines)
+        while pending:
+            line = pending.pop()
+            item_id = line["item_id"]
+            if item_id not in items:
+                items[item_id] = self.get_item(item_id)
+            latest = items[item_id]["current_revision"]
+            if latest["id"] != line["component_revision_id"]:
+                updates[line["component_revision_id"]] = latest["label"]
+            pending.extend(line.get("children", []))
+        return updates
+
     def validate_references(self, references):
         from .workspace import bind_references
 

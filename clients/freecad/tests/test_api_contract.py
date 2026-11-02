@@ -195,3 +195,41 @@ def test_other_api_errors_remain_readable(api, detail, expected):
     with pytest.raises(api.ForgePDMError) as caught:
         api.ForgePDMClient._decode_response(422, json.dumps({"detail": detail}).encode())
     assert expected in str(caught.value)
+
+
+def test_bom_newer_revision_check_is_read_only_and_deduplicates_items(api):
+    client = api.ForgePDMClient("http://forgepdm.test")
+    calls = []
+    client.get_item = lambda item: (
+        calls.append(item) or {"current_revision": {"id": "B", "label": "B"}}
+    )
+    child = {"item_id": "part", "component_revision_id": "A"}
+    lines = [dict(child, children=[child]), dict(child, component_revision_id="B")]
+    assert client.bom_revision_updates(lines) == {"A": "B"}
+    assert calls == ["part"]
+    assert child["component_revision_id"] == "A"
+
+
+def test_newer_revisions_filters_sequence_and_obsolete_and_pages(api):
+    client = api.ForgePDMClient("http://forgepdm.test")
+    client.get_revision = lambda key: {"item_id": "part", "sequence": 2}
+    calls = []
+
+    def page(item, limit, offset):
+        calls.append(offset)
+        return {
+            "items": [
+                {"id": "new", "sequence": 3, "lifecycle_state": "working"},
+                {"id": "old", "sequence": 1, "lifecycle_state": "released"},
+                {"id": "gone", "sequence": 4, "lifecycle_state": "obsolete"},
+            ]
+            if offset == 0
+            else [],
+            "has_more": offset == 0,
+        }
+
+    client.list_revisions = page
+    assert [r["id"] for r in client.newer_revisions("part", "B")] == ["new"]
+    assert calls == [0, 100]
+    with pytest.raises(ValueError):
+        client.newer_revisions("other", "B")

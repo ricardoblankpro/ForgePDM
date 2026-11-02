@@ -234,7 +234,7 @@ def _property(obj, name, kind, value):
     obj.setEditorMode(name, 1)
 
 
-def refresh(document):
+def refresh(document, within_transaction=False):
     """Apply presentation metadata to one authorized/owned document, atomically."""
     metadata = document.getObject("ForgePDM_Metadata")
     if metadata is None or not all(
@@ -265,9 +265,10 @@ def refresh(document):
         for name, kind in fields.items():
             if name in obj.PropertiesList and obj.getTypeIdOfProperty(name) != kind:
                 raise WorkspaceError("Incompatible ForgePDM property: {}.{}".format(obj.Name, name))
-    if getattr(document, "HasPendingTransaction", False):
+    if getattr(document, "HasPendingTransaction", False) and not within_transaction:
         raise WorkspaceError("Finish the current FreeCAD operation before refreshing tree labels")
-    document.openTransaction("Refresh ForgePDM tree labels")
+    if not within_transaction:
+        document.openTransaction("Refresh ForgePDM tree labels")
     try:
         if not getattr(metadata, "TreeOriginalLabel", ""):
             _property(metadata, "TreeOriginalLabel", "App::PropertyString", document.Label)
@@ -285,8 +286,10 @@ def refresh(document):
             obj.Label = row["label"]
         for name, label in projected.items():
             document.getObject(name).Label = label
-        document.commitTransaction()
+        if not within_transaction:
+            document.commitTransaction()
     except BaseException:
-        document.abortTransaction()
+        if not within_transaction:
+            document.abortTransaction()
         raise
     return {"changed": True, "labels": [row["label"] for row in planned], "skipped": skipped}

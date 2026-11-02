@@ -1,0 +1,11 @@
+{
+  "plain": {
+    "status": "passed",
+    "native_target_and_generated_child_pins": true
+  },
+  "constrained": {
+    "status": "passed",
+    "constrained_rollback": true
+  },
+  "registered_dialog_cancel_verified": true
+}

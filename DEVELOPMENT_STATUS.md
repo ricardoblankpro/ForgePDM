@@ -1,5 +1,52 @@
 # Development status
 
+## 2026-11-02 — Explicit component revision replacement (addon 0.5.7)
+
+- Added Replace with New Revision menu/toolbar command. Select direct component
+  occurrences, a newer revision and an exact uploaded native snapshot, then review.
+  Require clean Working parent, managed working copy and owned checkout.
+- Replace link targets in place in one undoable transaction with tree labels.
+  Preserve occurrence UUIDs, placements, unselected targets and valid joint links.
+  Reject missing/type-incompatible targets and unsafe joint mappings; rollback
+  detected failures. Does not save/upload or synchronize BOM automatically.
+- 201 addon tests passed; lint, manifest and distribution build passed.
+  Twenty-six live isolated workflow checks cover cancel, one-of-two
+  replacement, grounding, later explicit upload pin verification and rollback.
+  Native subassembly replacement and generated-child constraint rejection tested
+  in disposable documents. Actual registered command checklist/cancel tested on
+  A000001 without replacing its components.
+- Both installed profiles updated with backups. Runtime command/menu/toolbar
+  registered; normal future startup adds it to the main ForgePDM toolbar.
+- Limits: same internal target object names/types required. Changed face semantics
+  cannot be inferred from names; inspect geometry/joints before saving. Native
+  generated-child joint mappings may need manual work. Phase 5 atomicity unchanged.
+- Design and usage: docs/component-revision-replacement.md and addon README.
+  Evidence: docs/validation/freecad-component-replacement-2026-11-02.json and
+  docs/validation/freecad-native-replacement-2026-11-02.json.
+
+## 2026-11-02 — Live revision isolation (addon 0.5.6)
+
+- Fixed New Revision mutating the live source document: new revisions now open
+  distinct verified working-copy documents, leaving incoming assembly links,
+  source metadata, geometry and paths unchanged. Clean/latest Released source
+  guards prevent discarding unsaved edits or revising from stale geometry.
+- Show BOM reports newer revisions separately while displaying the pinned
+  revision; no automatic replacement, BOM update or background polling.
+- 184 addon tests passed; targeted lint and manifest/build checks passed.
+  Seventeen isolated live FreeCAD/HTTP checks passed, including editing B while
+  the existing parent still targets A with unchanged labels/geometry/source hash.
+- Actual registered Show BOM dialog verified the pinned Rev A and its newer
+  revision B notice; the dialog was inspected and closed without synchronization.
+- Repaired A000001's two P000006 links using the recorded uploaded revision A
+  pins and original occurrence registry. Local assembly saved cleanly with
+  P000006-A|1 and |2; revision B file and stored BOM preserved. A000002's
+  already-dirty open document was not saved or closed. Backups kept outside Mod.
+- Both installed profiles updated; runtime command classes/client refreshed.
+  ADR-007 records the decision. Evidence in docs/validation/freecad-live-revision-
+  isolation-2026-11-02.json and freecad-revision-pin-repair-2026-11-02.json.
+- Limit: creation/upload still span separate operations (Phase 5); update
+  notices are checked on Show BOM, and component adoption is not automated.
+
 ## 2026-11-02 — Direct native subassembly BOMs (addon 0.5.5)
 
 - BOM synchronization now captures direct parts and native AssemblyLink
@@ -70,7 +117,7 @@ before acting. Git history and the linked reports provide the detailed record.
 - Backend: FastAPI, SQLite, separate SHA-256 file storage, authentication,
   project permissions, Items/revisions/datasets, checkout leases, lifecycle,
   revision-pinned BOMs and immutable CAD dependency manifests.
-- FreeCAD addon: **0.5.5**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.5.7**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 (atomic check-in, fencing and idempotency) remains future

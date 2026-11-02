@@ -1,0 +1,36 @@
+{
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "python": "3.11.14 | packaged by conda-forge | (main, Oct 13 2025, 14:25:33) [GCC 14.3.0]",
+  "qt": "6.8.3",
+  "addon_version": "0.5.6",
+  "checks": [
+    "new part upload derives its item/revision heading",
+    "assembly upload persists distinct repeated occurrence labels",
+    "labels preserve manifest internal object identities",
+    "owned retrieval preserves occurrence IDs and indices",
+    "retrieved labels leave every document saved cleanly",
+    "retrieved placement remains unchanged",
+    "new revision is a distinct live document",
+    "open parent still targets original document",
+    "original live revision identity remains A",
+    "next revision changes the managed document heading",
+    "next revision preserves prior native file bytes",
+    "live parent keeps original revision and geometry after editing B",
+    "original live document stays clean",
+    "historical assembly keeps revision A labels after part B exists",
+    "historical occurrence UUIDs remain pinned",
+    "historical geometry stays on exact part A",
+    "tree labeling does not create engineering BOM lines"
+  ],
+  "scope": "Actual command workflows, isolated disposable HTTP database/blobs/workspace; user session and documents restored",
+  "status": "passed"
+}

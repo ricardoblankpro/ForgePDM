@@ -488,3 +488,27 @@ def test_native_assembly_link_subelements_remain_rejected(tmp_path, attribute):
         archive.writestr("Document.xml", xml)
     with pytest.raises(fcstd.CADIntegrityError, match="Unsupported external"):
         fcstd.inspect(source)
+
+
+def test_revision_copy_preserves_source_and_rewrites_only_copy_paths(tmp_path):
+    source = tmp_path / "source.FCStd"
+    child = tmp_path / "child.FCStd"
+    source.write_bytes(native([("Link", "child.FCStd", "Box")]))
+    before = source.read_bytes()
+    destination = tmp_path / "new/model.FCStd"
+    destination.parent.mkdir()
+    refs = [
+        {
+            "object_name": "Link",
+            "property_name": "LinkedObject",
+            "target_object_name": "Box",
+            "target_path": str(child),
+        }
+    ]
+    workspace.copy_revision_source(source, destination, refs)
+    assert source.read_bytes() == before
+    _, actual = fcstd.validate(destination, refs, source_path=destination)
+    assert actual[0]["file"] == "../child.FCStd"
+    with pytest.raises(FileExistsError):
+        workspace.copy_revision_source(source, destination, refs)
+    assert source.read_bytes() == before

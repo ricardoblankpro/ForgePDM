@@ -251,6 +251,19 @@ def bind_references(client, references):
     return result
 
 
+def copy_revision_source(source, destination, references, checkpoint=lambda: None):
+    """Copy a saved revision without repurposing its live FreeCAD document."""
+    before = digest(source, checkpoint)
+    validate(source, references, source_path=source)
+    manifest = [dict(ref, target_file_id=str(index)) for index, ref in enumerate(references)]
+    paths = {str(index): ref["target_path"] for index, ref in enumerate(references)}
+    rewrite(source, destination, manifest, paths, checkpoint)
+    if digest(source, checkpoint) != before:
+        raise WorkspaceError("The source revision changed while preparing its separate copy")
+    validate(destination, references, source_path=destination)
+    return str(destination)
+
+
 def snapshot(client, path, references):
     value = binding(path, client.base_url, require_uploaded=False)
     directory = value["root"] / ".forgepdm/uploads" / uuid4().hex

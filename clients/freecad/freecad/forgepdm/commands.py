@@ -14,7 +14,12 @@ from .jobs import Request
 from .resources import icon_path
 from .i18n import translate
 from . import bom, cad, tree_labels, tree_observer, workspace
-from .ui import select_bom_occurrences, review_bom
+from .ui import (
+    select_bom_occurrences,
+    review_bom,
+    select_replacement_occurrences,
+    review_component_replacement,
+)
 
 
 METADATA_OBJECT = "ForgePDM_Metadata"
@@ -514,9 +519,22 @@ class NewRevisionCommand(Command):
         name = document.Name
         metadata = _require_metadata(document)
         revision_id = metadata.RevisionId
+        if cad.document_modified(document):
+            raise workspace.WorkspaceError(
+                "Save the source revision before creating a new revision"
+            )
+        source_path = document.FileName
         note = ask_text("ForgePDM New Revision", "Describe the change")
         if not note:
             return
+        item = yield Request("Checking revision source…", client.get_item, (metadata.ItemId,))
+        if (
+            item["current_revision_id"] != revision_id
+            or item["current_revision"]["lifecycle_state"] != "released"
+        ):
+            raise workspace.WorkspaceError(
+                "Create the next revision from the latest Released revision"
+            )
         references = cad.capture(document)
         yield Request(
             "Checking linked component snapshots…", client.validate_references, (references,)
@@ -527,6 +545,14 @@ class NewRevisionCommand(Command):
         path = yield Request(
             "Preparing next-revision working copy…", client.prepare_working, (root,)
         )
+        document = _guard_document(name, revision_id)
+        if cad.document_modified(document) or document.FileName != source_path:
+            raise workspace.WorkspaceError("Source revision changed while preparing its copy")
+        yield Request(
+            "Copying the saved revision without changing assembly references…",
+            client.copy_revision_source,
+            (source_path, path, references),
+        )
         result = yield Request(
             "Creating next revision…",
             client.create_next_revision,
@@ -534,19 +560,29 @@ class NewRevisionCommand(Command):
             mutates=True,
             cancellable=False,
         )
-        document = _guard_document(name, revision_id)
+        source = _guard_document(name, revision_id)
+        if cad.document_modified(source) or source.FileName != source_path:
+            raise workspace.WorkspaceError(
+                "Source revision changed; the new revision copy was preserved"
+            )
+        # Existing assembly links retain the source document and its old identity.
+        document = FreeCAD.openDocument(path)
+        FreeCAD.setActiveDocument(document.Name)
         _set_metadata(
             document,
             RevisionId=result["id"],
             RevisionLabel=result["label"],
             ServerUrl=client.base_url,
         )
-        _save_managed_as(document, path)
+        _save_document(document)
+        if document.HasPendingTransaction:
+            document.commitTransaction()
         yield from _upload_native(client, document, path, references)
         information(
             "ForgePDM",
-            "Created revision {} in a separate working copy; the previous file was preserved.".format(
-                result["label"]
+            "Created revision {} in a separate document. Existing assemblies retain revision {}. "
+            "Show BOM reports newer component revisions without replacing them.".format(
+                result["label"], metadata.RevisionLabel
             ),
         )
 
@@ -579,6 +615,181 @@ class RefreshTreeLabelsCommand(Command):
         information("ForgePDM", message)
 
 
+class ReplaceRevisionCommand(Command):
+    icon_name = "replace-revision"
+    menu_text = "Replace with New Revision…"
+    tooltip = "Review and replace direct component occurrences with an exact newer revision"
+    needs_document = True
+
+    def action(self):
+        from . import replacement
+
+        client = Session.require_client()
+        document = _require_document()
+        metadata = _require_metadata(document)
+        name, revision_id, path = document.Name, metadata.RevisionId, document.FileName
+        if cad.document_modified(document):
+            raise workspace.WorkspaceError(
+                "Save/upload the assembly before replacing a component revision"
+            )
+        yield from _editable(client, metadata)
+        yield from _authorize_tree_labels(client, document)
+        baseline = cad.capture_bom(document)
+        by_name = {ref["object_name"]: ref for ref in baseline}
+        selected_names = {
+            obj.Name for obj in FreeCADGui.Selection.getSelection() if obj.Document is document
+        }
+        if selected_names - by_name.keys():
+            raise workspace.WorkspaceError(
+                "Select direct component links, not generated subassembly children"
+            )
+        groups = {}
+        for ref in baseline:
+            groups.setdefault((ref["target_item_id"], ref["target_revision_id"]), []).append(ref)
+        if not groups:
+            raise workspace.WorkspaceError(
+                "This assembly has no supported direct component occurrences"
+            )
+        selected_groups = {
+            key
+            for key, refs in groups.items()
+            if any(ref["object_name"] in selected_names for ref in refs)
+        }
+        if len(selected_groups) > 1:
+            raise workspace.WorkspaceError(
+                "Replace occurrences of one item and source revision at a time"
+            )
+        keys = list(groups)
+        labels = [groups[key][0]["component_label"] for key in keys]
+        if selected_groups:
+            key = next(iter(selected_groups))
+        else:
+            value = ask_choice(
+                "Replace Component Revision", "Choose the component to replace", labels
+            )
+            if value is None:
+                return
+            key = keys[labels.index(value)]
+        matching = groups[key]
+        rows = [
+            dict(ref, occurrence_label=document.getObject(ref["object_name"]).Label)
+            for ref in matching
+        ]
+        names = select_replacement_occurrences(rows, selected_names)
+        if not names:
+            return
+        if set(names) - {ref["object_name"] for ref in matching}:
+            raise workspace.WorkspaceError("The selected occurrences do not match the component")
+        revisions = yield Request("Loading newer component revisions…", client.newer_revisions, key)
+        if not revisions:
+            information(
+                "ForgePDM", "No newer non-obsolete revision is available for this component."
+            )
+            return
+        revision_labels = [
+            "{} — {} — {}".format(r["label"], r["lifecycle_state"], r["change_note"])
+            for r in revisions
+        ]
+        choice = ask_choice(
+            "New Component Revision",
+            "Choose the exact replacement revision",
+            revision_labels,
+            revision_labels[0],
+        )
+        if choice is None:
+            return
+        target_revision = revisions[revision_labels.index(choice)]
+        snapshot = yield from _choose_native_snapshot(client, target_revision["id"])
+        if snapshot is None:
+            return
+        dataset, file_record = snapshot
+        root = _choose_workspace(client, document)
+        if root is None:
+            return
+        opened, applied = None, False
+        try:
+            configuration = yield Request(
+                "Retrieving the chosen replacement snapshot…",
+                client.retrieve_configuration,
+                (root, target_revision["id"], dataset["id"], file_record["id"]),
+            )
+            opened = cad.open_configuration(configuration, _set_metadata)
+            yield Request(
+                "Recording verified replacement snapshot…",
+                client.finish_configuration,
+                (configuration,),
+            )
+            if not review_component_replacement(
+                matching[0]["component_label"],
+                target_revision,
+                [document.getObject(n).Label for n in names],
+                dataset["created_at"],
+            ):
+                return
+            document = _guard_document(name, revision_id)
+            if (
+                cad.document_modified(document)
+                or document.FileName != path
+                or cad.capture_bom(document) != baseline
+            ):
+                raise workspace.WorkspaceError(
+                    "Assembly changed during review; prepare a new replacement"
+                )
+            yield from _editable(client, _require_metadata(document))
+            yield from _authorize_tree_labels(client, document)
+            document = _guard_document(name, revision_id)
+            if (
+                cad.document_modified(document)
+                or document.FileName != path
+                or cad.capture_bom(document) != baseline
+            ):
+                raise workspace.WorkspaceError("Assembly changed while rechecking checkout")
+            yield Request(
+                "Verifying original component snapshots…", client.validate_references, (matching,)
+            )
+            document = _guard_document(name, revision_id)
+            if cad.document_modified(document) or cad.capture_bom(document) != baseline:
+                raise workspace.WorkspaceError("Assembly changed while verifying references")
+            count = replacement.apply(document, baseline, names, opened["root"], target_revision)
+            applied = True
+            FreeCAD.setActiveDocument(name)
+            information(
+                "ForgePDM",
+                "Replaced {} occurrence(s) with revision {}. Inspect geometry and joints, "
+                "then save/upload and synchronize the BOM separately.".format(
+                    count, target_revision["label"]
+                ),
+            )
+        finally:
+            if opened is not None and not applied:
+                cad.close_owned(opened["owned"])
+            try:
+                if FreeCAD.getDocument(name) is not None:
+                    FreeCAD.setActiveDocument(name)
+            except NameError:
+                pass
+
+
+def _choose_native_snapshot(client, revision_id):
+    datasets = yield Request("Loading native CAD snapshots…", client.list_datasets, (revision_id,))
+    choices = [
+        (dataset, record)
+        for dataset in datasets
+        if dataset["dataset_type"] == "native_cad"
+        for record in dataset["files"]
+    ]
+    if not choices:
+        raise workspace.WorkspaceError("The chosen revision has no uploaded native CAD snapshot")
+    if len(choices) == 1:
+        return choices[0]
+    labels = [
+        "{}. {} — {} — {}".format(i + 1, ds["name"], ds["created_at"], rec["content_hash"][:8])
+        for i, (ds, rec) in enumerate(choices)
+    ]
+    choice = ask_choice("CAD Snapshots", "Choose the exact saved snapshot", labels, labels[-1])
+    return None if choice is None else choices[labels.index(choice)]
+
+
 class ShowBOMCommand(Command):
     icon_name = "bom"
     menu_text = "Show ForgePDM BOM"
@@ -590,13 +801,18 @@ class ShowBOMCommand(Command):
         metadata = _require_metadata(_require_document())
         number, revision_id = metadata.ItemNumber, metadata.RevisionId
         lines = yield Request("Loading BOM…", client.get_bom, (revision_id,), {"recursive": True})
+        updates = yield Request(
+            "Checking newer component revisions…", client.bom_revision_updates, (lines,)
+        )
         dialog = QtWidgets.QDialog(_main_window())
         dialog.setWindowTitle("ForgePDM BOM — " + number)
         dialog.resize(640, 480)
         layout = QtWidgets.QVBoxLayout(dialog)
         output = QtWidgets.QPlainTextEdit(dialog)
         output.setReadOnly(True)
-        output.setPlainText(_format_bom(lines) or "This revision has no BOM lines.")
+        output.setPlainText(
+            _format_bom(lines, updates=updates) or "This revision has no BOM lines."
+        )
         layout.addWidget(output)
         buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok, parent=dialog)
         buttons.accepted.connect(dialog.accept)
@@ -763,7 +979,7 @@ def _walk_bom(lines):
             yield child
 
 
-def _format_bom(lines, depth=0):
+def _format_bom(lines, depth=0, updates=None):
     formatted = []
     for line in lines:
         indent = "  " * depth
@@ -778,5 +994,10 @@ def _format_bom(lines, depth=0):
                 line["lifecycle_state"],
             )
         )
-        formatted.extend(_format_bom(line.get("children", []), depth + 1))
+        newer = (updates or {}).get(line.get("component_revision_id"))
+        if newer:
+            formatted[-1] += "  [Newer revision available: {}]".format(newer)
+        children = _format_bom(line.get("children", []), depth + 1, updates)
+        if children:
+            formatted.append(children)
     return "\n".join(formatted)

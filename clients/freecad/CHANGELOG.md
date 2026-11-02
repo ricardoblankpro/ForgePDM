@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.7 — 2026-11-02
+
+- Add Replace with New Revision for reviewed direct component occurrences.
+  Choose the newer revision and uploaded native snapshot explicitly.
+- Retain link objects, placements, occurrence UUIDs and valid joint references;
+  roll back local replacement failures. Require a clean Working parent and owned
+  checkout. Save/upload and BOM synchronization remain separate actions.
+
+
+## 0.5.6 — 2026-11-02
+
+- Create next revisions in distinct FreeCAD documents from verified saved copies.
+  Existing live assembly links keep the original revision and geometry.
+- Require a clean source at the latest Released revision; preserve historical
+  documents and reject source changes during preparation.
+- Show BOM reports newer component revisions without replacing pinned revisions.
+  Preserve indentation when displaying nested BOM text.
+
+
 ## 0.5.5 — 2026-11-02
 
 - Synchronize native assembly BOMs from direct parts and AssemblyLink

@@ -178,3 +178,39 @@ catalog; no reviewed translated catalogs or compiled `.qm` files are supplied.
 After adding reviewed translations, compile them with Qt's `lrelease` and place
 `ForgePDM_<locale>.qm` beside the `.ts` files before building. The build includes
 both formats. Do not install another Qt binding into FreeCAD.
+
+### Creating revisions without changing existing assemblies
+
+Create Next Revision opens the new revision in a **separate document** and makes
+it active. Existing assemblies keep linking the old document and its exact
+revision. Edit the new active document to develop the new revision. The source
+must be saved, clean and the item's latest Released revision.
+
+Show BOM keeps displaying each pinned component revision and adds
+`[Newer revision available: B]` when a later revision exists. This is informational;
+it does not replace components or synchronize the engineering BOM automatically.
+
+### Replace a component with a newer revision
+
+1. Activate the clean, saved assembly working copy and hold its checkout. A
+   Released assembly needs its own next revision before changing components.
+2. Select one or more direct occurrences of the same item/revision in the tree,
+   then use **ForgePDM → Replace with New Revision…**. Without a selection, choose
+   the component in the dialog. Generated children inside a native subassembly
+   must be changed from that subassembly's own working document.
+3. Check the occurrences to replace, choose the newer revision and its uploaded
+   native snapshot, then approve the replacement preview.
+4. Inspect geometry and joints. Save/upload the assembly, then use Show BOM →
+   Synchronize from CAD to review and persist its engineering BOM change.
+
+The command keeps the existing occurrence objects, placements and UUIDs. Only
+selected occurrences change; other instances can retain their earlier revision.
+Source revision documents remain unchanged. Replacement leaves local unsaved
+changes and can be undone in FreeCAD; it does not save, upload or write a BOM.
+
+The new revision must contain compatible whole-object targets with the same
+internal object names/types. Detected invalid geometry references or changed
+joint references cause transaction rollback. Native subassembly replacements
+that invalidate joints to generated children need manual mapping. Equal face
+names do not establish semantic geometric equivalence: inspect the result before
+saving. No assembly solver or automatic face/joint remapping is added.

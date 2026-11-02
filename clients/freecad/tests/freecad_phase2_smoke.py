@@ -273,6 +273,8 @@ def run(case_directory):
         invoke("CheckIn")
         invoke("Release")
         invoke("NewRevision")
+        document = App.ActiveDocument
+        box = document.getObject(box.Name)
         box.Length = 15
         document.recompute()
         invoke("CheckIn")
