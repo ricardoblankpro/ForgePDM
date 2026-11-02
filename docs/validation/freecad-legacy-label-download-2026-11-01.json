@@ -1,0 +1,61 @@
+{
+  "status": "passed",
+  "version": "0.5.1",
+  "root_file_id": "8dde39cd-3279-4c6c-8db5-9da102d7d8e5",
+  "documents": [
+    {
+      "label": "P000005-A",
+      "path": "/home/ricardoblank/Projetos/teste/configurations/13a6047ec1ca4fabbca912424a8afca6/documents/36aa1d88-675a-49b5-baa1-3273337f79fa.FCStd",
+      "modified": false
+    },
+    {
+      "label": "A000001-A",
+      "path": "/home/ricardoblank/Projetos/teste/configurations/13a6047ec1ca4fabbca912424a8afca6/documents/8dde39cd-3279-4c6c-8db5-9da102d7d8e5.FCStd",
+      "modified": false
+    },
+    {
+      "label": "P000004-B",
+      "path": "/home/ricardoblank/Projetos/teste/configurations/13a6047ec1ca4fabbca912424a8afca6/documents/a4e1d6c6-ea0e-4d39-bbcd-8b018cc80a53.FCStd",
+      "modified": false
+    },
+    {
+      "label": "P000006-A",
+      "path": "/home/ricardoblank/Projetos/teste/configurations/13a6047ec1ca4fabbca912424a8afca6/documents/e5ce7468-eab9-43ec-bbc4-792fa6234b25.FCStd",
+      "modified": false
+    }
+  ],
+  "labels": [
+    [
+      "Body001",
+      "P000004-B|1",
+      "Placement [Pos=(0,0,0), Yaw-Pitch-Roll=(0,0,0)]",
+      25104.75814282442
+    ],
+    [
+      "Body",
+      "P000005-A|1",
+      "Placement [Pos=(-11.4103,11.1853,29.1448), Yaw-Pitch-Roll=(90,0,0)]",
+      16514.15330201397
+    ],
+    [
+      "Body002",
+      "P000006-A|1",
+      "Placement [Pos=(6.93241,2.63143,-0.315079), Yaw-Pitch-Roll=(0,0,0)]",
+      21782.357445703547
+    ],
+    [
+      "Body003",
+      "P000005-A|2",
+      "Placement [Pos=(4.62113,34.6045,43.3153), Yaw-Pitch-Roll=(0,0,0)]",
+      16514.15330201397
+    ]
+  ],
+  "original_documents_preserved": true,
+  "exact_reference_pins_verified": true,
+  "notifications": [
+    [
+      "information",
+      "Opened the exact CAD configuration with verified external links. BOM extraction/synchronization remains a separate step."
+    ]
+  ]
+}

@@ -255,7 +255,11 @@ def open_configuration(configuration, set_metadata):
             document.recompute()
             if document.HasPendingTransaction:
                 document.commitTransaction()
-            tree_labels.refresh(document)
+            presentation = tree_labels.refresh(document)
+            if presentation["changed"]:
+                # Legacy snapshots get new metadata properties during label
+                # projection. Saving clears GUI Modified, but not feature Touched.
+                document.recompute()
             # App.Document.save() can leave Gui.Document.Modified set after our
             # metadata/relink edits. The GUI save clears it only on success.
             Gui.getDocument(document.Name).save()

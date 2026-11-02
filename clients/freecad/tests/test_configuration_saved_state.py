@@ -85,6 +85,46 @@ def test_retrieval_metadata_save_leaves_clean_gui_state(configuration_gui):
     assert not case.closed
 
 
+def test_legacy_label_projection_is_recomputed_before_save(configuration_gui, monkeypatch):
+    case = configuration_gui
+    touched = [False]
+    recomputes = []
+
+    def recompute():
+        touched[0] = False
+        recomputes.append(True)
+
+    def add_label_metadata(document):
+        touched[0] = True
+        return {"changed": True}
+
+    original_save = case.gui.save
+
+    def save():
+        assert not touched[0], "Label metadata was saved without recomputing it"
+        original_save()
+
+    case.document.isTouched = lambda: touched[0]
+    case.document.recompute = recompute
+    case.gui.save = save
+    monkeypatch.setattr(cad.tree_labels, "refresh", add_label_metadata)
+    result = cad.open_configuration(case.configuration, case.metadata)
+    assert result["root"] is case.document
+    assert len(recomputes) == 2
+    assert not cad.document_modified(case.document)
+
+
+def test_unresolved_touch_after_label_projection_still_rejects_configuration(
+    configuration_gui, monkeypatch
+):
+    case = configuration_gui
+    case.document.isTouched = lambda: True
+    monkeypatch.setattr(cad.tree_labels, "refresh", lambda document: {"changed": True})
+    with pytest.raises(WorkspaceError, match="could not be saved cleanly"):
+        cad.open_configuration(case.configuration, case.metadata)
+    assert not case.closed
+
+
 def test_real_edit_after_download_is_still_dirty_and_retained(configuration_gui):
     case = configuration_gui
     result = cad.open_configuration(case.configuration, case.metadata)

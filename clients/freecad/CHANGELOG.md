@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1 — legacy component retrieval after tree-label projection
+
+- Recompute loader-created occurrence metadata before saving reconstructed
+  documents. A successful GUI save alone does not clear FeaturePython Touched.
+- Keep the strict saved-state guard; genuine unresolved touches still prevent
+  completion. Preserve legacy blobs and historical occurrence labels/identities.
+
 ## 0.5.0 — persistent tree occurrence labels
 
 - Show managed component links as ITEM-REVISION|OCCURRENCE with persistent UUIDs,

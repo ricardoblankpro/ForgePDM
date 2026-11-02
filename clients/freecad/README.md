@@ -17,7 +17,7 @@ uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.
 uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.py build
 ```
 
-The output is `clients/freecad/dist/ForgePDM-0.5.0.zip`. Create a `ForgePDM`
+The output is `clients/freecad/dist/ForgePDM-0.5.1.zip`. Create a `ForgePDM`
 directory inside your FreeCAD user `Mod` directory and extract the archive there.
 The resulting layout must be `Mod/ForgePDM/package.xml` and
 `Mod/ForgePDM/freecad/forgepdm/init_gui.py`. Do not extract into an extra nested
@@ -158,7 +158,7 @@ publication requires filesystem hard-link support. Local read-only protection
 is advisory. Third-party proxies, external textures and other CAD adapters are
 not certified. Windows, macOS and network shares remain unverified.
 
-Version 0.5.0 requires the Phase 3 manifest endpoints and Phase 4 BOM snapshot/
+Version 0.5.1 requires the Phase 3 manifest endpoints and Phase 4 BOM snapshot/
 synchronization endpoints. SQLite schema remains at migration 6.
 Back up the database and immutable files before updating/restarting
 the server. The backend still runs separately from FreeCAD. Restart FreeCAD after
