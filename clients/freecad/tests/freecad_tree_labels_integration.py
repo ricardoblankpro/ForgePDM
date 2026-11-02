@@ -270,6 +270,80 @@ def run(App, Gui, case_directory):
                 child.getObject("ForgePDM_Metadata").RevisionId,
             },
         )
+        # General replacement uses a different item and a different object name.
+        other = source("DifferentReplacementItem")
+        other_box = other.addObject("Part::Box", "ReplacementBlock")
+        other_box.Length, other_box.Width, other_box.Height = 22, 3, 4
+        other.recompute()
+        other_entry = upload(other, "part")
+        other_number = other.getObject("ForgePDM_Metadata").ItemNumber
+        original_part_hash = workspace.digest(child.FileName)
+        original_other_hash = workspace.digest(other.FileName)
+        App.setActiveDocument(root.Name)
+        commands.ask_text = lambda *args, **kwargs: None
+        before_general = cad.capture_bom(root)
+        drive(commands.ReplaceComponentCommand().action())
+        check(
+            "cancel item search leaves source assembly unchanged",
+            cad.capture_bom(root) == before_general and not cad.document_modified(root),
+        )
+        commands.ask_text = lambda *args, **kwargs: other_number
+        choose = commands.ask_choice
+        commands.ask_choice = lambda title, *args: (
+            None if title == "Replacement Object" else choose(title, *args)
+        )
+        before_docs = set(App.listDocuments())
+        drive(commands.ReplaceComponentCommand().action())
+        check(
+            "cancel target mapping closes only owned retrieval documents",
+            set(App.listDocuments()) == before_docs and cad.capture_bom(root) == before_general,
+        )
+        commands.ask_choice = choose
+        previews = []
+        commands.review_component_replacement = lambda *args: previews.append(args) or True
+        saved_general_hash = workspace.digest(root.FileName)
+        drive(commands.ReplaceComponentCommand().action())
+        check(
+            "general replacement searches exact item number and maps renamed target",
+            first.LinkedObject.Name == "ReplacementBlock"
+            and first.LinkedObject.Length.Value == 22
+            and first.LinkedObject.Document.getObject("ForgePDM_Metadata").ItemNumber
+            == other_number,
+        )
+        check(
+            "general review identifies new item and explicit object mapping",
+            previews[-1][-1] == other_number and "ReplacementBlock" in previews[-1][2][0],
+        )
+        check(
+            "different-item labels and occurrence UUIDs are correct",
+            first.Label.startswith(other_number + "-A|")
+            and first.ForgePDMOccurrenceId == ids[0]
+            and repeat.Label == part_number + "-A|2",
+        )
+        check(
+            "different-item replacement preserves unselected geometry, placement and grounding",
+            repeat.LinkedObject is source_box
+            and repeat.Placement.Base.x == 25
+            and grounded.ObjectToGround is first,
+        )
+        check(
+            "general replacement preserves source files and stored BOM",
+            workspace.digest(child.FileName) == original_part_hash
+            and workspace.digest(other.FileName) == original_other_hash
+            and workspace.digest(root.FileName) == saved_general_hash
+            and worker(client.get_bom, root_entry["revision_id"]) == [],
+        )
+        upload(root, "assembly")
+        refs = cad.capture_bom(root)
+        prepared = worker(client.prepare_cad_bom, root.FileName, root_entry["revision_id"], refs)
+        check(
+            "general explicit upload records mapped target and correct item revision pins",
+            {ref["target_revision_id"] for ref in prepared["references"]}
+            == {other_entry["revision_id"], source_child.getObject("ForgePDM_Metadata").RevisionId}
+            and any(
+                ref["target_object_name"] == "ReplacementBlock" for ref in prepared["references"]
+            ),
+        )
         from freecad.forgepdm import replacement
 
         original_refresh = replacement.tree_labels.refresh

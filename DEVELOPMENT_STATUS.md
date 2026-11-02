@@ -1,5 +1,28 @@
 # Development status
 
+## 2026-11-02 — General component replacement (addon 0.5.8)
+
+- Added Replace Component menu/toolbar command with part/assembly-number or name
+  search, explicit item/revision/snapshot selection and whole-object mapping.
+  Uses the revision replacement engine; the newer-revision shortcut remains
+  restricted to the same item. Mapping can change part names/feature types.
+- Preserve selected occurrence UUIDs/placements and unselected targets; labels
+  reflect the new item. Block direct self-item insertion and unselected internal
+  link dependencies that would otherwise silently follow the replaced object.
+  Existing checkout/lifecycle, review, joint validity and rollback checks remain.
+- 212 addon tests passed; 34 isolated live workflow checks passed, including
+  renamed-object cross-item replacement, search/mapping cancellation, grounding,
+  unchanged source files and BOM, plus exact pins after separate explicit upload.
+  Native different-item assembly replacement and constraint rollback probes passed.
+- Both addon profiles updated with backups. Command registered in running
+  FreeCAD; main toolbar/menu registration included for future startup.
+  Actual A000001 invocation correctly rejected its missing checkout and preserved
+  its references, clean state and original selection. No checkout was acquired.
+- Evidence: docs/validation/freecad-general-component-replacement-2026-11-02.json
+  and docs/validation/freecad-general-native-replacement-2026-11-02.json.
+- Limits: native AssemblyLinks still require native Assembly targets. No joint
+  remapping or automatic save/upload/BOM synchronization. Inspect changed geometry.
+
 ## 2026-11-02 — Explicit component revision replacement (addon 0.5.7)
 
 - Added Replace with New Revision menu/toolbar command. Select direct component
@@ -117,7 +140,7 @@ before acting. Git history and the linked reports provide the detailed record.
 - Backend: FastAPI, SQLite, separate SHA-256 file storage, authentication,
   project permissions, Items/revisions/datasets, checkout leases, lifecycle,
   revision-pinned BOMs and immutable CAD dependency manifests.
-- FreeCAD addon: **0.5.7**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.5.8**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 (atomic check-in, fencing and idempotency) remains future

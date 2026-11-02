@@ -94,5 +94,13 @@
       <source>Review and replace direct component occurrences with an exact newer revision</source>
       <translation>Review and replace direct component occurrences with an exact newer revision</translation>
     </message>
+    <message>
+      <source>Replace Component…</source>
+      <translation>Replace Component…</translation>
+    </message>
+    <message>
+      <source>Search a part or assembly and explicitly map selected component occurrences</source>
+      <translation>Search a part or assembly and explicitly map selected component occurrences</translation>
+    </message>
   </context>
 </TS>

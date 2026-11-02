@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.8 — 2026-11-02
+
+- Add Replace Component with item-number/name search, explicit revision and
+  snapshot selection, and whole-object mapping across different items/names.
+- Share occurrence selection, checkout/lifecycle guards, review, placement/joint
+  preservation and rollback with Replace with New Revision. Keep that shortcut
+  restricted to newer revisions of the same item.
+- Update item labels without changing occurrence UUIDs. Save/upload and reviewed
+  engineering BOM synchronization remain separate actions.
+
+
 ## 0.5.7 — 2026-11-02
 
 - Add Replace with New Revision for reviewed direct component occurrences.

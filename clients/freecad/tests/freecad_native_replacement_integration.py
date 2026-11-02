@@ -1,7 +1,7 @@
 """Disposable native AssemblyLink replacement/constraint rollback probe via MCP."""
 
 
-def run(App, Gui, constrained=False):
+def run(App, Gui, constrained=False, different_item=False):
     from pathlib import Path
     from uuid import uuid4
     import tempfile
@@ -12,6 +12,7 @@ def run(App, Gui, constrained=False):
     previous = App.ActiveDocument.Name if App.ActiveDocument else None
     try:
         item = str(uuid4())
+        target_item = str(uuid4()) if different_item else item
         a = str(uuid4())
         b = str(uuid4())
         rootid = str(uuid4())
@@ -21,7 +22,7 @@ def run(App, Gui, constrained=False):
             owned.append(d)
             commands._set_metadata(
                 d,
-                ItemId=item,
+                ItemId=target_item if label == "B" else item,
                 RevisionId=revision,
                 ItemNumber="SUB",
                 RevisionLabel=label,
@@ -73,16 +74,21 @@ def run(App, Gui, constrained=False):
             [(c.Name, c.TypeId, str(getattr(c, "LinkedObject", None))) for c in link.Group],
         )
         refs = cad.capture_bom(root)
+        kwargs = {"target_names": {"Sub": "Assembly"}} if different_item else {}
         if constrained:
             try:
-                replacement.apply(root, refs, ["Sub"], sources[1], {"id": b, "item_id": item})
+                replacement.apply(
+                    root, refs, ["Sub"], sources[1], {"id": b, "item_id": target_item}, **kwargs
+                )
             except replacement.WorkspaceError:
                 assert root.getObject("Sub").LinkedObject is sources[0].getObject("Assembly")
                 assert root.getObject("Grounded").ObjectToGround is not None
                 return {"status": "passed", "constrained_rollback": True}
             else:
                 raise AssertionError("Generated-child joint replacement needs explicit mapping")
-        replacement.apply(root, refs, ["Sub"], sources[1], {"id": b, "item_id": item})
+        replacement.apply(
+            root, refs, ["Sub"], sources[1], {"id": b, "item_id": target_item}, **kwargs
+        )
         print(
             "After native replacement",
             [(c.Name, c.TypeId, str(getattr(c, "LinkedObject", None))) for c in link.Group],

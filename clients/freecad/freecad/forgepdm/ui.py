@@ -178,7 +178,7 @@ def login_form(values):
 
 def select_replacement_occurrences(references, selected_names):
     dialog = QtWidgets.QDialog(parent_window())
-    dialog.setWindowTitle("Replace with New Revision — Occurrences")
+    dialog.setWindowTitle("Select Component Occurrences to Replace")
     dialog.resize(650, 420)
     layout = QtWidgets.QVBoxLayout(dialog)
     layout.addWidget(QtWidgets.QLabel("Choose the direct component occurrences to replace."))
@@ -199,14 +199,17 @@ def select_replacement_occurrences(references, selected_names):
     return [name for check, name in checks if check.isChecked()]
 
 
-def review_component_replacement(source_label, target_revision, occurrences, snapshot):
+def review_component_replacement(
+    source_label, target_revision, occurrences, snapshot, target_item=None
+):
     message = (
-        "Replace {} with revision {} ({})?\n\n{}\n\n"
+        "Replace {} with {} revision {} ({})?\n\n{}\n\n"
         "Snapshot: {}\n\n"
         "Placements and link objects will be retained. Inspect geometry and joints afterward.\n"
         "Save/upload and synchronize the BOM separately to persist the change."
     ).format(
         source_label,
+        target_item or "the same item's",
         target_revision["label"],
         target_revision["lifecycle_state"],
         "\n".join(occurrences),

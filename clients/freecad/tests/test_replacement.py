@@ -166,8 +166,150 @@ def test_recompute_moving_unselected_occurrence_rolls_back(monkeypatch):
 
 
 def test_joint_pointing_directly_to_external_source_requires_manual_mapping(monkeypatch):
-    root,links,doc,target,refs,events,joint=fixture()
-    joint.ObjectToGround=links[0].LinkedObject
-    with pytest.raises(WorkspaceError,match='external source'):
-        replacement.apply(root,refs,['First'],doc,{'id':'B','item_id':'part'})
+    root, links, doc, target, refs, events, joint = fixture()
+    joint.ObjectToGround = links[0].LinkedObject
+    with pytest.raises(WorkspaceError, match="external source"):
+        replacement.apply(root, refs, ["First"], doc, {"id": "B", "item_id": "part"})
     assert not events
+
+
+def general_fixture():
+    root, links, doc, target, refs, events, joint = fixture()
+    parent_meta = NS(ItemId="parent", ServerUrl="http://server")
+    root.getObject = lambda name: (
+        parent_meta
+        if name == "ForgePDM_Metadata"
+        else next((o for o in root.Objects if o.Name == name), None)
+    )
+    target.Name = "ReplacementBox"
+    target.TypeId = "Part::Box"
+    target.Shape = NS(isNull=lambda: False)
+    target.isDerivedFrom = lambda kind: kind == "Part::Feature"
+    doc.Objects = [target]
+    meta = NS(ItemId="different-item", RevisionId="different-A", ServerUrl="http://server")
+    doc.getObject = lambda name: (
+        meta
+        if name == "ForgePDM_Metadata"
+        else next((o for o in doc.Objects if o.Name == name), None)
+    )
+    return root, links, doc, target, refs, events, joint, meta
+
+
+def test_general_replacement_maps_different_item_name_and_feature_type(monkeypatch):
+    root, links, doc, target, refs, events, joint, meta = general_fixture()
+    monkeypatch.setattr(replacement.tree_labels, "refresh", lambda *args, **kwargs: None)
+    replacement.apply(
+        root,
+        refs,
+        ["First"],
+        doc,
+        {"id": "different-A", "item_id": "different-item"},
+        target_names={"First": "ReplacementBox"},
+    )
+    assert links[0].LinkedObject is target
+    assert links[1].LinkedObject is not target
+    assert links[0].ForgePDMOccurrenceId == "uuid-First"
+    assert joint.ObjectToGround is links[0]
+    assert [o.Placement for o in links] == [0, 1]
+    assert events == ["open", "commit"]
+
+
+@pytest.mark.parametrize(
+    "fault",
+    ["mapping_missing", "internal_feature", "self_item", "native_to_part", "different_sources"],
+)
+def test_general_replacement_rejects_unsafe_mapping_before_mutation(monkeypatch, fault):
+    root, links, doc, target, refs, events, joint, meta = general_fixture()
+    names = ["First"]
+    mapping = {"First": "ReplacementBox"}
+    if fault == "mapping_missing":
+        mapping = {}
+    elif fault == "internal_feature":
+        mapping = {"First": "NoSuchFeature"}
+    elif fault == "self_item":
+        root.getObject("ForgePDM_Metadata").ItemId = "different-item"
+    elif fault == "native_to_part":
+        links[0].TypeId = "Assembly::AssemblyLink"
+    else:
+        refs[1]["target_item_id"] = "another-source"
+        names.append("Second")
+        mapping["Second"] = "ReplacementBox"
+    with pytest.raises(WorkspaceError):
+        replacement.apply(
+            root,
+            refs,
+            names,
+            doc,
+            {"id": "different-A", "item_id": "different-item"},
+            target_names=mapping,
+        )
+    assert not events
+    assert links[0].LinkedObject is not target
+
+
+def test_mapping_candidates_exclude_container_internals_and_links():
+    document = NS()
+    pad = NS(
+        Name="Pad",
+        TypeId="PartDesign::Feature",
+        Document=document,
+        isDerivedFrom=lambda kind: True,
+        Shape=NS(isNull=lambda: False),
+    )
+    body = NS(Name="Body", TypeId="PartDesign::Body", Document=document, Group=[pad])
+    link = NS(Name="Link", TypeId="App::Link", Document=document)
+    document.Objects = [pad, body, link]
+    assert replacement.target_objects(document) == [body]
+
+
+def test_general_replacement_rolls_back_on_joint_error(monkeypatch):
+    root, links, doc, target, refs, events, joint, meta = general_fixture()
+
+    def recompute():
+        if links[0].LinkedObject is target:
+            links[0].State = ["Invalid"]
+
+    root.recompute = recompute
+    with pytest.raises(WorkspaceError):
+        replacement.apply(
+            root,
+            refs,
+            ["First"],
+            doc,
+            {"id": "different-A", "item_id": "different-item"},
+            target_names={"First": "ReplacementBox"},
+        )
+    assert events == ["open", "abort"]
+    assert links[0].LinkedObject is not target
+
+
+def test_unselected_internal_occurrence_cannot_silently_follow_replaced_link(monkeypatch):
+    root, links, doc, target, refs, events, joint, meta = general_fixture()
+    links[1].LinkedObject = links[0]
+    with pytest.raises(WorkspaceError, match="depends on a selected"):
+        replacement.apply(
+            root,
+            refs,
+            ["First"],
+            doc,
+            {"id": "different-A", "item_id": "different-item"},
+            target_names={"First": "ReplacementBox"},
+        )
+    assert not events
+
+
+def test_selected_internal_occurrence_can_be_replaced_independently(monkeypatch):
+    root, links, doc, target, refs, events, joint, meta = general_fixture()
+    old = links[0].LinkedObject
+    links[1].LinkedObject = links[0]
+    monkeypatch.setattr(replacement.tree_labels, "refresh", lambda *args, **kwargs: None)
+    replacement.apply(
+        root,
+        refs,
+        ["Second"],
+        doc,
+        {"id": "different-A", "item_id": "different-item"},
+        target_names={"Second": "ReplacementBox"},
+    )
+    assert links[0].LinkedObject is old
+    assert links[1].LinkedObject is target

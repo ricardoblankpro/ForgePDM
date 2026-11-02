@@ -214,3 +214,23 @@ joint references cause transaction rollback. Native subassembly replacements
 that invalidate joints to generated children need manual mapping. Equal face
 names do not establish semantic geometric equivalence: inspect the result before
 saving. No assembly solver or automatic face/joint remapping is added.
+
+### Replace with a different part or assembly
+
+Use **ForgePDM → Replace Component…** to search by item number or name, choose
+an exact revision and uploaded native snapshot, and map the source object to a
+replacement Body, Part, Assembly or shape. Select the direct occurrences first,
+or choose the source component in the dialog. Repeated occurrences of the same
+source object share an explicit mapping; you can replace only some occurrences.
+The final preview identifies the new item, revision and object mapping.
+
+The parent must be a clean saved Working assembly with an owned checkout.
+Item labels change to the replacement identity while occurrence UUIDs and
+placements remain stable. Saving/uploading and BOM synchronization remain separate.
+Replace with New Revision continues to offer only newer revisions of the same item.
+
+Native subassembly links require a native Assembly target; converting those links
+to parts or guessing new joint mappings is not supported. If an unselected internal
+link would follow a selected occurrence, select its dependent occurrences too or
+replace the dependent link independently. Invalid mappings and detected joint
+errors are rejected or rolled back. Inspect geometry and joints before saving.

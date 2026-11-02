@@ -50,7 +50,28 @@ def _check_errors(document):
             )
 
 
-def apply(document, references, selected_names, target_document, revision):
+def target_objects(document):
+    """Offer whole spatial objects, excluding features owned by their containers."""
+    containers = {"PartDesign::Body", "App::Part", "Assembly::AssemblyObject"}
+    contained = {
+        child.Name
+        for obj in document.Objects
+        if obj.TypeId in containers
+        for child in obj.Group
+        if child.Document is document
+    }
+    candidates = []
+    for obj in document.Objects:
+        if obj.Name in contained or obj.TypeId in LINK_TYPES:
+            continue
+        if obj.TypeId in containers or (
+            obj.isDerivedFrom("Part::Feature") and not obj.Shape.isNull()
+        ):
+            candidates.append(obj)
+    return candidates
+
+
+def apply(document, references, selected_names, target_document, revision, target_names=None):
     """Replace only reviewed direct occurrences. Never save, upload or edit a BOM."""
     metadata = target_document.getObject("ForgePDM_Metadata")
     parent_metadata = document.getObject("ForgePDM_Metadata")
@@ -65,15 +86,35 @@ def apply(document, references, selected_names, target_document, revision):
     if not selected or len(selected) != len(set(selected)):
         raise WorkspaceError("Choose distinct component occurrences to replace")
     by_name = {ref["object_name"]: ref for ref in references}
+    if target_names is not None:
+        if set(target_names) != set(selected):
+            raise WorkspaceError("Map every selected occurrence to a replacement object")
+        if metadata.ItemId == parent_metadata.ItemId:
+            raise WorkspaceError("An assembly cannot contain its own item")
+        if (
+            len(
+                {
+                    (by_name[n]["target_item_id"], by_name[n]["target_revision_id"])
+                    for n in selected
+                    if n in by_name
+                }
+            )
+            != 1
+        ):
+            raise WorkspaceError("Replace occurrences of one source item/revision at a time")
+        eligible = {obj.Name for obj in target_objects(target_document)}
+        if any(name not in eligible for name in target_names.values()):
+            raise WorkspaceError("Choose a whole replacement object, not an internal feature")
     plan = []
     for name in selected:
         ref = by_name.get(name)
-        if ref is None or ref["target_item_id"] != revision["item_id"]:
+        if ref is None or (target_names is None and ref["target_item_id"] != revision["item_id"]):
             raise WorkspaceError("Replacement must use a newer revision of the same component item")
-        if ref["target_revision_id"] == revision["id"]:
-            raise WorkspaceError("The selected occurrence already uses that revision")
+        target_name = ref["target_object_name"] if target_names is None else target_names[name]
+        if ref["target_revision_id"] == revision["id"] and target_name == ref["target_object_name"]:
+            raise WorkspaceError("The selected occurrence already uses that revision and object")
         obj = document.getObject(name)
-        target = target_document.getObject(ref["target_object_name"])
+        target = target_document.getObject(target_name)
         if obj is None or obj.TypeId not in LINK_TYPES or getattr(obj, "ElementCount", 0):
             raise WorkspaceError("Only direct whole-object component occurrences can be replaced")
         if target is None or target.TypeId in LINK_TYPES:
@@ -87,9 +128,27 @@ def apply(document, references, selected_names, target_document, revision):
             raise WorkspaceError("The source occurrence is unresolved")
         if obj.TypeId == "Assembly::AssemblyLink" and target.TypeId != "Assembly::AssemblyObject":
             raise WorkspaceError("A native subassembly requires an Assembly target")
-        if original.Document is not document and original.TypeId != target.TypeId:
+        if (
+            target_names is None
+            and original.Document is not document
+            and original.TypeId != target.TypeId
+        ):
             raise WorkspaceError("Replacement target object type differs from the original")
         plan.append((name, target, obj.Placement))
+    for other_name in by_name.keys() - set(selected):
+        current = document.getObject(other_name).LinkedObject
+        visited = set()
+        while current is not None and current.Document is document and current.TypeId in LINK_TYPES:
+            if current.Name in selected:
+                raise WorkspaceError(
+                    "Unselected occurrence '{}' depends on a selected local link; select dependent occurrences too".format(
+                        other_name
+                    )
+                )
+            if current.Name in visited:
+                raise WorkspaceError("Internal component link cycle")
+            visited.add(current.Name)
+            current = current.LinkedObject
     if document.HasPendingTransaction:
         raise WorkspaceError("Finish the current FreeCAD operation before replacing a revision")
     occurrences_before = {
@@ -112,7 +171,7 @@ def apply(document, references, selected_names, target_document, revision):
             "Joint references must use assembly occurrences, not external source objects"
         )
     _check_errors(document)
-    document.openTransaction("Replace component revision")
+    document.openTransaction("Replace component")
     try:
         for name, target, placement in plan:
             obj = document.getObject(name)

@@ -68,14 +68,14 @@ expected = [
     'ForgePDM_Login', 'ForgePDM_Logout', 'ForgePDM_Upload', 'ForgePDM_Checkout',
     'ForgePDM_CheckIn', 'ForgePDM_Release', 'ForgePDM_NewRevision',
     'ForgePDM_Download', 'ForgePDM_ShowBOM',
-    'ForgePDM_RefreshTreeLabels', 'ForgePDM_ReplaceRevision',
+    'ForgePDM_RefreshTreeLabels', 'ForgePDM_ReplaceRevision', 'ForgePDM_ReplaceComponent',
 ]
 assert command_calls == wb.menu == wb.toolbar == expected
 assert wb.GetClassName() == 'Gui::PythonWorkbench'
 assert len(language_paths) == 1 and Path(language_paths[0]).is_dir()
 assert len(observers) == 1
 expected_icons = ['login', 'logout', 'upload', 'checkout', 'checkin', 'release',
-                  'new-revision', 'download', 'bom', 'tree-labels', 'replace-revision']
+                  'new-revision', 'download', 'bom', 'tree-labels', 'replace-revision', 'replace-component']
 for command, icon in zip(registered.values(), expected_icons):
     resources = command.GetResources()
     assert resources['MenuText'] and resources['ToolTip']

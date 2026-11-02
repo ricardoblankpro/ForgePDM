@@ -1,0 +1,10 @@
+{
+  "different_item": {
+    "status": "passed",
+    "native_target_and_generated_child_pins": true
+  },
+  "constrained_different_item": {
+    "status": "passed",
+    "constrained_rollback": true
+  }
+}

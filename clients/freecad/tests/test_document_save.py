@@ -474,3 +474,23 @@ def test_replace_revision_guards_parent_before_loading_replacement(commands, mon
     commands.ReplaceRevisionCommand().Activated()
     assert len(commands._test_errors) == 1
     assert not document.saved
+
+
+def test_target_mapping_groups_repeated_occurrences_and_cancellation(commands, monkeypatch):
+    from freecad.forgepdm import replacement
+
+    source = Document("/tmp/source.FCStd")
+    source.getObject = lambda name: SimpleNamespace(TypeId="App::Link")
+    target = SimpleNamespace(Name="DifferentBody", Label="New Body", TypeId="PartDesign::Body")
+    target_doc = SimpleNamespace()
+    monkeypatch.setattr(replacement, "target_objects", lambda doc: [target])
+    refs = [{"object_name": name, "target_object_name": "OldBody"} for name in ("First", "Repeat")]
+    calls = []
+    monkeypatch.setattr(commands, "ask_choice", lambda *args: calls.append(args) or args[2][0])
+    assert commands._map_replacement_objects(source, refs, ["First", "Repeat"], target_doc) == {
+        "First": "DifferentBody",
+        "Repeat": "DifferentBody",
+    }
+    assert len(calls) == 1
+    monkeypatch.setattr(commands, "ask_choice", lambda *args: None)
+    assert commands._map_replacement_objects(source, refs, ["First"], target_doc) is None

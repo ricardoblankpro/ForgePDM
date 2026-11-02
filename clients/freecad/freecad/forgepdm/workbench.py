@@ -30,6 +30,7 @@ class ForgePDMWorkbench(Gui.Workbench):
             ("ForgePDM_ShowBOM", commands.ShowBOMCommand),
             ("ForgePDM_RefreshTreeLabels", commands.RefreshTreeLabelsCommand),
             ("ForgePDM_ReplaceRevision", commands.ReplaceRevisionCommand),
+            ("ForgePDM_ReplaceComponent", commands.ReplaceComponentCommand),
         )
         for name, command in entries:
             Gui.addCommand(name, command())

@@ -616,6 +616,7 @@ class RefreshTreeLabelsCommand(Command):
 
 
 class ReplaceRevisionCommand(Command):
+    replace_any_item = False
     icon_name = "replace-revision"
     menu_text = "Replace with New Revision…"
     tooltip = "Review and replace direct component occurrences with an exact newer revision"
@@ -680,25 +681,59 @@ class ReplaceRevisionCommand(Command):
             return
         if set(names) - {ref["object_name"] for ref in matching}:
             raise workspace.WorkspaceError("The selected occurrences do not match the component")
-        revisions = yield Request("Loading newer component revisions…", client.newer_revisions, key)
-        if not revisions:
-            information(
-                "ForgePDM", "No newer non-obsolete revision is available for this component."
+        target_item = None
+        if self.replace_any_item:
+            query = ask_text(
+                "Find Replacement Component", "Part or assembly number, name or description", ""
             )
-            return
-        revision_labels = [
-            "{} — {} — {}".format(r["label"], r["lifecycle_state"], r["change_note"])
-            for r in revisions
-        ]
-        choice = ask_choice(
-            "New Component Revision",
-            "Choose the exact replacement revision",
-            revision_labels,
-            revision_labels[0],
-        )
-        if choice is None:
-            return
-        target_revision = revisions[revision_labels.index(choice)]
+            if query is None:
+                return
+            target_item = yield from _select_record(
+                "Replacement Items",
+                "Choose the replacement part or assembly",
+                client.search_items,
+                lambda row: "{} — {} ({})".format(row["number"], row["name"], row["kind"]),
+                args=(query,),
+            )
+            if target_item is None:
+                return
+            if target_item["id"] == metadata.ItemId:
+                raise workspace.WorkspaceError("An assembly cannot contain its own item")
+            target_revision = yield from _select_record(
+                "Replacement Revisions",
+                "Choose the exact replacement revision",
+                client.list_revisions,
+                lambda row: "{} — {} — {}".format(
+                    row["label"], row["lifecycle_state"], row["change_note"]
+                ),
+                args=(target_item["id"],),
+            )
+            if target_revision is None:
+                return
+            if target_revision["lifecycle_state"] == "obsolete":
+                raise workspace.WorkspaceError("Choose a non-obsolete replacement revision")
+        else:
+            revisions = yield Request(
+                "Loading newer component revisions…", client.newer_revisions, key
+            )
+            if not revisions:
+                information(
+                    "ForgePDM", "No newer non-obsolete revision is available for this component."
+                )
+                return
+            revision_labels = [
+                "{} — {} — {}".format(r["label"], r["lifecycle_state"], r["change_note"])
+                for r in revisions
+            ]
+            choice = ask_choice(
+                "New Component Revision",
+                "Choose the exact replacement revision",
+                revision_labels,
+                revision_labels[0],
+            )
+            if choice is None:
+                return
+            target_revision = revisions[revision_labels.index(choice)]
         snapshot = yield from _choose_native_snapshot(client, target_revision["id"])
         if snapshot is None:
             return
@@ -719,12 +754,34 @@ class ReplaceRevisionCommand(Command):
                 client.finish_configuration,
                 (configuration,),
             )
-            if not review_component_replacement(
-                matching[0]["component_label"],
-                target_revision,
-                [document.getObject(n).Label for n in names],
-                dataset["created_at"],
-            ):
+            target_names = None
+            if self.replace_any_item:
+                target_names = _map_replacement_objects(document, baseline, names, opened["root"])
+                if target_names is None:
+                    return
+                preview = [
+                    "{} → {} ({})".format(
+                        document.getObject(n).Label,
+                        opened["root"].getObject(target_names[n]).Label,
+                        target_names[n],
+                    )
+                    for n in names
+                ]
+                approved = review_component_replacement(
+                    matching[0]["component_label"],
+                    target_revision,
+                    preview,
+                    dataset["created_at"],
+                    target_item["number"],
+                )
+            else:
+                approved = review_component_replacement(
+                    matching[0]["component_label"],
+                    target_revision,
+                    [document.getObject(n).Label for n in names],
+                    dataset["created_at"],
+                )
+            if not approved:
                 return
             document = _guard_document(name, revision_id)
             if (
@@ -750,15 +807,30 @@ class ReplaceRevisionCommand(Command):
             document = _guard_document(name, revision_id)
             if cad.document_modified(document) or cad.capture_bom(document) != baseline:
                 raise workspace.WorkspaceError("Assembly changed while verifying references")
-            count = replacement.apply(document, baseline, names, opened["root"], target_revision)
+            if self.replace_any_item:
+                count = replacement.apply(
+                    document,
+                    baseline,
+                    names,
+                    opened["root"],
+                    target_revision,
+                    target_names=target_names,
+                )
+            else:
+                count = replacement.apply(
+                    document, baseline, names, opened["root"], target_revision
+                )
             applied = True
             FreeCAD.setActiveDocument(name)
+            destination = (
+                "{} revision {}".format(target_item["number"], target_revision["label"])
+                if target_item
+                else "revision {}".format(target_revision["label"])
+            )
             information(
                 "ForgePDM",
-                "Replaced {} occurrence(s) with revision {}. Inspect geometry and joints, "
-                "then save/upload and synchronize the BOM separately.".format(
-                    count, target_revision["label"]
-                ),
+                "Replaced {} occurrence(s) with {}. Inspect geometry and joints, "
+                "then save/upload and synchronize the BOM separately.".format(count, destination),
             )
         finally:
             if opened is not None and not applied:
@@ -768,6 +840,52 @@ class ReplaceRevisionCommand(Command):
                     FreeCAD.setActiveDocument(name)
             except NameError:
                 pass
+
+
+class ReplaceComponentCommand(ReplaceRevisionCommand):
+    replace_any_item = True
+    icon_name = "replace-component"
+    menu_text = "Replace Component…"
+    tooltip = "Search a part or assembly and explicitly map selected component occurrences"
+
+
+def _map_replacement_objects(document, references, names, target_document):
+    from . import replacement
+
+    by_name = {ref["object_name"]: ref for ref in references}
+    grouped = {}
+    for name in names:
+        grouped.setdefault(by_name[name]["target_object_name"], []).append(name)
+    candidates = replacement.target_objects(target_document)
+    mapping = {}
+    for source_name, occurrences in grouped.items():
+        objects = [
+            obj
+            for obj in candidates
+            if obj.TypeId == "Assembly::AssemblyObject"
+            or not any(
+                document.getObject(n).TypeId == "Assembly::AssemblyLink" for n in occurrences
+            )
+        ]
+        if not objects:
+            raise workspace.WorkspaceError(
+                "No compatible whole object is available in the replacement snapshot"
+            )
+        labels = ["{} ({}, {})".format(obj.Label, obj.Name, obj.TypeId) for obj in objects]
+        default = next(
+            (label for obj, label in zip(objects, labels) if obj.Name == source_name), labels[0]
+        )
+        choice = ask_choice(
+            "Replacement Object",
+            "Map {} ({} occurrence(s)) to".format(source_name, len(occurrences)),
+            labels,
+            default,
+        )
+        if choice is None:
+            return None
+        target = objects[labels.index(choice)]
+        mapping.update({name: target.Name for name in occurrences})
+    return mapping
 
 
 def _choose_native_snapshot(client, revision_id):
