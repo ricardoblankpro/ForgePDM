@@ -1,0 +1,48 @@
+{
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "checks": [
+    "initial upload is current",
+    "second user checked in changed geometry",
+    "component update requires owned parent checkout",
+    "component review cancellation preserves targets",
+    "component cancellation cleans retrieved documents",
+    "selected component adopts other user's same-revision geometry",
+    "unselected component keeps original geometry and target",
+    "component revision remains unchanged",
+    "occurrence UUIDs preserved",
+    "component placements preserved",
+    "same-revision occurrence labels preserved",
+    "grounded joint preserved",
+    "parent stays modified for inspection",
+    "parent file and source file bytes untouched",
+    "component update does not publish parent or BOM",
+    "component update preserves parent checkout",
+    "explicit check-in persists mixed exact snapshot pins",
+    "server manifest matches reviewed occurrence pins",
+    "current selected occurrence reports no update",
+    "component HTTP work stays off GUI thread",
+    "user documents preserved",
+    "user file hashes preserved"
+  ],
+  "scope": "Real FreeCAD geometry, disposable HTTP DB/storage, two users and workspaces; automated review choices",
+  "status": "passed",
+  "native_probes": [
+    {
+      "status": "passed",
+      "native_target_and_generated_child_pins": true
+    },
+    {
+      "status": "passed",
+      "constrained_rollback": true
+    }
+  ]
+}

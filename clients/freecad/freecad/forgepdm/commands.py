@@ -281,6 +281,7 @@ def _authorize_tree_labels(client, document):
             "Create a managed working copy before refreshing tree labels"
         )
     tree_observer.allow_edit(document, checkout, client, Session.user)
+    return checkout
 
 
 class Command:
@@ -675,6 +676,7 @@ class RefreshTreeLabelsCommand(Command):
 
 class ReplaceRevisionCommand(Command):
     replace_any_item = False
+    update_snapshot = False
     icon_name = "replace-revision"
     menu_text = "Replace with New Revision…"
     tooltip = "Review and replace direct component occurrences with an exact newer revision"
@@ -740,7 +742,23 @@ class ReplaceRevisionCommand(Command):
         if set(names) - {ref["object_name"] for ref in matching}:
             raise workspace.WorkspaceError("The selected occurrences do not match the component")
         target_item = None
-        if self.replace_any_item:
+        update = None
+        if self.update_snapshot:
+            chosen = [ref for ref in matching if ref["object_name"] in names]
+            update = yield Request(
+                "Checking selected component snapshots…",
+                client.prepare_component_update,
+                (path, metadata.ItemId, revision_id, chosen),
+            )
+            names = update["names"]
+            if not names:
+                information(
+                    "ForgePDM",
+                    "Selected occurrences already use the latest uploaded snapshot of this revision.",
+                )
+                return
+            target_revision = update["revision"]
+        elif self.replace_any_item:
             query = ask_text(
                 "Find Replacement Component", "Part or assembly number, name or description", ""
             )
@@ -792,7 +810,11 @@ class ReplaceRevisionCommand(Command):
             if choice is None:
                 return
             target_revision = revisions[revision_labels.index(choice)]
-        snapshot = yield from _choose_native_snapshot(client, target_revision["id"])
+        snapshot = (
+            (update["dataset"], update["file"])
+            if update is not None
+            else (yield from _choose_native_snapshot(client, target_revision["id"]))
+        )
         if snapshot is None:
             return
         dataset, file_record = snapshot
@@ -832,6 +854,23 @@ class ReplaceRevisionCommand(Command):
                     dataset["created_at"],
                     target_item["number"],
                 )
+            elif self.update_snapshot:
+                pins = {pin["object_name"]: pin for pin in update["pins"]}
+                approved = review_component_replacement(
+                    matching[0]["component_label"],
+                    target_revision,
+                    [
+                        "{}: {}/{} → {}/{}".format(
+                            document.getObject(n).Label,
+                            pins[n]["target_dataset_id"],
+                            pins[n]["target_file_id"],
+                            dataset["id"],
+                            file_record["id"],
+                        )
+                        for n in names
+                    ],
+                    "{} — SHA-256 {}".format(dataset["created_at"], file_record["content_hash"]),
+                )
             else:
                 approved = review_component_replacement(
                     matching[0]["component_label"],
@@ -851,7 +890,7 @@ class ReplaceRevisionCommand(Command):
                     "Assembly changed during review; prepare a new replacement"
                 )
             yield from _editable(client, _require_metadata(document))
-            yield from _authorize_tree_labels(client, document)
+            checkout = yield from _authorize_tree_labels(client, document)
             document = _guard_document(name, revision_id)
             if (
                 cad.document_modified(document)
@@ -865,7 +904,38 @@ class ReplaceRevisionCommand(Command):
             document = _guard_document(name, revision_id)
             if cad.document_modified(document) or cad.capture_bom(document) != baseline:
                 raise workspace.WorkspaceError("Assembly changed while verifying references")
-            if self.replace_any_item:
+            if self.update_snapshot:
+                current_parent = yield Request(
+                    "Rechecking assembly snapshot…",
+                    client.component_update_baseline,
+                    (path, metadata.ItemId, revision_id, matching),
+                )
+                document = _guard_document(name, revision_id)
+                pins = {pin["object_name"]: pin for pin in current_parent["pins"]}
+                if (
+                    current_parent["baseline"] != update["baseline"]
+                    or any(pins.get(pin["object_name"]) != pin for pin in update["pins"])
+                    or document.FileName != path
+                    or cad.document_modified(document)
+                    or cad.capture_bom(document) != baseline
+                ):
+                    raise workspace.WorkspaceError(
+                        "Assembly or component snapshots changed during review"
+                    )
+                tree_observer.allow_edit(document, checkout, client, Session.user)
+                exact_baseline = [
+                    dict(ref, **pins[ref["object_name"]]) if ref["object_name"] in pins else ref
+                    for ref in baseline
+                ]
+                count = replacement.apply(
+                    document,
+                    exact_baseline,
+                    names,
+                    opened["root"],
+                    target_revision,
+                    target_snapshot=dict(dataset_id=dataset["id"], file_id=file_record["id"]),
+                )
+            elif self.replace_any_item:
                 count = replacement.apply(
                     document,
                     baseline,
@@ -905,6 +975,13 @@ class ReplaceComponentCommand(ReplaceRevisionCommand):
     icon_name = "replace-component"
     menu_text = "Replace Component…"
     tooltip = "Search a part or assembly and explicitly map selected component occurrences"
+
+
+class UpdateSelectedComponentsCommand(ReplaceRevisionCommand):
+    update_snapshot = True
+    icon_name = "replace-revision"
+    menu_text = "Update Selected Components from Server…"
+    tooltip = "Review and adopt the latest uploaded snapshot of selected component occurrences"
 
 
 def _map_replacement_objects(document, references, names, target_document):
@@ -1048,6 +1125,110 @@ def _synchronize_bom(client, revision_id):
         cancellable=False,
     )
     information("ForgePDM", "The reviewed engineering BOM was synchronized.")
+
+
+class UpdateFromServerCommand(Command):
+    icon_name = "download"
+    menu_text = "Update from Server…"
+    tooltip = "Check for uploaded changes and open a verified copy of this revision"
+    needs_document = True
+
+    def action(self):
+        client = Session.require_client()
+        document = _require_document()
+        metadata = _require_metadata(document)
+        name, path = document.Name, document.FileName
+        item_id, revision_id = metadata.ItemId, metadata.RevisionId
+
+        def guard():
+            current = _guard_document(name, revision_id)
+            if current.FileName != path or cad.document_modified(current):
+                raise workspace.WorkspaceError(
+                    "Local document changed. Save/upload or preserve your edits before updating."
+                )
+            if _require_metadata(current).ItemId != item_id:
+                raise workspace.WorkspaceError("Document item changed while checking updates")
+            return current
+
+        guard()
+        result = yield Request(
+            "Checking uploaded server snapshots…",
+            client.inspect_server_update,
+            (path, item_id, revision_id),
+        )
+        guard()
+        newer = result["newer"]
+        notice = (
+            "\nNewer revisions available: {}. Adopt these explicitly using revision replacement.".format(
+                ", ".join(row["label"] for row in newer)
+            )
+            if newer
+            else ""
+        )
+        if not result["changed"]:
+            information(
+                "ForgePDM",
+                "This document already uses the latest uploaded snapshot of this revision."
+                + notice,
+            )
+            return
+        dataset, record = result["dataset"], result["file"]
+        choice = ask_choice(
+            "Update from Server",
+            "{} revision {}: snapshot {} ({}).\nOpen a separate verified copy? "
+            "The original document and existing assembly links are preserved.{}".format(
+                metadata.ItemNumber,
+                metadata.RevisionLabel,
+                dataset["created_at"],
+                record["content_hash"][:12],
+                notice,
+            ),
+            ["Cancel", "Open updated copy"],
+            "Cancel",
+        )
+        if choice != "Open updated copy":
+            return
+        guard()
+        configuration, opened, complete = None, None, False
+        try:
+            configuration = yield Request(
+                "Retrieving reviewed server snapshot…",
+                client.retrieve_configuration,
+                (result["baseline"]["root"], revision_id, dataset["id"], record["id"]),
+            )
+            guard()
+            current = yield Request(
+                "Rechecking local snapshot…",
+                client.update_baseline,
+                (path, item_id, revision_id),
+            )
+            guard()
+            if current != result["baseline"]:
+                raise workspace.WorkspaceError("Local snapshot changed during update; retry review")
+            opened = cad.open_configuration(configuration, _set_metadata)
+            yield Request(
+                "Recording updated configuration…",
+                client.finish_configuration,
+                (configuration,),
+            )
+            complete = True
+            FreeCAD.setActiveDocument(opened["root"].Name)
+            information(
+                "ForgePDM",
+                "Updated copy opened. The original remains open and unchanged. "
+                "Existing assembly links keep their exact snapshots. "
+                "Acquire a checkout on the updated copy before editing.",
+            )
+        finally:
+            if not complete:
+                if opened is not None:
+                    cad.close_owned(opened["owned"])
+                if configuration is not None:
+                    workspace.incomplete(configuration)
+                try:
+                    FreeCAD.setActiveDocument(name)
+                except (NameError, RuntimeError):
+                    pass
 
 
 class DownloadCommand(Command):

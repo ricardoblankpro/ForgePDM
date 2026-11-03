@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.6.3 — 2026-11-03
+
+- Add Update Selected Components from Server for reviewed same-revision snapshot
+  replacement in owned clean uploaded Working assemblies. Preserve occurrence
+  identities, labels, placements and unselected targets; check joints and rollback
+  failures. Recheck original pins, parent bytes and lease after review. Leave the
+  assembly modified for inspection and separate explicit check-in.
+
+## 0.6.2 — 2026-11-03
+
+- Add Update from Server to compare the active managed revision with its latest
+  native upload and open a reviewed verified copy, preserving original documents
+  and incoming assembly links. Block dirty/unuploaded local changes and pending
+  check-in recovery; report newer revisions without automatically adopting them.
+
 ## 0.6.1 — 2026-11-02
 
 - Extend atomic check-in to assemblies and external-reference parts. Publish

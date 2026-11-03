@@ -102,5 +102,21 @@
       <source>Search a part or assembly and explicitly map selected component occurrences</source>
       <translation>Search a part or assembly and explicitly map selected component occurrences</translation>
     </message>
+    <message>
+      <source>Update from Server…</source>
+      <translation>Update from Server…</translation>
+    </message>
+    <message>
+      <source>Check for uploaded changes and open a verified copy of this revision</source>
+      <translation>Check for uploaded changes and open a verified copy of this revision</translation>
+    </message>
+    <message>
+      <source>Update Selected Components from Server…</source>
+      <translation>Update Selected Components from Server…</translation>
+    </message>
+    <message>
+      <source>Review and adopt the latest uploaded snapshot of selected component occurrences</source>
+      <translation>Review and adopt the latest uploaded snapshot of selected component occurrences</translation>
+    </message>
   </context>
 </TS>

@@ -236,6 +236,25 @@ link would follow a selected occurrence, select its dependent occurrences too or
 replace the dependent link independently. Invalid mappings and detected joint
 errors are rejected or rolled back. Inspect geometry and joints before saving.
 
+### Update selected assembly components (0.6.3)
+
+Acquire the parent assembly's checkout and save/upload it. Select direct
+occurrences of one component item/revision, then choose **Update Selected
+Components from Server…**. Review the occurrence checklist and exact latest
+snapshot. Selected occurrences adopt that snapshot of the same revision; other
+occurrences stay pinned. Inspect geometry and joints, then check in the parent.
+No automatic save, upload or BOM write occurs. See
+[workflow and limitations](../../docs/update-from-server.md).
+
+### Update from Server (0.6.2)
+
+Choose **Update from Server…** on a clean managed document to check for other
+users' uploads on the same revision. Review the timestamp/hash and open the updated
+copy. The original stays open and all existing assembly links remain pinned.
+Saved but unuploaded edits and pending check-in recovery block refresh. Newer
+revisions are reported for explicit replacement. See
+[workflow and limitations](../../docs/update-from-server.md).
+
 ### Reliable native check-in (0.6.1)
 
 Check In uses one atomic operation for parts and supported assemblies, including

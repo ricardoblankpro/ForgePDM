@@ -40,7 +40,7 @@ def fixture():
     )
     root.Objects = links + [joint]
     root.getObject = lambda name: (
-        NS(ServerUrl="http://server")
+        NS(ServerUrl="http://server", ItemId="assembly")
         if name == "ForgePDM_Metadata"
         else next((o for o in root.Objects if o.Name == name), None)
     )
@@ -86,6 +86,80 @@ def test_replaces_only_selected_occurrence_preserving_names_placements_and_groun
     assert joint.ObjectToGround is links[0]
     assert calls == [{"within_transaction": True}]
     assert events == ["open", "commit"]
+
+
+def test_same_revision_snapshot_update_preserves_occurrences_and_unselected_target(monkeypatch):
+    root, links, doc, target, refs, events, joint = fixture()
+    for ref in refs:
+        ref.update(target_revision_id="B", target_dataset_id="old", target_file_id="old-file")
+    monkeypatch.setattr(replacement.tree_labels, "refresh", lambda *a, **kw: None)
+    assert (
+        replacement.apply(
+            root,
+            refs,
+            ["First"],
+            doc,
+            {"id": "B", "item_id": "part"},
+            target_snapshot=dict(dataset_id="new", file_id="new-file"),
+        )
+        == 1
+    )
+    assert links[0].LinkedObject is target and links[1].LinkedObject is not target
+    assert [o.ForgePDMOccurrenceId for o in links] == ["uuid-First", "uuid-Second"]
+    assert [o.Placement for o in links] == [0, 1]
+    assert joint.ObjectToGround is links[0] and events == ["open", "commit"]
+
+
+@pytest.mark.parametrize(
+    "fault", ["same_pin", "missing_source_pin", "new_revision", "missing_target_pin", "mapping"]
+)
+def test_snapshot_mode_rejects_invalid_identity_or_pins(monkeypatch, fault):
+    root, links, doc, target, refs, events, joint = fixture()
+    refs[0].update(target_revision_id="B", target_dataset_id="old", target_file_id="old-file")
+    snapshot = dict(dataset_id="new", file_id="new-file")
+    kwargs = {}
+    if fault == "same_pin":
+        snapshot = dict(dataset_id="old", file_id="old-file")
+    elif fault == "missing_source_pin":
+        refs[0].pop("target_file_id")
+    elif fault == "new_revision":
+        refs[0]["target_revision_id"] = "A"
+    elif fault == "missing_target_pin":
+        snapshot.pop("file_id")
+    else:
+        kwargs["target_names"] = {"First": "Body"}
+    with pytest.raises(WorkspaceError):
+        replacement.apply(
+            root,
+            refs,
+            ["First"],
+            doc,
+            {"id": "B", "item_id": "part"},
+            target_snapshot=snapshot,
+            **kwargs,
+        )
+    assert not events and links[0].LinkedObject is not target
+
+
+def test_snapshot_mode_rolls_back_joint_failure(monkeypatch):
+    root, links, doc, target, refs, events, joint = fixture()
+    refs[0].update(target_revision_id="B", target_dataset_id="old", target_file_id="old-file")
+
+    def recompute():
+        if links[0].LinkedObject is target:
+            joint.ObjectToGround = links[1]
+
+    root.recompute = recompute
+    with pytest.raises(WorkspaceError, match="Joint references changed"):
+        replacement.apply(
+            root,
+            refs,
+            ["First"],
+            doc,
+            {"id": "B", "item_id": "part"},
+            target_snapshot=dict(dataset_id="new", file_id="new-file"),
+        )
+    assert events == ["open", "abort"] and links[0].LinkedObject is not target
 
 
 @pytest.mark.parametrize(

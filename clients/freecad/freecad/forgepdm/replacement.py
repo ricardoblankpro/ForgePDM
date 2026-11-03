@@ -71,7 +71,15 @@ def target_objects(document):
     return candidates
 
 
-def apply(document, references, selected_names, target_document, revision, target_names=None):
+def apply(
+    document,
+    references,
+    selected_names,
+    target_document,
+    revision,
+    target_names=None,
+    target_snapshot=None,
+):
     """Replace only reviewed direct occurrences. Never save, upload or edit a BOM."""
     metadata = target_document.getObject("ForgePDM_Metadata")
     parent_metadata = document.getObject("ForgePDM_Metadata")
@@ -86,6 +94,13 @@ def apply(document, references, selected_names, target_document, revision, targe
     if not selected or len(selected) != len(set(selected)):
         raise WorkspaceError("Choose distinct component occurrences to replace")
     by_name = {ref["object_name"]: ref for ref in references}
+    if target_snapshot is not None:
+        if target_names is not None or not all(
+            target_snapshot.get(key) for key in ("dataset_id", "file_id")
+        ):
+            raise WorkspaceError("Snapshot updates require exact pins and unchanged object mapping")
+        if metadata.ItemId == parent_metadata.ItemId:
+            raise WorkspaceError("An assembly cannot contain its own item")
     if target_names is not None:
         if set(target_names) != set(selected):
             raise WorkspaceError("Map every selected occurrence to a replacement object")
@@ -111,7 +126,19 @@ def apply(document, references, selected_names, target_document, revision, targe
         if ref is None or (target_names is None and ref["target_item_id"] != revision["item_id"]):
             raise WorkspaceError("Replacement must use a newer revision of the same component item")
         target_name = ref["target_object_name"] if target_names is None else target_names[name]
-        if ref["target_revision_id"] == revision["id"] and target_name == ref["target_object_name"]:
+        if target_snapshot is not None:
+            if ref["target_revision_id"] != revision["id"]:
+                raise WorkspaceError("Snapshot update must keep the exact component revision")
+            if not ref.get("target_dataset_id") or not ref.get("target_file_id"):
+                raise WorkspaceError("Original component snapshot pins are required")
+            if (ref["target_dataset_id"], ref["target_file_id"]) == (
+                target_snapshot["dataset_id"],
+                target_snapshot["file_id"],
+            ):
+                raise WorkspaceError("The selected occurrence already uses that snapshot")
+        elif (
+            ref["target_revision_id"] == revision["id"] and target_name == ref["target_object_name"]
+        ):
             raise WorkspaceError("The selected occurrence already uses that revision and object")
         obj = document.getObject(name)
         target = target_document.getObject(target_name)

@@ -1,7 +1,7 @@
 """Disposable native AssemblyLink replacement/constraint rollback probe via MCP."""
 
 
-def run(App, Gui, constrained=False, different_item=False):
+def run(App, Gui, constrained=False, different_item=False, same_snapshot_revision=False):
     from pathlib import Path
     from uuid import uuid4
     import tempfile
@@ -14,7 +14,7 @@ def run(App, Gui, constrained=False, different_item=False):
         item = str(uuid4())
         target_item = str(uuid4()) if different_item else item
         a = str(uuid4())
-        b = str(uuid4())
+        b = a if same_snapshot_revision else str(uuid4())
         rootid = str(uuid4())
         sources = []
         for label, revision, length in [("A", a, 10), ("B", b, 20)]:
@@ -75,6 +75,10 @@ def run(App, Gui, constrained=False, different_item=False):
         )
         refs = cad.capture_bom(root)
         kwargs = {"target_names": {"Sub": "Assembly"}} if different_item else {}
+        if same_snapshot_revision:
+            for ref in refs:
+                ref.update(target_dataset_id="old-snapshot", target_file_id="old-file")
+            kwargs["target_snapshot"] = dict(dataset_id="new-snapshot", file_id="new-file")
         if constrained:
             try:
                 replacement.apply(

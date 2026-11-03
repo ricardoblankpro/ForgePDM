@@ -1,5 +1,55 @@
 # Development status
 
+## 2026-11-03 — Selected component snapshot updates (addon 0.6.3)
+
+- New **Update Selected Components from Server…** command adopts the latest
+  uploaded same-revision snapshot for reviewed direct occurrences of one source
+  item/revision group at a time. Require a clean uploaded managed Working parent
+  and owned checkout. Skip current occurrences; no automatic new-revision adoption.
+- Extend the existing replacement transaction with explicit exact snapshot pins;
+  recheck parent bytes/identity, pending recovery, source pins and checkout before
+  applying. Preserve occurrence UUIDs, labels, placements, unselected targets and
+  valid joints. Reject unsafe mappings/dependencies and rollback detected errors.
+  Leave the parent modified; check-in and BOM synchronization remain explicit.
+- Validation: 251 addon tests, focused lint and manifest/build checks passed.
+  Live FreeCAD 1.1.4 with disposable HTTP DB/storage and two users passed 22 checks,
+  including selected-only geometry adoption, preserved grounding/occurrences,
+  cancellation, checkout enforcement, unchanged source/parent saved bytes and BOM,
+  and mixed exact pins persisted by later atomic check-in. Native AssemblyLink
+  same-revision replacement and generated-child constraint rollback also passed.
+  User documents, saved hashes and session preserved. Evidence:
+  docs/validation/freecad-component-update-2026-11-03.json.
+- Both installed profiles updated with backups. Registered/enabled the command
+  in the running ForgePDM menu and Updates toolbar; preserved login and active
+  document. Future startup includes both update commands in the main toolbar.
+- Workflow: docs/update-from-server.md. One group per operation; save/upload after
+  inspecting it before updating another group. No geometry merge or schema/API
+  changes. Phase 5 reliability follow-ups remain separate.
+
+## 2026-11-03 — Update from Server (addon 0.6.2)
+
+- Added explicit menu/toolbar command to compare the active managed document
+  with the latest native upload on the same revision. Review timestamp/hash,
+  retrieve the exact chosen snapshot, and activate a separate verified copy.
+  Preserve the original document/files, incoming links and checkout state.
+- Reject unsaved or saved-but-unuploaded edits, inconsistent workspace identity
+  and pending check-in recovery. Recheck local state after download. Report
+  newer revision labels without automatic adoption. Assembly roots retain their
+  exact uploaded dependency manifest; component updates inside an existing parent
+  remain a later increment. No backend/schema or PDM-rule changes.
+- Validation: 238 addon tests passed. Focused lint and manifest/distribution
+  checks passed. Real FreeCAD 1.1.4 with disposable HTTP storage, two users and
+  separate workspaces passed 16 checks: changed geometry from another user's
+  check-in, cancellation, clean verified copy, exact ledger, no new checkout or
+  dataset, unsaved-edit rejection, worker HTTP, preserved user documents/bytes.
+  Evidence: docs/validation/freecad-server-update-2026-11-03.json.
+- Both installed addon profiles updated with backups. Command registered in the
+  running FreeCAD menu and an Updates toolbar; enabled state and preserved login
+  verified. Normal future startup includes it in the main ForgePDM toolbar.
+- Usage and bounded design: docs/update-from-server.md. The original copy stays
+  open deliberately; close it when no longer needed. Acquire checkout on the
+  updated copy before editing. No geometry merging or automatic link retargeting.
+
 ## 2026-11-02 — Functional web management workspace
 
 - User-approved GUI priorities brought forward: admin user creation/edit/enable/
@@ -243,7 +293,7 @@ before acting. Git history and the linked reports provide the detailed record.
   revision-pinned BOMs and immutable CAD dependency manifests.
 - Web GUI: browsing and controlled user/project/account management at `/app/`,
   served by the backend; see docs/web-gui.md and docs/web-management.md.
-- FreeCAD addon: **0.6.1**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.6.3**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 implements atomic part/assembly check-in, pinned manifests,

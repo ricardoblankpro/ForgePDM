@@ -1,0 +1,32 @@
+{
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "checks": [
+    "initial upload is current",
+    "second user checked in changed geometry",
+    "cancel preserves original document count",
+    "cancel preserves original geometry",
+    "updated geometry comes from other user's check-in",
+    "update opens separate active copy",
+    "original geometry and bytes preserved",
+    "updated copy is clean",
+    "updated exact dataset is recorded",
+    "update does not acquire a checkout",
+    "repeated check reports up-to-date",
+    "refresh does not publish datasets",
+    "unsaved edits block refresh and survive",
+    "HTTP work stays off GUI thread",
+    "user documents preserved",
+    "user file hashes preserved"
+  ],
+  "scope": "Real FreeCAD geometry, disposable HTTP DB/storage, two users and workspaces; automated review choices",
+  "status": "passed"
+}

@@ -149,6 +149,29 @@ class ForgePDMClient:
     def get_revision(self, revision_id):
         return self._json_request("GET", "/api/v1/revisions/" + self._quote(revision_id))
 
+    def inspect_server_update(self, path, item_id, revision_id):
+        from . import server_updates
+
+        return server_updates.inspect(self, path, item_id, revision_id)
+
+    def update_baseline(self, path, item_id, revision_id):
+        from . import server_updates
+
+        return server_updates.baseline(self, path, item_id, revision_id)
+
+    def prepare_component_update(self, path, item_id, revision_id, references):
+        from . import server_updates
+
+        return server_updates.prepare_components(self, path, item_id, revision_id, references)
+
+    def component_update_baseline(self, path, item_id, revision_id, references):
+        from . import server_updates
+
+        return {
+            "baseline": server_updates.baseline(self, path, item_id, revision_id),
+            "pins": self.validate_references(references),
+        }
+
     def get_manifest(self, dataset_id):
         try:
             return self._json_request(
