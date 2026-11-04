@@ -236,6 +236,15 @@ link would follow a selected occurrence, select its dependent occurrences too or
 replace the dependent link independently. Invalid mappings and detected joint
 errors are rejected or rolled back. Inspect geometry and joints before saving.
 
+### Embedded TechDraw pages (0.6.5)
+
+Native part/assembly uploads and check-ins now support TechDraw pages with valid
+embedded self-contained SVG templates. Pages, editable title fields, dimensions
+and notes stay in the model's exact native snapshot. Retrieval does not require
+the original template path. TechDraw objects do not count as BOM components.
+Other external assets remain unsupported; embed template logos as PNG/JPEG data
+images. See [supported scope and validation](../../docs/techdraw-support.md).
+
 ### Visual PDM status (0.6.4)
 
 Choose **Refresh PDM Status** after signing in to add the PDM column beside tree

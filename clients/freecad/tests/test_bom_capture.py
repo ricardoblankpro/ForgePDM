@@ -270,3 +270,19 @@ def test_native_subassembly_repeats_group_into_one_exact_revision_line():
     assert [line.as_payload() for line in proposal] == [
         {"component_revision_id": revision, "quantity": 2, "position": 1}
     ]
+
+
+def test_techdraw_pages_and_annotations_do_not_enter_native_assembly_bom():
+    root, assembly, sub, projected = subassembly_document()
+    before = cad.capture_bom(root)
+    page = NS(Name="Page", TypeId="TechDraw::DrawPage")
+    assembly.Group.append(page)
+    root.Objects.extend(
+        [
+            page,
+            NS(Name="Template", TypeId="TechDraw::DrawSVGTemplate"),
+            NS(Name="View", TypeId="TechDraw::DrawViewPart"),
+            NS(Name="Dimension", TypeId="TechDraw::DrawViewDimension"),
+        ]
+    )
+    assert cad.capture_bom(root) == before

@@ -34,7 +34,12 @@ def _report_result(job):
         else:
             text = str(job.error)
         rejected = getattr(job.error, "status", None) in (400, 401, 403, 404, 409, 422)
-        if job.completed_mutations or (job.may_have_changed_server and not rejected):
+        local_validation = getattr(job.error, "server_mutation_started", None) is False
+        if local_validation:
+            text += "\nThe CAD snapshot failed local validation; this step did not upload it."
+            if job.completed_mutations:
+                text += " Earlier server changes completed; inspect the existing item/checkout before retrying."
+        elif job.completed_mutations or (job.may_have_changed_server and not rejected):
             text += "\nA server change may have completed; do not retry blindly."
         import FreeCAD
 

@@ -14,6 +14,46 @@ def document_modified(document):
     return document.isTouched() or FreeCADGui.getDocument(document.Name).Modified
 
 
+def settle_techdraw(document, timeout=30):
+    """Let queued native HLR/face results settle before saving an owned snapshot."""
+    if not any(
+        getattr(obj, "TypeId", "").startswith("TechDraw::")
+        for obj in getattr(document, "Objects", ())
+    ):
+        return
+    import FreeCAD as App
+    from time import monotonic
+    from .ui import QtCore
+
+    name = document.Name
+    loop, timer = QtCore.QEventLoop(), QtCore.QTimer()
+    deadline, quiet, failure = monotonic() + timeout, [0], []
+
+    def poll():
+        try:
+            current = App.getDocument(name)
+        except NameError:
+            current = None
+        if current is not document:
+            failure.append("The document was closed while waiting for TechDraw")
+        elif monotonic() >= deadline:
+            failure.append("TechDraw is still computing. Let drawing updates finish and retry.")
+        else:
+            quiet[0] = (
+                quiet[0] + 1 if QtCore.QThreadPool.globalInstance().activeThreadCount() == 0 else 0
+            )
+        if failure or quiet[0] >= 3:
+            loop.quit()
+
+    timer.timeout.connect(poll)
+    timer.start(20)
+    execute = getattr(loop, "exec", None) or loop.exec_
+    execute()
+    timer.stop()
+    if failure:
+        raise WorkspaceError(failure[0])
+
+
 def rebase_links(document):
     """Refresh FreeCAD's cached relative paths after changing FileName."""
     for name in [obj.Name for obj in document.Objects]:
@@ -118,6 +158,7 @@ def _builtin_bom_context(document):
         )
     ignored = {assembly.Name}
     members = list(assembly.Group)
+    ignored.update(obj.Name for obj in members if obj.TypeId.startswith("TechDraw::"))
     for group in members:
         if group.TypeId != "Assembly::JointGroup":
             continue
@@ -173,7 +214,11 @@ def capture_bom(document):
     ignored, assembly_components = _builtin_bom_context(document)
     result = []
     for obj in document.Objects:
-        if obj.Name == "ForgePDM_Metadata" or obj.Name in ignored:
+        if (
+            obj.Name == "ForgePDM_Metadata"
+            or obj.Name in ignored
+            or obj.TypeId.startswith("TechDraw::")
+        ):
             continue
         if getattr(obj, "Proxy", None) is not None:
             raise WorkspaceError(
@@ -306,6 +351,7 @@ def open_configuration(configuration, set_metadata):
                         link.setLink(target)
                     link.Placement = placement
             document.recompute()
+            settle_techdraw(document)
             if document.HasPendingTransaction:
                 document.commitTransaction()
             presentation = tree_labels.refresh(document)
@@ -313,6 +359,7 @@ def open_configuration(configuration, set_metadata):
                 # Legacy snapshots get new metadata properties during label
                 # projection. Saving clears GUI Modified, but not feature Touched.
                 document.recompute()
+                settle_techdraw(document)
             # App.Document.save() can leave Gui.Document.Modified set after our
             # metadata/relink edits. The GUI save clears it only on success.
             Gui.getDocument(document.Name).save()

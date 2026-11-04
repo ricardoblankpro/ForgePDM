@@ -6,9 +6,14 @@ import os
 import xml.etree.ElementTree as ET
 from zipfile import BadZipFile, ZipFile
 
+from .techdraw import embedded_templates
+
 
 class CADIntegrityError(Exception):
     """The native file cannot be reconstructed safely by the supported adapter."""
+
+    code = "cad_validation_failed"
+    server_mutation_started = False
 
 
 def inspect(path):
@@ -48,6 +53,11 @@ def inspect(path):
     if any("#" in node.get("expression", "") for node in tree.iter("Expression")):
         raise CADIntegrityError("Cross-document expressions require a dedicated reference adapter")
     objects = {node.get("name"): node.get("type") for node in tree.findall("./Objects/Object")}
+    try:
+        with ZipFile(path) as archive:
+            template_properties = embedded_templates(archive, tree, objects, CADIntegrityError)
+    except (BadZipFile, OSError, RuntimeError) as error:
+        raise CADIntegrityError("Embedded TechDraw template could not be read") from error
     references = []
     for obj in tree.findall("./ObjectData/Object"):
         for prop in obj.findall("./Properties/Property"):
@@ -80,6 +90,8 @@ def inspect(path):
                     }
                 )
             if prop.get("type") in ("App::PropertyFile", "App::PropertyPath"):
+                if (obj.get("name"), prop.get("name")) in template_properties:
+                    continue
                 values = [node.get("value", "") for node in prop]
                 if any(values):
                     raise CADIntegrityError(

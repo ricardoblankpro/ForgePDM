@@ -149,3 +149,26 @@ def test_reporting_failure_still_restores_toolbar_and_disposes_dialog(task_gui, 
     assert task_gui.tasks.active_job() is None
     assert task_gui.dialogs[0].deleted
     assert task_gui.refreshes[-1]["busy"] is False
+
+
+@pytest.mark.parametrize("earlier_change", [False, True])
+def test_local_cad_validation_does_not_claim_an_uncertain_upload(task_gui, earlier_change):
+    from freecad.forgepdm.fcstd import CADIntegrityError
+
+    def upload():
+        raise CADIntegrityError("Missing embedded template")
+
+    def workflow():
+        if earlier_change:
+            yield Request("Acquire checkout", lambda: {}, mutates=True)
+        yield Request("Check In", upload, mutates=True)
+
+    job = task_gui.tasks.run(workflow())
+    deadline = time.monotonic() + 3
+    while Session.busy and time.monotonic() < deadline:
+        task_gui.timers[0].timeout.emit()
+        time.sleep(0.001)
+    assert isinstance(job.error, CADIntegrityError)
+    text = task_gui.notifications[-1][-1]
+    assert "local validation" in text and "may have completed" not in text
+    assert ("Earlier server changes completed" in text) == earlier_change

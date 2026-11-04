@@ -1,5 +1,33 @@
 # Development status
 
+## 2026-11-03 — Embedded TechDraw pages (addon 0.6.5)
+
+- Upload/check-in accepts native TechDraw SVG Template paths only when the same
+  object has a verified embedded self-contained PageResult SVG. Preserve embedded
+  bytes, editable fields, views, dimensions and notes; reconstruction uses FreeCAD's
+  embedded template without reassigning Template or requiring its historical path.
+  Other file/path assets and cross-document drawing adapters remain unsupported.
+- Validate SVG/member limits, structure, local resource references and embedded
+  PNG/JPEG images (including wrapped Base64). Reject missing/unsafe resources,
+  external CSS/images, DTD/entities and active content. The user's saved drawing
+  also passed read-only preflight with the new adapter; no automatic upload made.
+- Settle native Qt drawing projection/face results before managed saves and
+  reconstruction saves, with a bounded responsive wait. TechDraw documentation
+  objects do not enter BOM quantities, including pages inside native Assembly.
+  Local CAD validation failures now say that the failed step did not upload the
+  snapshot; earlier completed writes and uncertain transport failures remain clear.
+- Validation: 288 addon tests, focused lint and manifest/package checks passed.
+  Real FreeCAD 1.1.4/HTTP disposable fixture passed 43 checks: two-page part and
+  native assembly, atomic check-in, original SVGs unavailable, editable title
+  re-check-in, 100 mm dimensions, notes/embedded logos/rendering, clean retrieval
+  and exact child pins. User documents/dirty states/saved bytes preserved.
+  Evidence: docs/validation/freecad-techdraw-2026-11-03.json.
+- Both installed profiles updated with backups and running CAD/validation/command
+  modules reloaded. Session and document states preserved; actual engineering
+  check-in remains the user's explicit next action.
+- Usage/scope: docs/techdraw-support.md. Pages share model revisions/checkouts;
+  no backend schema/API changes, separate drawing revisions or PDF publication.
+
 ## 2026-11-03 — Visual tree status (addon 0.6.4)
 
 - **Refresh PDM Status** adds an ephemeral native-tree PDM column beside labels.
@@ -323,7 +351,7 @@ before acting. Git history and the linked reports provide the detailed record.
   revision-pinned BOMs and immutable CAD dependency manifests.
 - Web GUI: browsing and controlled user/project/account management at `/app/`,
   served by the backend; see docs/web-gui.md and docs/web-management.md.
-- FreeCAD addon: **0.6.4**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.6.5**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 implements atomic part/assembly check-in, pinned manifests,

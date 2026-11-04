@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.5 — 2026-11-03
+
+- Support TechDraw SVG templates proven embedded and self-contained in native
+  FCStd snapshots. Preserve page/title/dimension data and restore without the
+  uploader's original template file. Keep other external-asset guards intact.
+- Settle native TechDraw background projection before saving managed/retrieved
+  snapshots; exclude drawing documentation from assembly BOM quantities.
+- Distinguish local CAD validation failures from uncertain server writes, while
+  retaining clear warnings about earlier successful operations.
+
 ## 0.6.4 — 2026-11-03
 
 - Add Refresh PDM Status and an ephemeral native-tree column for checkout owners,

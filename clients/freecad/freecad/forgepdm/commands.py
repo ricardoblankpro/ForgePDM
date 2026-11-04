@@ -104,6 +104,7 @@ def _save_document(document):
         )
     try:
         document.recompute()
+        cad.settle_techdraw(document)
         if save_as:
             document.saveAs(path)
         else:
@@ -213,8 +214,10 @@ def _save_managed_as(document, path):
             "The new working-copy path already exists; it was not overwritten"
         )
     document.recompute()
+    cad.settle_techdraw(document)
     document.saveAs(path)
     cad.rebase_links(document)
+    cad.settle_techdraw(document)
     document.save()
     if not os.path.isfile(path):
         raise workspace.WorkspaceError("FreeCAD did not create the managed working copy")
