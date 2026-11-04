@@ -149,6 +149,25 @@ class ForgePDMClient:
     def get_revision(self, revision_id):
         return self._json_request("GET", "/api/v1/revisions/" + self._quote(revision_id))
 
+    def revision_status(self, revision_ids):
+        try:
+            return self._json_request(
+                "POST", "/api/v1/status/revisions", {"revision_ids": revision_ids}
+            )
+        except ForgePDMError as error:
+            if error.status == 404:
+                raise ForgePDMError(
+                    "Tree status requires an updated ForgePDM backend. Restart/update the server.",
+                    404,
+                    "unsupported_server",
+                ) from error
+            raise
+
+    def fetch_tree_status(self, targets, hash_cache):
+        from . import pdm_status
+
+        return pdm_status.fetch(self, targets, hash_cache)
+
     def inspect_server_update(self, path, item_id, revision_id):
         from . import server_updates
 

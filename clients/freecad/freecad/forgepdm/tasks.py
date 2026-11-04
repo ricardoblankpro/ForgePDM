@@ -79,6 +79,11 @@ def run(workflow):
                 # Busy/auth state changed outside FreeCAD's synchronous command
                 # dispatch. Request a fresh IsActive evaluation for toolbar/menu.
                 Gui.Command.update()
+                import sys
+
+                status = sys.modules.get(__package__ + ".tree_status")
+                if status is not None:
+                    status.request_if_enabled()
             return
         if job.request is not None and not job.context.cancelled.is_set():
             dialog.setLabelText(job.request.label)

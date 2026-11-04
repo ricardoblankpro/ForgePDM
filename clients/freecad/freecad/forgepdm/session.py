@@ -1,5 +1,13 @@
 """In-memory Workbench session. Tokens are not persisted to disk."""
 
+import sys
+
+
+def _notify_status():
+    module = sys.modules.get(__package__ + ".tree_status")
+    if module is not None:
+        module.session_changed()
+
 
 class Session:
     client = None
@@ -10,6 +18,7 @@ class Session:
     def set_client(cls, client, user):
         cls.client = client
         cls.user = user
+        _notify_status()
 
     @classmethod
     def clear(cls):
@@ -17,6 +26,7 @@ class Session:
         client = cls.client
         cls.client = None
         cls.user = None
+        _notify_status()
         return client
 
     @classmethod

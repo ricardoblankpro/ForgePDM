@@ -1127,6 +1127,23 @@ def _synchronize_bom(client, revision_id):
     information("ForgePDM", "The reviewed engineering BOM was synchronized.")
 
 
+class RefreshPDMStatusCommand(Command):
+    icon_name = "tree-status"
+    menu_text = "Refresh PDM Status"
+    tooltip = "Show checkout owners, lifecycle and available server updates in the tree"
+    needs_document = True
+
+    def Activated(self):
+        try:
+            Session.require_client()
+        except RuntimeError as error:
+            warning("ForgePDM", str(error))
+            return
+        from . import tree_status
+
+        tree_status.enable().request()
+
+
 class UpdateFromServerCommand(Command):
     icon_name = "download"
     menu_text = "Update from Server…"

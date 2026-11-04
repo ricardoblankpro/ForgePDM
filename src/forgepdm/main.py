@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from forgepdm.api.v1 import management, routes
+from forgepdm.api.v1 import management, routes, tree_status
 from forgepdm.application.auth import AuthService
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.application.bom import BOMService
@@ -14,9 +14,10 @@ from forgepdm.application.catalog import CatalogService
 from forgepdm.application.checkins import CheckInService
 from forgepdm.application.datasets import DatasetService
 from forgepdm.application.items import ItemService
-from forgepdm.application.manifests import ManifestService
 from forgepdm.application.management import ManagementService
+from forgepdm.application.manifests import ManifestService
 from forgepdm.application.revisions import RevisionService
+from forgepdm.application.tree_status import TreeStatusService
 from forgepdm.infrastructure.database import Database
 from forgepdm.infrastructure.storage import DEFAULT_MAX_UPLOAD_BYTES, FileStorage
 
@@ -38,6 +39,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     app.state.auth_service = AuthService(database)
     app.state.authorization_service = authorization
     app.state.catalog_service = CatalogService(database, authorization)
+    app.state.tree_status_service = TreeStatusService(database, authorization)
     app.state.bom_service = BOMService(database, authorization, revisions)
     app.state.item_service = ItemService(database)
     app.state.revision_service = revisions
@@ -47,6 +49,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     app.state.file_storage = storage
     app.include_router(routes.router)
     app.include_router(management.router)
+    app.include_router(tree_status.router)
     app.mount("/app", StaticFiles(directory=Path(__file__).parent / "web", html=True), name="web")
 
     @app.middleware("http")

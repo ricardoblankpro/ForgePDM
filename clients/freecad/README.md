@@ -236,6 +236,16 @@ link would follow a selected occurrence, select its dependent occurrences too or
 replace the dependent link independently. Invalid mappings and detected joint
 errors are rejected or rolled back. Inspect geometry and joints before saving.
 
+### Visual PDM status (0.6.4)
+
+Choose **Refresh PDM Status** after signing in to add the PDM column beside tree
+labels. Colored badges show your/another user's checkout, released state, newer
+revisions and newer same-revision snapshots. Hover for the owner's name/expiry,
+exact pins and refresh time. It refreshes every 60 seconds and after PDM commands;
+offline/stale values are explicit. Logout clears the column and private cache.
+No CAD document changes or automatic component updates occur. See
+[status legend, operation and limitations](../../docs/tree-pdm-status.md).
+
 ### Update selected assembly components (0.6.3)
 
 Acquire the parent assembly's checkout and save/upload it. Select direct

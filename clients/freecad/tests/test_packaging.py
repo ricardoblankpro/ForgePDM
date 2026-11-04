@@ -55,13 +55,13 @@ assert not {'FreeCAD', 'FreeCADGui', 'PySide', 'PySide6', 'forgepdm', 'sqlite3'}
         timeout=15,
     )
     # Validation also works against the extracted distribution, not just source.
-    assert addon_tools.validate(installed) == "0.6.3"
+    assert addon_tools.validate(installed) == "0.6.4"
 
 
 @pytest.mark.parametrize(
     ("old", "new"),
     [
-        ("<version>0.6.3</version>", "<version>0.1.1</version>"),
+        ("<version>0.6.4</version>", "<version>0.1.1</version>"),
         ("<format-does-not-exist/>", ""),
         ("<classname>ForgePDMWorkbench</classname>", "<classname>DifferentWorkbench</classname>"),
         ("<name>ForgePDM</name>", ""),

@@ -118,5 +118,13 @@
       <source>Review and adopt the latest uploaded snapshot of selected component occurrences</source>
       <translation>Review and adopt the latest uploaded snapshot of selected component occurrences</translation>
     </message>
+    <message>
+      <source>Refresh PDM Status</source>
+      <translation>Refresh PDM Status</translation>
+    </message>
+    <message>
+      <source>Show checkout owners, lifecycle and available server updates in the tree</source>
+      <translation>Show checkout owners, lifecycle and available server updates in the tree</translation>
+    </message>
   </context>
 </TS>

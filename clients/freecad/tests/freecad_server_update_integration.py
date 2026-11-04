@@ -1,7 +1,7 @@
 """Real FreeCAD/HTTP multi-user refresh harness; invoke run(App, Gui, case)."""
 
 
-def run(App, Gui, directory, component_updates=False):
+def run(App, Gui, directory, component_updates=False, tree_status_checks=False):
     import importlib
     import json
     import secrets
@@ -281,6 +281,29 @@ def run(App, Gui, directory, component_updates=False):
                 "already use the latest" in messages[-1],
             )
             check("component HTTP work stays off GUI thread", main_thread not in worker_threads)
+            if tree_status_checks:
+                from importlib.util import spec_from_file_location, module_from_spec
+
+                spec = spec_from_file_location(
+                    "tree_status_acceptance",
+                    source.parents[1] / "tests/freecad_tree_status_integration.py",
+                )
+                status_harness = module_from_spec(spec)
+                spec.loader.exec_module(status_harness)
+                status_harness.run(
+                    App,
+                    Gui,
+                    case,
+                    worker,
+                    check,
+                    alice,
+                    bob,
+                    alice_user,
+                    bob_user,
+                    parent,
+                    item_id,
+                    revision_id,
+                )
             report["status"] = "passed"
             return report
         App.setActiveDocument(document.Name)

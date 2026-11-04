@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.4 — 2026-11-03
+
+- Add Refresh PDM Status and an ephemeral native-tree column for checkout owners,
+  released revisions, newer revisions and per-occurrence newer snapshots. Colored
+  badges/text/tooltips preserve native icons, CAD labels and document clean state.
+- After explicit activation, refresh in the background every 60 seconds and after
+  PDM commands. Handle stale/offline results and clear private data on logout or
+  account changes. Requires the additive authorized backend batch-status endpoint.
+
 ## 0.6.3 — 2026-11-03
 
 - Add Update Selected Components from Server for reviewed same-revision snapshot

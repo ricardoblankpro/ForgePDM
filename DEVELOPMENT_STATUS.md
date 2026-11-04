@@ -1,5 +1,35 @@
 # Development status
 
+## 2026-11-03 — Visual tree status (addon 0.6.4)
+
+- **Refresh PDM Status** adds an ephemeral native-tree PDM column beside labels.
+  Independent colored badges/text/tooltips show your/other-user checkout and owner,
+  released lifecycle, newer revision, and newer same-revision snapshot per exact
+  occurrence pin. Include local-edit/unknown/stale indicators and refresh times.
+  Native icons/error display, labels, properties, CAD dirty state and files remain
+  unchanged. Duplicate indistinguishable document roots remain unknown safely;
+  their occurrences in an identifiable parent still compare independent pins.
+- Additive authorized `POST /api/v1/status/revisions` batches 1–200 revision IDs,
+  reads a consistent metadata snapshot, hides missing/inaccessible identities
+  identically and exposes only checkout owners of readable revisions. No migration
+  or engineering rule changes. Latest snapshot ordering matches update commands.
+- After explicit activation, refresh every 60 seconds and after PDM command
+  completion. All HTTP/hash work runs in a worker; unchanged files reuse stat-keyed
+  hash cache. Defer during commands/modals. Logout/account switch clears private
+  statuses immediately; discard late previous-session replies. Offline/old data is
+  explicitly stale. Status never grants edit permission or adopts server changes.
+- Validation: 103 backend tests, 260 addon tests, focused lint, manifest validation,
+  addon ZIP and backend wheel builds passed. Real FreeCAD 1.1.4/Qt 6.8.3 isolated
+  two-user HTTP/Qt workflow passed 45 checks, including selected component pins,
+  simultaneous status badges, owner names, offline recovery, logout/session races,
+  command deferral and preserved CAD labels/properties/dirty flags/bytes/selection.
+  Screenshot inspected locally; evidence: docs/validation/freecad-tree-status-2026-11-03.json.
+- Both installed profiles updated with backups. Local backend gracefully restarted
+  with original arguments/environment/data to load the new route. Runtime command
+  registered and feature activated while preserving login and open documents.
+  Usage/legend and adapter limitations: docs/tree-pdm-status.md. No startup network;
+  after a future FreeCAD restart, use Refresh PDM Status to activate polling again.
+
 ## 2026-11-03 — Selected component snapshot updates (addon 0.6.3)
 
 - New **Update Selected Components from Server…** command adopts the latest
@@ -293,7 +323,7 @@ before acting. Git history and the linked reports provide the detailed record.
   revision-pinned BOMs and immutable CAD dependency manifests.
 - Web GUI: browsing and controlled user/project/account management at `/app/`,
   served by the backend; see docs/web-gui.md and docs/web-management.md.
-- FreeCAD addon: **0.6.3**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.6.4**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 implements atomic part/assembly check-in, pinned manifests,
