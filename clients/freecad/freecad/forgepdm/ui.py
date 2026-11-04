@@ -18,6 +18,51 @@ def parent_window():
         return None
 
 
+def select_drawing_pages(pages):
+    dialog = QtWidgets.QDialog(parent_window())
+    dialog.setWindowTitle("Publish Drawing PDFs — select pages")
+    layout = QtWidgets.QVBoxLayout(dialog)
+    choices = QtWidgets.QListWidget(dialog)
+    for page in pages:
+        item = QtWidgets.QListWidgetItem("{} ({})".format(page["page_label"], page["page_name"]))
+        item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+        item.setCheckState(QtCore.Qt.Checked)
+        choices.addItem(item)
+    layout.addWidget(choices)
+    buttons = QtWidgets.QDialogButtonBox(
+        QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
+    )
+    buttons.accepted.connect(dialog.accept)
+    buttons.rejected.connect(dialog.reject)
+    layout.addWidget(buttons)
+    dialog.resize(480, 360)
+    if not execute_dialog(dialog):
+        return None
+    return [
+        page
+        for index, page in enumerate(pages)
+        if choices.item(index).checkState() == QtCore.Qt.Checked
+    ]
+
+
+def review_drawing_publication(plan, pages):
+    box = QtWidgets.QMessageBox(parent_window())
+    box.setWindowTitle("Review Drawing PDF Publication")
+    box.setTextFormat(QtCore.Qt.PlainText)
+    box.setText(
+        "Publish {} drawing page(s) for {} revision {}?\n\nSource CAD uploaded: {}\n\n{}\n\nPDFs are generated from this exact uploaded snapshot. Your original document and checkout are preserved.".format(
+            len(pages),
+            plan["revision"]["item_number"],
+            plan["revision"]["label"],
+            plan["source_created_at"],
+            "\n".join(page["page_label"] for page in pages),
+        )
+    )
+    box.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+    box.setDefaultButton(QtWidgets.QMessageBox.No)
+    return execute_dialog(box) == QtWidgets.QMessageBox.Yes
+
+
 def information(title, message):
     QtWidgets.QMessageBox.information(parent_window(), title, message)
 

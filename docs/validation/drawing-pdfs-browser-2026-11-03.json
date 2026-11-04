@@ -1,0 +1,26 @@
+{
+  "browser": "156.0.8078.47",
+  "checks": [
+    "published pages appear on exact historical revision",
+    "newer native snapshot warning is visible",
+    "source association is shown in advanced details",
+    "preview uses a PDF Blob URL instead of a bearer query",
+    "PDF browser frame loads",
+    "PDF is handed to the native browser viewer",
+    "PDF preview does not violate CSP",
+    "changing pages clears old preview",
+    "old page Blob URL is revoked",
+    "PDF download contains real PDF bytes",
+    "all PDF API reads use authorization headers",
+    "mobile layout stays within viewport",
+    "tab navigation revokes preview bytes",
+    "assembly publication has its own page",
+    "exact assembly snapshot stays current despite a newer child upload",
+    "new revision never inherits old drawing PDFs",
+    "logout removes protected preview and revokes Blob URL",
+    "no unhandled browser errors"
+  ],
+  "pageErrors": [],
+  "scope": "Real Chrome, disposable server and real FreeCAD-generated PDFs",
+  "status": "passed"
+}

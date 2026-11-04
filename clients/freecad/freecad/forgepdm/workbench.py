@@ -29,6 +29,7 @@ class ForgePDMWorkbench(Gui.Workbench):
             ("ForgePDM_Download", commands.DownloadCommand),
             ("ForgePDM_UpdateFromServer", commands.UpdateFromServerCommand),
             ("ForgePDM_UpdateSelectedComponents", commands.UpdateSelectedComponentsCommand),
+            ("ForgePDM_PublishDrawings", commands.PublishDrawingsCommand),
             ("ForgePDM_RefreshPDMStatus", commands.RefreshPDMStatusCommand),
             ("ForgePDM_ShowBOM", commands.ShowBOMCommand),
             ("ForgePDM_RefreshTreeLabels", commands.RefreshTreeLabelsCommand),

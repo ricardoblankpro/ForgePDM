@@ -236,6 +236,16 @@ link would follow a selected occurrence, select its dependent occurrences too or
 replace the dependent link independently. Invalid mappings and detected joint
 errors are rejected or rolled back. Inspect geometry and joints before saving.
 
+### Publish Drawing PDFs (0.6.6)
+
+With your clean, uploaded managed document active and your own Working checkout,
+choose **ForgePDM → Publish Drawing PDFs…**, select pages and review the source.
+Open the revision's **Drawings** tab in the web GUI to preview/download the PDFs.
+The command exports verified copies and preserves your open documents and lease.
+After a connection failure, invoke the command again to recover the same PDFs.
+Later native uploads/check-ins can make this publication historical; republish
+explicitly when needed. See [workflow and limitations](../../docs/drawing-pdfs.md).
+
 ### Embedded TechDraw pages (0.6.5)
 
 Native part/assembly uploads and check-ins now support TechDraw pages with valid

@@ -126,5 +126,13 @@
       <source>Show checkout owners, lifecycle and available server updates in the tree</source>
       <translation>Show checkout owners, lifecycle and available server updates in the tree</translation>
     </message>
+    <message>
+      <source>Publish Drawing PDFs…</source>
+      <translation>Publish Drawing PDFs…</translation>
+    </message>
+    <message>
+      <source>Publish reviewed TechDraw PDFs from this exact uploaded CAD snapshot</source>
+      <translation>Publish reviewed TechDraw PDFs from this exact uploaded CAD snapshot</translation>
+    </message>
   </context>
 </TS>

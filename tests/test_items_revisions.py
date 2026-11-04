@@ -1,10 +1,9 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
-
-from forgepdm.domain.entities import Conflict, ItemKind, LifecycleState
-
 from conftest import create_item
+
+from forgepdm.domain.entities import Conflict, LifecycleState
 
 
 def test_migrations_are_repeatable_and_item_creation_is_atomic(backend):
@@ -13,7 +12,7 @@ def test_migrations_are_repeatable_and_item_creation_is_atomic(backend):
             row["version"]
             for row in connection.execute("SELECT version FROM schema_version ORDER BY version")
         ]
-    assert versions == [1, 2, 3, 4, 5, 6, 7, 8]
+    assert versions == [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
     first = create_item(backend, kind="part")
     second = create_item(backend, kind="assembly", name="Test Assembly")
@@ -32,7 +31,7 @@ def test_checkout_is_exclusive_and_expired_lease_can_be_reclaimed(backend):
     with pytest.raises(Conflict):
         backend.revisions.acquire_checkout(backend.users["editor2"], item.current_revision_id)
 
-    past = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+    past = (datetime.now(UTC) - timedelta(minutes=1)).isoformat()
     with backend.database.transaction() as connection:
         connection.execute(
             "UPDATE checkouts SET expires_at = ? WHERE revision_id = ? AND released_at IS NULL",

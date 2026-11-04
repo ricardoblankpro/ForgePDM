@@ -1,5 +1,36 @@
 # Development status
 
+## 2026-11-03 — Published TechDraw PDFs (addon 0.6.6)
+
+- Add explicit Publish Drawing PDFs from clean uploaded managed Working copies
+  with an owned checkout. Render selected pages from isolated verified exact
+  configurations under a modal GUI guard; preserve original documents/selection
+  and lease. One PDF per page, 1–32 pages, 25 MiB/page and 100 MiB/publication.
+- Migration 9 adds immutable publications and page/source associations. Bounded
+  ZIP transport, verified hashes, final lease/permission/source fencing and one
+  metadata transaction protect the complete page set. Actor-scoped operation
+  replay plus frozen local PDFs/journal recover response loss without reexport.
+- Web Drawings tab provides publication/page history, exact native source details,
+  stale same-revision warnings, authenticated download and native browser PDF
+  preview. Temporary Blob URLs are revoked on navigation/session changes; tokens
+  never enter URLs. Download fallback covers browsers without inline PDF support.
+- Validation: 130 backend tests, 295 addon tests, three web model tests; live
+  FreeCAD 1.1.4 fixture passed 59 checks; real Chrome drawings passed 18 checks,
+  existing web/management acceptance passed 26/23. Evidence:
+  docs/validation/drawing-pdfs-*-2026-11-03.json. No real engineering publication.
+- Publication remains separate from native check-in and keeps the checkout.
+  Subsequent native datasets can make published PDFs historical, including when
+  bytes are unchanged. Released revisions remain read-only; new revisions start
+  with their own publication list. Combined PDFs, automatic check-in integration,
+  local cache cleanup and orphan-blob recovery remain deferred.
+- Usage, architecture and limits: docs/drawing-pdfs.md and ADR-009.
+- Deployment: backend wheel/addon ZIP and focused lint passed. Local migration 9
+  applied after a private consistent database backup; hashes/counts of every
+  existing non-migration table were unchanged and foreign-key checks passed.
+  Both installed addon profiles updated with backups, and the new runtime command
+  registered while preserving login, open document states, saved bytes and
+  selection. Refresh the web page to load the new Drawings tab.
+
 ## 2026-11-03 — Embedded TechDraw pages (addon 0.6.5)
 
 - Upload/check-in accepts native TechDraw SVG Template paths only when the same

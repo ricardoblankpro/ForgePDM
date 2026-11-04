@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.6 — 2026-11-03
+
+- Add Publish Drawing PDFs: review selected TechDraw pages, render an isolated
+  verified native snapshot and publish one immutable PDF per page. Require an
+  owned Working checkout; preserve the original documents and checkout.
+- Retain frozen PDFs and a credential-free operation journal for safe retry after
+  response loss. Requires backend drawing-publication support and migration 9.
+- Add web Drawings preview/download, publication history, exact source details
+  and newer-native-snapshot warnings. Publication is separate from native check-in.
+
 ## 0.6.5 — 2026-11-03
 
 - Support TechDraw SVG templates proven embedded and self-contained in native

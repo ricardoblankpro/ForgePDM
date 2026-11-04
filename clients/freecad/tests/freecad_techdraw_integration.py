@@ -1,7 +1,7 @@
 """Actual FreeCAD/HTTP round trips with original drawing templates unavailable."""
 
 
-def run(App, Gui, directory):
+def run(App, Gui, directory, publish_pdfs=False):
     import importlib
     import json
     from concurrent.futures import ThreadPoolExecutor
@@ -27,7 +27,7 @@ def run(App, Gui, directory):
         workspace,
     )
 
-    for module in (techdraw, fcstd, workspace, cad, commands):
+    for module in (techdraw, fcstd, workspace, cad, api, ui, commands):
         importlib.reload(module)
     case = Path(directory)
     config = json.loads((case / "connection.json").read_text())
@@ -280,6 +280,15 @@ def run(App, Gui, directory):
             not part_svg.exists() and not second_svg.exists() and not assembly_svg.exists(),
         )
         check("HTTP work executes off GUI thread", threads and main_thread not in threads)
+        if publish_pdfs:
+            spec = importlib.util.spec_from_file_location(
+                "pdf_acceptance", Path(__file__).with_name("freecad_pdf_integration.py")
+            )
+            pdf_harness = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(pdf_harness)
+            pdf_harness.run(
+                App, Gui, case, worker, drive, check, client, downloaded, parent, selected
+            )
         report["status"] = "passed"
     except BaseException as error:
         report.update(status="failed", error=str(error))

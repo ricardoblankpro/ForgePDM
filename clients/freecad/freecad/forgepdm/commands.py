@@ -1130,6 +1130,129 @@ def _synchronize_bom(client, revision_id):
     information("ForgePDM", "The reviewed engineering BOM was synchronized.")
 
 
+class PublishDrawingsCommand(Command):
+    icon_name = "publish-drawings"
+    menu_text = "Publish Drawing PDFs…"
+    tooltip = "Publish reviewed TechDraw PDFs from this exact uploaded CAD snapshot"
+    needs_document = True
+
+    def action(self):
+        from . import drawing_export
+        from .ui import select_drawing_pages, review_drawing_publication
+
+        client = Session.require_client()
+        document = _require_document()
+        metadata = _require_metadata(document)
+        name, path = document.Name, document.FileName
+        revision_id, item_id = metadata.RevisionId, metadata.ItemId
+        actor_id = (Session.user or {}).get("id")
+        args = (path, revision_id, item_id, actor_id)
+        try:
+            recovered = yield Request(
+                "Recovering previous drawing publication…",
+                client.resume_drawings,
+                args,
+                mutates=True,
+            )
+        except ForgePDMError as error:
+            if error.status != 409:
+                raise
+            choice = ask_choice(
+                "Pending Drawing Publication",
+                "The prior publication has a stale checkout. Keep its frozen PDFs, or start a new reviewed publication?",
+                ["Keep pending publication", "Start a new reviewed publication"],
+                "Keep pending publication",
+            )
+            if choice != "Start a new reviewed publication":
+                return
+            yield Request(
+                "Archiving prior drawing intent…", client.abandon_drawings, args, cancellable=False
+            )
+            recovered = None
+        if recovered is not None:
+            information(
+                "ForgePDM",
+                "The previous drawing publication was confirmed without duplicate PDFs. Current CAD edits were preserved.",
+            )
+            return
+
+        def guard():
+            current = _guard_document(name, revision_id)
+            if (
+                current.FileName != path
+                or _require_metadata(current).ItemId != item_id
+                or cad.document_modified(current)
+            ):
+                raise workspace.WorkspaceError(
+                    "Save/upload the source document before publishing drawing PDFs"
+                )
+            return current
+
+        document = guard()
+        candidates = [
+            dict(
+                page_name=obj.Name,
+                page_label=obj.Label,
+                filename="{}-{}-{}.pdf".format(
+                    metadata.ItemNumber, metadata.RevisionLabel, obj.Name
+                ),
+            )
+            for obj in document.Objects
+            if obj.isDerivedFrom("TechDraw::DrawPage")
+        ]
+        if not candidates:
+            raise workspace.WorkspaceError("This document has no TechDraw pages")
+        selected = select_drawing_pages(candidates)
+        if not selected:
+            return
+        if len(selected) > 32 or any(page not in candidates for page in selected):
+            raise workspace.WorkspaceError("Select between 1 and 32 pages from the active document")
+        plan = yield Request(
+            "Verifying drawing source and checkout…", client.prepare_drawings, args
+        )
+        guard()
+        if not review_drawing_publication(plan, selected):
+            return
+        configuration, finished = None, False
+        try:
+            configuration = yield Request(
+                "Retrieving verified PDF source configuration…",
+                client.retrieve_configuration,
+                (
+                    plan["root"],
+                    revision_id,
+                    plan["intent"]["source_dataset_id"],
+                    plan["intent"]["source_file_id"],
+                ),
+            )
+            guard()
+            pages = drawing_export.export(configuration, selected, plan["directory"], _set_metadata)
+            guard()
+            yield Request(
+                "Recording PDF source configuration…", client.finish_configuration, (configuration,)
+            )
+            finished = True
+            yield Request(
+                "Freezing reviewed PDF publication…",
+                client.freeze_drawings,
+                (plan, pages),
+                cancellable=False,
+            )
+            guard()
+            result = yield Request(
+                "Publishing drawing PDFs…", client.resume_drawings, args, mutates=True
+            )
+            information(
+                "ForgePDM",
+                "Published {} drawing PDF(s) for this exact CAD snapshot. View them in the web GUI's Drawings tab. Your checkout is retained.".format(
+                    len(result["pages"])
+                ),
+            )
+        finally:
+            if configuration is not None and not finished:
+                workspace.incomplete(configuration)
+
+
 class RefreshPDMStatusCommand(Command):
     icon_name = "tree-status"
     menu_text = "Refresh PDM Status"

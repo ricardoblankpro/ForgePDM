@@ -372,6 +372,50 @@ class ForgePDMClient:
             "GET", "/api/v1/revisions/" + self._quote(revision_id) + "/datasets"
         )
 
+    def drawing_publication_status(self, revision_id, operation_id):
+        try:
+            return self._json_request(
+                "GET",
+                "/api/v1/revisions/{}/drawing-operations/{}".format(
+                    self._quote(revision_id), self._quote(operation_id)
+                ),
+            )
+        except ForgePDMError as error:
+            if error.status == 404 and str(error) == "Not Found":
+                raise ForgePDMError(
+                    "Update/restart the backend to publish drawing PDFs", 404, "unsupported_server"
+                ) from error
+            if error.status == 404:
+                return None
+            raise
+
+    def upload_drawing_publication(self, revision_id, bundle, intent):
+        return self._multipart_file(
+            "/api/v1/revisions/{}/drawings".format(self._quote(revision_id)),
+            bundle,
+            [("intent_json", json.dumps(intent, sort_keys=True))],
+        )
+
+    def prepare_drawings(self, path, revision_id, item_id, actor_id):
+        from .drawing_publication import prepare
+
+        return prepare(self, path, revision_id, item_id, actor_id)
+
+    def freeze_drawings(self, plan, pages):
+        from .drawing_publication import freeze
+
+        return freeze(self, plan, pages)
+
+    def resume_drawings(self, path, revision_id, item_id, actor_id):
+        from .drawing_publication import resume
+
+        return resume(self, path, revision_id, item_id, actor_id)
+
+    def abandon_drawings(self, path, revision_id, item_id, actor_id):
+        from .drawing_publication import abandon
+
+        return abandon(self, path, revision_id, item_id, actor_id)
+
     def upload_file(self, revision_id, file_path, dataset_type="native_cad", name=None):
         if not self.token:
             raise ForgePDMError("Log in to ForgePDM before uploading")

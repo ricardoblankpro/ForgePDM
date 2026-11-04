@@ -1,4 +1,5 @@
 import { managementUI } from "./management.mjs";
+import { drawingViewer } from "./drawings.mjs";
 import { API } from "./api.mjs";
 import { readRoute, routeFor, bomRows, allBomKeys, fileSize, dateLabel, stateLabel } from "./model.mjs";
 
@@ -13,6 +14,7 @@ let detailVersion = 0;
 let tabVersion = 0;
 let toastTimer;
 let management;
+const drawingUI = drawingViewer({ state, request, el, button, dateLabel });
 
 function el(tag, attrs = {}, ...children) {
   const element = document.createElement(tag);
@@ -59,6 +61,7 @@ function toast(message) {
 }
 function request(path, options = {}) { return api.request(path, { signal: session.signal, ...options }); }
 function resetSession(message = "") {
+  drawingUI.reset();
   management?.reset();
   session.abort(); session = new AbortController(); api.token = null;
   listVersion++; detailVersion++; tabVersion++;
@@ -141,6 +144,7 @@ function renderProjects() {
   $("#project-cards").replaceChildren(...(cards.length ? cards : [empty("No projects available", "Your assigned projects will appear here. Contact your administrator if you need access.")]));
 }
 function setPage(page) {
+  drawingUI.reset();
   if (state.user?.must_change_password) page = "account";
   state.page = page;
   const managed = !["projects", "catalog"].includes(page);
@@ -208,6 +212,7 @@ function renderEmptyDetail() {
   $("#detail").replaceChildren(empty("Your product data, in context", "Select an item to explore its revisions, product structure and associated files.", "assembly"));
 }
 async function loadDetail() {
+  drawingUI.reset();
   const version = ++detailVersion; tabVersion++;
   const { itemId, revisionId } = readRoute(location.hash);
   state.item = null; state.revision = null; state.cache = {}; state.expanded = new Set(); state.historyAll = false;
@@ -233,6 +238,7 @@ async function loadDetail() {
   } catch (error) { if (version === detailVersion) showError($("#detail"), error, loadDetail); }
 }
 function renderDetail() {
+  drawingUI.reset();
   const { item, revision } = state;
   if (!item || !revision) return;
   const picker = el("select", { id: "revision-picker", "aria-label": "Selected revision", onChange: event => navigate(item.id, event.target.value) },
@@ -247,7 +253,7 @@ function renderDetail() {
     `Viewing recorded revision ${revision.label}. Current revision ${item.current_revision.label} is available. `,
     button(`View ${item.current_revision.label} →`, () => navigate(item.id, item.current_revision_id), { class: "text-button" })) : null;
   const tabs = el("div", { class: "tabs", role: "tablist", "aria-label": "Item information" });
-  for (const [key, label] of [["overview", "Overview"], ["bom", "Bill of materials"], ["datasets", "Files & datasets"], ["where-used", "Where used"]]) {
+  for (const [key, label] of [["overview", "Overview"], ["bom", "Bill of materials"], ["drawings", "Drawings"], ["datasets", "Files & datasets"], ["where-used", "Where used"]]) {
     tabs.append(button(label, () => { state.tab = key; renderDetail(); }, {
       class: `tab${state.tab === key ? " active" : ""}`, role: "tab", id: `tab-${key}`,
       "aria-selected": String(state.tab === key), "aria-controls": "tab-content", tabindex: state.tab === key ? "0" : "-1",
@@ -272,6 +278,7 @@ async function loadTab(content) {
   if (Object.hasOwn(state.cache, tab)) { renderTabData(content, tab, state.cache[tab]); return; }
   content.replaceChildren(loading("Loading revision data…"));
   const path = tab === "bom" ? `/revisions/${revision.id}/bom?recursive=true` :
+    tab === "drawings" ? `/revisions/${revision.id}/drawings` :
     tab === "datasets" ? `/revisions/${revision.id}/datasets` : `/items/${state.item.id}/where-used`;
   try {
     const data = await request(path);
@@ -307,6 +314,7 @@ function dataTable(headers, rows, className = "", label = "") {
 function renderTabData(content, tab, data) {
   if (tab === "bom") renderBOM(content, data);
   else if (tab === "datasets") renderDatasets(content, data);
+  else if (tab === "drawings") drawingUI.render(content, data, () => { delete state.cache.drawings; loadTab(content); });
   else renderWhereUsed(content, data);
 }
 function renderBOM(content, lines) {

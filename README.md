@@ -10,7 +10,10 @@ Managed CAD workspaces reconstruct pinned assembly references, and the Workbench
 can review and synchronize engineering BOMs for supported App::Link structures.
 Its tree labels show item, pinned revision and persistent per-parent occurrence
 numbers, with a refresh command for existing managed assemblies.
-Atomic check-in and operational hardening remain future work.
+Atomic native check-in supports parts and supported assemblies. Further legacy-write
+fencing and operational hardening remain in progress. TechDraw pages can be
+explicitly published as source-pinned PDFs and viewed/downloaded in the web GUI;
+see [drawing publication](docs/drawing-pdfs.md).
 
 See [Development status](DEVELOPMENT_STATUS.md) for the current handoff, recent
 fixes, validation evidence and remaining work.

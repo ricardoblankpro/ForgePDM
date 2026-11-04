@@ -1,10 +1,9 @@
 """SQLite database adapter and initial schema."""
 
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
-
 
 SCHEMA = """
 PRAGMA foreign_keys = ON;
@@ -204,6 +203,34 @@ ALTER TABLE projects ADD COLUMN description TEXT NOT NULL DEFAULT '';
 CREATE INDEX audit_events_time_idx ON audit_events(occurred_at,id);
 """
 
+DRAWING_SCHEMA = """
+CREATE TABLE drawing_publications (
+    id TEXT PRIMARY KEY,
+    revision_id TEXT NOT NULL REFERENCES item_revisions(id),
+    source_dataset_id TEXT NOT NULL,
+    source_file_id TEXT NOT NULL,
+    created_by TEXT NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL,
+    operation_id TEXT NOT NULL,
+    fingerprint TEXT NOT NULL,
+    result_json TEXT NOT NULL,
+    UNIQUE(created_by, operation_id),
+    FOREIGN KEY(source_dataset_id,source_file_id) REFERENCES dataset_files(dataset_id,file_id)
+);
+CREATE TABLE drawing_pages (
+    publication_id TEXT NOT NULL REFERENCES drawing_publications(id),
+    dataset_id TEXT NOT NULL REFERENCES datasets(id),
+    file_id TEXT NOT NULL REFERENCES files(id),
+    page_name TEXT NOT NULL,
+    page_label TEXT NOT NULL,
+    position INTEGER NOT NULL CHECK(position>0),
+    PRIMARY KEY(publication_id,page_name),
+    UNIQUE(publication_id,position),
+    FOREIGN KEY(dataset_id,file_id) REFERENCES dataset_files(dataset_id,file_id)
+);
+CREATE INDEX drawing_publications_revision_idx ON drawing_publications(revision_id,created_at,id);
+"""
+
 MIGRATIONS = (
     (1, SCHEMA),
     (2, AUTHORIZATION_SCHEMA),
@@ -213,6 +240,7 @@ MIGRATIONS = (
     (6, MANIFEST_SCHEMA),
     (7, ATOMIC_CHECKIN_SCHEMA),
     (8, MANAGEMENT_SCHEMA),
+    (9, DRAWING_SCHEMA),
 )
 
 
