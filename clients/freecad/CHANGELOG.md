@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.7.3 — 2026-11-05
+
+- Replace fastener material/grade/finish text prompts with one controlled selection
+  form, dependent mechanical/finish options and an extended-options view.
+- Generate uppercase catalog name/description in TYPE MATERIAL FAMILY NORM
+  DIMENSION GRADE FINISH order. Show the complete name before registration;
+  require explicit classification for unrecognized standards.
+- Preserve legacy catalog text and specification values. Generic purchased-item
+  registration remains available when there is no Fasteners geometry schema.
+
+## 0.7.2 — 2026-11-05
+
+- Add Change Standard Part Association for selected direct Fasteners objects.
+  Choose an existing matching S specification or register another grade/material/
+  finish; retain occurrence UUIDs, geometry, placements and unselected associations.
+- Require an owned Working assembly checkout and recheck it after review.
+  Changes are undoable and remain local until explicit Upload and BOM review.
+
+## 0.7.1 — 2026-11-05
+
+- Accept qualified local Fasteners attachment paths produced by native Assembly
+  selection, such as Body002.Hole.Edge5. Validate the full path against a non-null
+  shape; preserve exact external-link pins and the existing external adapter limits.
+
+## 0.7.0 — 2026-11-05
+
+- Add S-numbered standard/purchased items and metadata-only registration.
+- Resolve Fasteners catalog associations during Upload and Check In, with grouped
+  confirmation, missing-item registration, exact revision pins and edit detection.
+- Preserve embedded occurrence evidence and managed external attachments; include
+  associated fasteners in explicitly reviewed mixed BOM proposals.
+- Require backend migrations 10–11 and Fasteners integration capability.
+- See docs/standard-parts.md for validated versions and unsupported cases.
+
 ## 0.6.6 — 2026-11-03
 
 - Add Publish Drawing PDFs: review selected TechDraw pages, render an isolated

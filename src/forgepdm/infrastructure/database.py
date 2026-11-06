@@ -231,6 +231,25 @@ CREATE TABLE drawing_pages (
 CREATE INDEX drawing_publications_revision_idx ON drawing_publications(revision_id,created_at,id);
 """
 
+STANDARD_PARTS_SCHEMA = """
+CREATE TABLE standard_specifications (
+ item_id TEXT PRIMARY KEY REFERENCES items(id),
+ scope TEXT NOT NULL,
+ geometry_json TEXT NOT NULL,
+ specification_json TEXT NOT NULL,
+ UNIQUE(scope, specification_json)
+);
+CREATE TABLE dataset_standard_occurrences (
+ dataset_id TEXT NOT NULL REFERENCES datasets(id),
+ object_name TEXT NOT NULL,
+ occurrence_id TEXT NOT NULL,
+ revision_id TEXT NOT NULL REFERENCES item_revisions(id),
+ geometry_json TEXT NOT NULL,
+ PRIMARY KEY(dataset_id, object_name), UNIQUE(dataset_id, occurrence_id)
+);
+ALTER TABLE dataset_references ADD COLUMN target_subelement TEXT;
+"""
+
 MIGRATIONS = (
     (1, SCHEMA),
     (2, AUTHORIZATION_SCHEMA),
@@ -241,6 +260,16 @@ MIGRATIONS = (
     (7, ATOMIC_CHECKIN_SCHEMA),
     (8, MANAGEMENT_SCHEMA),
     (9, DRAWING_SCHEMA),
+    (10, """
+ALTER TABLE items ADD COLUMN number_series TEXT NOT NULL DEFAULT 'P' CHECK(number_series IN ('P','A','S'));
+UPDATE items SET number_series = 'A' WHERE kind = 'assembly';
+CREATE TABLE series_counters (
+    series TEXT PRIMARY KEY CHECK(series IN ('P','A','S')),
+    next_value INTEGER NOT NULL CHECK(next_value > 0)
+);
+INSERT INTO series_counters SELECT CASE item_kind WHEN 'part' THEN 'P' ELSE 'A' END, next_value FROM number_counters;
+"""),
+    (11, STANDARD_PARTS_SCHEMA),
 )
 
 

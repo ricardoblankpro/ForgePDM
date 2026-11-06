@@ -3,12 +3,12 @@
 import json
 from decimal import Decimal
 from pathlib import PurePosixPath
+from typing import Literal
 from uuid import UUID
 
 from fastapi import (
     APIRouter,
     Depends,
-    File as MultipartFile,
     Form,
     HTTPException,
     Query,
@@ -17,11 +17,14 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi import (
+    File as MultipartFile,
+)
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
-from forgepdm.application.auth import AuthService, AuthenticationError
+from forgepdm.application.auth import AuthenticationError, AuthService
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.application.bom import BOMService
 from forgepdm.application.catalog import CatalogService
@@ -46,7 +49,6 @@ from forgepdm.infrastructure.storage import (
     FileStorage,
     UploadTooLarge,
 )
-
 
 router = APIRouter(prefix="/api/v1")
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -89,6 +91,8 @@ def get_file_storage(request: Request) -> FileStorage:
 
 
 class CreateItemRequest(BaseModel):
+    number_series: Literal["P", "A", "S"] | None = None
+    standard_specification: dict | None = None
     kind: ItemKind
     name: str = Field(min_length=1, max_length=200)
     description: str = Field(default="", max_length=4000)
@@ -132,6 +136,7 @@ class CADReferenceRequest(BaseModel):
     model_config = {"extra": "forbid"}
     object_name: str = Field(min_length=1, max_length=200)
     property_name: str = "LinkedObject"
+    target_subelement: str | None = None
     target_revision_id: UUID
     target_dataset_id: UUID
     target_file_id: UUID
@@ -159,9 +164,13 @@ def current_user(
     try:
         user = auth_service.authenticate(credentials.credentials)
         if user.must_change_password and request.url.path not in {
-            "/api/v1/auth/me", "/api/v1/auth/logout", "/api/v1/auth/password"
+            "/api/v1/auth/me",
+            "/api/v1/auth/logout",
+            "/api/v1/auth/password",
         }:
-            raise HTTPException(status_code=403, detail="Change your temporary password before continuing")
+            raise HTTPException(
+                status_code=403, detail="Change your temporary password before continuing"
+            )
         return user
     except AuthenticationError as error:
         raise HTTPException(
@@ -218,6 +227,8 @@ def create_item(
         authorization.require_create_item(user, project_id)
         item = service.create_item(
             kind=payload.kind,
+            number_series=payload.number_series,
+            standard_specification=payload.standard_specification,
             name=payload.name,
             description=payload.description,
             project_id=project_id,
@@ -229,6 +240,8 @@ def create_item(
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Forbidden as error:
         raise HTTPException(status_code=403, detail=str(error)) from error
+    except Conflict as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return {**_item_response(item), "current_checkout": _checkout_response(checkout)}
@@ -245,8 +258,28 @@ def list_projects(
     return catalog.projects(user, editable=editable, limit=limit, offset=offset)
 
 
+@router.get("/standard-parts/capabilities")
+def standard_capabilities(user: User = Depends(current_user)):
+    return {"version": 1, "adapter": "fasteners-v1", "snapshot_evidence": True}
+
+
+@router.post("/standard-parts/matches")
+def standard_matches(
+    payload: dict,
+    user: User = Depends(current_user),
+    catalog: CatalogService = Depends(get_catalog_service),
+):
+    from forgepdm.application.standard_parts import StandardPartsService
+
+    try:
+        return StandardPartsService(catalog.database, catalog.authorization).match(user, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
 @router.get("/items")
 def search_items(
+    number_series: Literal["P", "A", "S"] | None = None,
     q: str = Query(default="", max_length=200),
     project_id: UUID | None = None,
     limit: int = Query(default=50, ge=1, le=100),
@@ -257,6 +290,7 @@ def search_items(
     return catalog.search_items(
         user,
         query=q,
+        number_series=number_series,
         project_id=str(project_id) if project_id else None,
         limit=limit,
         offset=offset,
@@ -305,8 +339,13 @@ def get_item(
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Forbidden as error:
         raise HTTPException(status_code=404, detail="item not found") from error
+    with service.database.connection() as connection:
+        spec = connection.execute(
+            "SELECT specification_json FROM standard_specifications WHERE item_id=?", (item.id,)
+        ).fetchone()
     return {
         **_item_response(item),
+        "standard_specification": json.loads(spec["specification_json"]) if spec else None,
         "current_revision": {
             "id": revision.id,
             "label": revision.label,
@@ -754,7 +793,7 @@ def attach_dataset_manifest(
             str(dataset_id),
             str(payload.source_file_id),
             [
-                {key: str(value) for key, value in reference.model_dump().items()}
+                {key: str(value) for key, value in reference.model_dump(exclude_none=True).items()}
                 for reference in payload.references
             ],
             payload.profile,
@@ -775,6 +814,7 @@ def _item_response(item):
     return {
         "id": item.id,
         "number": item.number,
+        "number_series": item.number[0],
         "kind": item.kind.value,
         "name": item.name,
         "description": item.description,

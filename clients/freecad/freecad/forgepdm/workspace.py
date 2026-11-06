@@ -4,19 +4,18 @@ All authoritative identities come through the HTTP API. This module never reads
 the server's database or blob directory and has no FreeCAD dependency.
 """
 
-from contextlib import contextmanager
-from datetime import datetime, timezone
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import socket
 import tempfile
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from .fcstd import inspect, rewrite, validate
-
 
 MANIFEST = "forgepdm-workspace.json"
 PROFILE = "freecad-app-link-v1"
@@ -248,7 +247,12 @@ def bind_references(client, references):
         result.append(
             {
                 "object_name": reference["object_name"],
-                "property_name": "LinkedObject",
+                "property_name": reference["property_name"],
+                **(
+                    {"target_subelement": reference["target_subelement"]}
+                    if "target_subelement" in reference
+                    else {}
+                ),
                 "target_object_name": reference["target_object_name"],
                 "target_revision_id": entry["revision_id"],
                 "target_dataset_id": entry["dataset_id"],
@@ -418,7 +422,10 @@ def retrieve(client, root, revision_id, dataset_id, file_id):
                         )
                     references = []
                 else:
-                    if manifest["source_file_id"] != file_id or manifest["profile"] != PROFILE:
+                    if manifest["source_file_id"] != file_id or manifest["profile"] not in (
+                        PROFILE,
+                        "freecad-fasteners-v1",
+                    ):
                         raise WorkspaceError(
                             "CAD manifest identifies a different source file or unsupported profile"
                         )
@@ -435,6 +442,9 @@ def retrieve(client, root, revision_id, dataset_id, file_id):
                     "byte_size": record["byte_size"],
                     "path": "documents/" + file_id + ".FCStd",
                     "references": references,
+                    "standard_occurrences": manifest.get("standard_occurrences", [])
+                    if manifest
+                    else [],
                 }
                 if revision["item_kind"] == "assembly":
                     bom = client.get_bom(revision_id)

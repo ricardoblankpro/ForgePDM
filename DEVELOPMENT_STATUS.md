@@ -1,5 +1,167 @@
 # Development status
 
+## 2026-11-05 — Specification selections and uppercase catalog text (0.7.3)
+
+- Fasteners-driven registration now uses one form with controlled material,
+  mechanical-class and finish choices; known norms classify type/family, unknown
+  norms require explicit choices. Extended options include researched specialist
+  entries. Obvious family/material mismatches are filtered; no certification of
+  every product/size/coating combination is implied.
+- Generate Name and Description as TYPE MATERIAL FAMILY NORM DIMENSION GRADE
+  FINISH, uppercase with X dimensions, and show a live preview. No separate name/
+  description prompts for this path. Preserve unknown values, custom dimensions
+  and left-hand indication; reject oversized names without silent truncation.
+- Existing S items/associations and backend specification contract remain intact;
+  no migration or automatic alias merge. Generic purchased-item registration
+  without Fasteners geometry retains manual text entry.
+- Validation: 337 addon tests, focused lint and 28 real Qt/HTTP checks passed on
+  disposable data, including exact screw/nut/washer names, dependent choices and
+  cancel safety. User document states and hashes preserved. Evidence:
+  docs/validation/standard-parts-form-2026-11-05.json.
+- Built and installed 0.7.3 in both local addon profiles with backups; runtime
+  command dispatch refreshed. No engineering records automatically altered.
+
+## 2026-11-05 — Specification dropdown vocabulary research (no implementation)
+
+- User prefers specification-only registration with selections instead of free
+  typing. Researched primary standards/manufacturer sources for a broad material,
+  mechanical-class and finish seed inventory; see docs/fastener-selection-options-research.md.
+- Recommend dependent family/material/class selectors and generated catalog text.
+  Distinguish current vs legacy classes (notably ISO 898-2:2022), bolt vs nut vs
+  washer/set-screw systems, and coating processes vs appearance. Unknown values
+  and supplier extensions need explicit handling.
+- Research is not an exhaustive certified compatibility matrix; extended stainless
+  combinations and specialist specifications need further verification. No UI,
+  schema, installed-addon or engineering-record changes in this research increment.
+
+## 2026-11-05 — Selected standard-part reassociation (addon 0.7.2)
+
+- Add Change Standard Part Association command for selected direct fasteners in
+  an owned Working assembly. Reuse matching/registration for a different grade,
+  material or finish; preserve occurrence UUIDs, placement, attachments and all
+  unselected associations. Recheck edit/checkout rights before one undoable local
+  transaction. Save/upload and reviewed BOM synchronization remain explicit.
+- Shared upload preflight additionally detects association changes during review.
+  No description/name standardization implemented; existing text remains unchanged.
+- Validation: 321 addon tests passed; focused lint and package/layout checks passed.
+  Focused tests cover subset changes, cancellation, stale metadata,
+  checkout loss, invalid selection and new-spec registration. Disposable live
+  CAD/HTTP checks prove two identical screws retain distinct grade 8.8/10.9
+  revisions after upload/retrieval, with separate BOM quantities and preserved
+  user documents/session. Eleven live checks passed. Built and installed 0.7.2
+  in both addon profiles with backups; registered the new command in the current
+  session. See docs/validation/standard-parts-reassociation-2026-11-05.json.
+
+## 2026-11-05 — Repair stale GUI command instances after addon reload
+
+- User upload skipped Fasteners prompts because FreeCAD retained the registered
+  0.6.6 UploadCommand instance, despite the module being reloaded from 0.7.1.
+  Re-adding an existing command name did not replace its Python instance.
+- Rebound registered workflow command instances to the current installed classes.
+  Intercepted dispatch without advancing workflows and verified both toolbar
+  Upload and Check In now invoke actions containing the Fasteners preflight.
+  No CAD save/upload or catalog mutation performed.
+- Future in-process upgrades must verify registered command dispatch, not merely
+  module version or command-name presence. A normal FreeCAD restart loads current
+  installed classes without this hot-reload issue.
+
+## 2026-11-05 — Qualified local Fasteners attachments (addon 0.7.1)
+
+- Actual A000003 inspection found a valid local Assembly attachment using
+  Body002.Hole.Edge5. The 0.7.0 adapter incorrectly required an unqualified name.
+  Accept bounded local object paths ending in one topology element, resolve the
+  full path and retain null-shape rejection. External attachment limits unchanged.
+- Validation: 314 addon tests passed; disposable live save/reopen/path-rewrite
+  checks passed, preserving all user document dirty/touched flags and saved hashes.
+  Actual A000003 attachment passes read-only preflight; no user document saved,
+  altered or uploaded. P000008 already had unsaved edits and was preserved.
+- Built 0.7.1, updated both installed addon profiles with backups and reloaded the
+  runtime adapter. No backend or schema change. Evidence:
+  docs/validation/fasteners-qualified-attachment-2026-11-05.json.
+
+## 2026-11-05 — Installed addon upgraded for user testing
+
+- Installed 0.7.0 in both local FreeCAD addon profiles, preserving prior addon
+  directories in the private ForgePDM-backups directory outside Mod. Verified
+  every installed distribution file against the built ZIP.
+- Reloaded installed modules and refreshed the running ForgePDM menu/toolbar;
+  Register Standard / Purchased Part is available. No engineering document edits.
+- Local database was already at migration 11; no new migration was needed. Started
+  the configured loopback backend and verified health and standard-parts API presence.
+  User can log in and test the workflow documented in docs/standard-parts.md.
+
+## 2026-11-05 — Standard parts and Fasteners integration (addon 0.7.0)
+
+- Complete S creation/search foundation plus metadata-only registration and explicit
+  check-in/release actions. Migrations 10–11 preserve P/A counters, identifiers and
+  relationships; S remains ordinary part kind with existing revision/access rules.
+- Upload and Check In discover Fasteners, reuse exact associations, group new/changed
+  specifications for confirmation, and offer registration of missing S items.
+  Material/grade/finish are explicit, including unknowns. Normal toolbar-created
+  root fasteners and direct native Assembly members are supported; nested local
+  groups remain rejected. No automatic release or server BOM change.
+- Save occurrence UUIDs, geometry and generator provenance in native snapshots.
+  Validate/publish immutable occurrence evidence with datasets and atomic check-in.
+  Extend reviewed BOM capture to mixed links/embedded fasteners without flattening
+  linked subassemblies. Preserve manual-line review and stale/checkout guards.
+- Narrow freecad-fasteners-v1 manifests pin external BaseObject targets and one
+  explicit subelement. Retrieval rewrites paths before open, verifies attachments
+  and associations, and rejects missing/null subelement shapes. Old link-only
+  snapshots remain compatible. Compatible Fasteners installation is required.
+- Validation: 140 backend tests, 305 addon tests, three web model tests; focused
+  lint, web syntax and addon manifest/layout checks passed. Backend distributions
+  and ForgePDM-0.7.0.zip built. Isolated real FreeCAD/HTTP pilot passed 32 checks:
+  four families, managed attachments, qty eight, purchased-model qty two, atomic
+  check-in/recovery, exact retrieval, edits/copies/deletion/cancel, stale reviews
+  and nested assembly boundaries. Runtime: Linux FreeCAD 1.1.4 / Fasteners 0.5.43.
+- Evidence: [live report](docs/validation/standard-parts-freecad-2026-11-05.json).
+  Reusable isolated fixtures live under clients/freecad/tools/validation/.
+  [Usage and limits](docs/standard-parts.md); architectural contract: ADR-010.
+- No production database upgrade or installed-addon deployment in this session.
+  Backend and addon must be upgraded together before using this with engineering
+  data. Other families sharing the parameter contract can be discovered but are
+  not individually certified; arrays, arbitrary proxies and semantic topology
+  remapping remain unsupported. Phase 5 legacy-write/revision-retry debt remains.
+
+## 2026-11-05 — S numbering backend foundation (partial implementation)
+
+- Migration 10 adds item numbering series and independent P/A/S counters copied
+  from previous counter values. Item creation accepts optional number_series;
+  defaults remain P/A and assembly/S is rejected. Item API responses expose series.
+- Validation: 131 backend tests passed; git diff --check passed. No live database
+  upgrade or FreeCAD deployment performed.
+- Remaining: catalog filtering and creation UI, stronger migration/concurrency
+  coverage, metadata-only registration, matching and the complete Fasteners
+  upload/check-in/BOM/retrieval integration. This is not a completed feature.
+
+## 2026-11-05 — Simplified standard parts proposal (planning only)
+
+- Reformulated the catalog proposal around the original Fasteners BOM problem:
+  ordinary S-numbered parts, explicit multi-object association, and reviewed
+  occurrence counting for one validated Fasteners case. Purchased models reuse
+  existing managed links. Revisions, lifecycle and permissions stay in place.
+- Authoritative proposal: [standard parts plan](ForgePDM_Standard_Parts_Implementation_Plan.md).
+  The older catalog plan now links there. Automatic matching, taxonomy and special
+  administration are deferred; duplicate-equivalence review is initially manual.
+- First implementation task, when requested: reproduce attachment/capture/upload/
+  retrieval behavior in disposable fixtures. No implementation or runtime changes;
+  validation in this session is documentation/diff review only. Phase 5 debt remains.
+
+## 2026-11-04 — Next priority: personal component catalog (planning only)
+
+- User selected a ForgePDM-owned standard/purchased component catalog as the next
+  feature, with optional Fasteners Workbench integration after the foundation.
+- Detailed implementation sequence and acceptance gates:
+  [component catalog plan](docs/component-catalog-plan.md). Reuse existing Items,
+  revisions and exact BOM/reference workflows; separate catalog classification
+  from part/assembly kind. Define specification identity, revision ownership,
+  normalized matching and sharing permissions before implementation.
+- Three increments: backend catalog and matching; browsing/managed CAD reuse;
+  optional Fasteners adapter. No implementation, migration or runtime change in
+  this session. Validation is documentation/diff review only.
+- This is the next feature priority. Phase 5 reliability work remains pending;
+  it has not been completed or removed from the roadmap.
+
 ## 2026-11-03 — Published TechDraw PDFs (addon 0.6.6)
 
 - Add explicit Publish Drawing PDFs from clean uploaded managed Working copies
@@ -442,14 +604,16 @@ Evidence:
 ## Next session
 
 1. Read root and applicable nested `AGENTS.md`, inspect Git status and recent
-   commits, and confirm the user's requested scope. Phase 5 is authorized and
+   commits, and confirm the user's requested scope. The next feature priority is
+   the personal component catalog: start with docs/component-catalog-plan.md and
+   its domain/schema design increment. Phase 5 is authorized and
    started; the first two bounded increments are complete. The user subsequently
    prioritized functional web management and independent thorough testing; use
    docs/web-management.md for the implemented GUI and suggested test sequence.
 2. For CAD issues, confirm installed addon/runtime versions and reproduce with
    the actual document structure. Distinguish mocked tests from live validation.
    Preserve existing edits, immutable snapshots and exact revision pins.
-3. After the user's independent testing, continue Phase 5 from ADR-008 and
+3. After the catalog priority, or when explicitly requested, continue Phase 5 from ADR-008 and
    docs/phase5-reliable-checkin.md when requested. Next,
    fence remaining legacy writes and address revision-creation retries. Propose the
    next design increment before major architectural changes.

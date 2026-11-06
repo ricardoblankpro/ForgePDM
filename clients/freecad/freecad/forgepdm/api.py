@@ -1,16 +1,16 @@
 """Small standard-library HTTP client for the ForgePDM API."""
 
+import hashlib
 import http.client
 import json
 import os
 import re
 import ssl
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
-import tempfile
-import hashlib
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from threading import local
@@ -136,8 +136,11 @@ class ForgePDMClient:
         )
         return self._catalog_request("/api/v1/projects?" + query)
 
-    def search_items(self, query="", limit=50, offset=0):
-        query = urllib.parse.urlencode({"q": query, "limit": limit, "offset": offset})
+    def search_items(self, query="", limit=50, offset=0, number_series=None):
+        params = {"q": query, "limit": limit, "offset": offset}
+        if number_series:
+            params["number_series"] = number_series
+        query = urllib.parse.urlencode(params)
         return self._catalog_request("/api/v1/items?" + query)
 
     def list_revisions(self, item_id, limit=50, offset=0):
@@ -213,7 +216,9 @@ class ForgePDMClient:
             "/api/v1/datasets/" + self._quote(dataset_id) + "/manifest",
             {
                 "source_file_id": source_file_id,
-                "profile": "freecad-app-link-v1",
+                "profile": "freecad-fasteners-v1"
+                if any(r["property_name"] == "BaseObject" for r in references)
+                else "freecad-app-link-v1",
                 "references": references,
             },
         )
@@ -297,8 +302,26 @@ class ForgePDMClient:
                 ) from error
             raise
 
-    def create_item(self, kind, name, project_id=None, description=""):
+    def standard_capabilities(self):
+        return self._json_request("GET", "/api/v1/standard-parts/capabilities")
+
+    def standard_matches(self, geometry):
+        return self._json_request("POST", "/api/v1/standard-parts/matches", geometry)
+
+    def create_item(
+        self,
+        kind,
+        name,
+        project_id=None,
+        description="",
+        number_series=None,
+        standard_specification=None,
+    ):
         payload = {"kind": kind, "name": name, "description": description}
+        if number_series:
+            payload["number_series"] = number_series
+        if standard_specification is not None:
+            payload["standard_specification"] = standard_specification
         if project_id:
             payload["project_id"] = project_id
         return self._json_request("POST", "/api/v1/items", payload)
@@ -334,8 +357,8 @@ class ForgePDMClient:
         )
 
     def prepare_cad_bom(self, path, revision_id, references):
-        from .workspace import binding, bind_references, digest, WorkspaceError
         from .fcstd import validate
+        from .workspace import WorkspaceError, bind_references, binding, digest
 
         value = binding(path, self.base_url)
         entry = value["entry"]
@@ -346,20 +369,34 @@ class ForgePDMClient:
         if (
             manifest is None
             or manifest["source_file_id"] != entry["file_id"]
-            or manifest["profile"] != "freecad-app-link-v1"
+            or manifest["profile"] not in ("freecad-app-link-v1", "freecad-fasteners-v1")
         ):
             raise WorkspaceError("The assembly needs an uploaded pinned reference manifest")
         validate(path, manifest["references"])
-        bound = bind_references(self, references)
+        embedded = [r for r in references if r["property_name"] == "PDMStandardAssociation"]
+        evidence = {r["object_name"]: r for r in manifest.get("standard_occurrences", [])}
+        for captured in embedded:
+            saved = evidence.get(captured["object_name"])
+            if (
+                not saved
+                or saved["revision_id"] != captured["target_revision_id"]
+                or saved["geometry"] != captured["geometry"]
+                or saved["occurrence_id"] != captured["occurrence_id"]
+            ):
+                raise WorkspaceError(
+                    "Fastener associations differ from the uploaded snapshot; upload again"
+                )
+        links = [r for r in references if r["property_name"] != "PDMStandardAssociation"]
+        bound = bind_references(self, links)
         fields = ("target_revision_id", "target_dataset_id", "target_file_id", "target_object_name")
         pins = {tuple(ref[field] for field in fields) for ref in manifest["references"]}
         if any(tuple(ref[field] for field in fields) not in pins for ref in bound):
             raise WorkspaceError(
                 "CAD occurrences differ from the uploaded assembly pins; upload again"
             )
-        for ref, captured in zip(bound, references):
+        for ref, captured in zip(bound, links):
             ref["component_label"] = captured.get("component_label", ref["target_revision_id"])
-        return {"references": bound, "source_hash": current}
+        return {"references": bound + embedded, "source_hash": current}
 
     def synchronize_cad_bom(self, path, revision_id, references, source_hash, lines, snapshot):
         prepared = self.prepare_cad_bom(path, revision_id, references)

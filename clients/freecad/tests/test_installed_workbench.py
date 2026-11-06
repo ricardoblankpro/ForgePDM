@@ -65,7 +65,7 @@ sys.modules[binding] = qt
 wb.Initialize()
 wb.Initialize()
 expected = [
-    'ForgePDM_Login', 'ForgePDM_Logout', 'ForgePDM_Upload', 'ForgePDM_Checkout',
+    'ForgePDM_Login', 'ForgePDM_Logout', 'ForgePDM_RegisterStandardPart', 'ForgePDM_ChangeStandardPartAssociation', 'ForgePDM_Upload', 'ForgePDM_Checkout',
     'ForgePDM_CheckIn', 'ForgePDM_Release', 'ForgePDM_NewRevision',
     'ForgePDM_Download', 'ForgePDM_UpdateFromServer', 'ForgePDM_UpdateSelectedComponents', 'ForgePDM_PublishDrawings', 'ForgePDM_RefreshPDMStatus', 'ForgePDM_ShowBOM',
     'ForgePDM_RefreshTreeLabels', 'ForgePDM_ReplaceRevision', 'ForgePDM_ReplaceComponent',
@@ -74,7 +74,7 @@ assert command_calls == wb.menu == wb.toolbar == expected
 assert wb.GetClassName() == 'Gui::PythonWorkbench'
 assert len(language_paths) == 1 and Path(language_paths[0]).is_dir()
 assert len(observers) == 1
-expected_icons = ['login', 'logout', 'upload', 'checkout', 'checkin', 'release',
+expected_icons = ['login', 'logout', 'upload', 'replace-component', 'upload', 'checkout', 'checkin', 'release',
                   'new-revision', 'download', 'download', 'replace-revision', 'publish-drawings', 'tree-status', 'bom', 'tree-labels', 'replace-revision', 'replace-component']
 for command, icon in zip(registered.values(), expected_icons):
     resources = command.GetResources()

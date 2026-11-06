@@ -3,8 +3,8 @@
 import os
 from pathlib import Path
 
+from . import fasteners, tree_labels
 from .workspace import WorkspaceError, _safe_path
-from . import tree_labels
 
 
 def document_modified(document):
@@ -21,8 +21,10 @@ def settle_techdraw(document, timeout=30):
         for obj in getattr(document, "Objects", ())
     ):
         return
-    import FreeCAD as App
     from time import monotonic
+
+    import FreeCAD as App
+
     from .ui import QtCore
 
     name = document.Name
@@ -73,6 +75,12 @@ def rebase_links(document):
             obj.setLink(None)
             obj.setLink(target)
         obj.Placement = placement
+    for obj in fasteners.objects(document):
+        attached = fasteners.attachment(obj)
+        if attached and attached[0].Document is not document:
+            target, subelement = attached
+            obj.BaseObject = None
+            obj.BaseObject = (target, [subelement])
     document.recompute()
 
 
@@ -115,6 +123,36 @@ def capture(document):
                 "target_item_id": metadata.ItemId,
                 "target_revision_id": metadata.RevisionId,
             }
+        )
+    for obj in fasteners.objects(document):
+        attached = fasteners.attachment(obj)
+        if not attached:
+            continue
+        target, subelement = attached
+        if target.Document is document:
+            continue
+        target_document = target.Document
+        metadata = target_document.getObject("ForgePDM_Metadata")
+        if (
+            metadata is None
+            or not getattr(metadata, "ItemId", "")
+            or not getattr(metadata, "RevisionId", "")
+        ):
+            raise WorkspaceError(
+                "Upload the fastener attachment target as a managed component first"
+            )
+        if document_modified(target_document):
+            raise WorkspaceError("Fastener attachment target has unsaved changes")
+        references.append(
+            dict(
+                object_name=obj.Name,
+                property_name="BaseObject",
+                target_path=os.path.abspath(target_document.FileName),
+                target_object_name=target.Name,
+                target_item_id=metadata.ItemId,
+                target_revision_id=metadata.RevisionId,
+                target_subelement=subelement,
+            )
         )
     return references
 
@@ -191,9 +229,14 @@ def _builtin_bom_context(document):
         raise WorkspaceError("Generated subassembly members overlap direct assembly members")
     ignored.update(generated)
     for member in members:
-        if member.Name not in ignored and member.TypeId not in (
-            "App::Link",
-            "Assembly::AssemblyLink",
+        if (
+            member.Name not in ignored
+            and not fasteners.recognized(member)
+            and member.TypeId
+            not in (
+                "App::Link",
+                "Assembly::AssemblyLink",
+            )
         ):
             raise WorkspaceError(
                 "Unsupported Assembly member '{}' ({}). "
@@ -202,6 +245,13 @@ def _builtin_bom_context(document):
                 )
             )
     return ignored, components
+
+
+def validate_fastener_membership(document, obj):
+    """A toolbar-created root fastener belongs to the sole assembly's direct BOM."""
+    for parent in document.Objects:
+        if obj in getattr(parent, "Group", ()) and parent.TypeId != "Assembly::AssemblyObject":
+            raise WorkspaceError("Fasteners in nested local groups require a dedicated BOM adapter")
 
 
 def capture_bom(document):
@@ -219,6 +269,9 @@ def capture_bom(document):
             or obj.Name in ignored
             or obj.TypeId.startswith("TechDraw::")
         ):
+            continue
+        if fasteners.recognized(obj):
+            validate_fastener_membership(document, obj)
             continue
         if getattr(obj, "Proxy", None) is not None:
             raise WorkspaceError(
@@ -293,6 +346,18 @@ def capture_bom(document):
                 ),
             }
         )
+    for entry in fasteners.capture(document):
+        if entry["object_name"] not in ignored:
+            result.append(
+                dict(
+                    object_name=entry["object_name"],
+                    property_name="PDMStandardAssociation",
+                    target_revision_id=entry["revision_id"],
+                    occurrence_id=entry["occurrence_id"],
+                    geometry=entry["geometry"],
+                    component_label=entry["object_name"],
+                )
+            )
     return result
 
 
@@ -335,6 +400,16 @@ def open_configuration(configuration, set_metadata):
                 link = document.getObject(reference["object_name"])
                 target_document = documents[reference["target_file_id"]]
                 target = target_document.getObject(reference["target_object_name"])
+                if reference["property_name"] == "BaseObject":
+                    if (
+                        link is None
+                        or not fasteners.recognized(link)
+                        or target is None
+                        or not fasteners.subelement_exists(target, reference["target_subelement"])
+                    ):
+                        raise WorkspaceError("Pinned fastener attachment cannot be reconstructed")
+                    link.BaseObject = (target, [reference["target_subelement"]])
+                    continue
                 if (
                     link is None
                     or link.TypeId not in ("App::Link", "Assembly::AssemblyLink")
@@ -384,9 +459,24 @@ def open_configuration(configuration, set_metadata):
 def verify(configuration, documents):
     for entry in configuration["ledger"]["documents"]:
         document = documents[entry["file_id"]]
+        expected_occurrences = entry.get("standard_occurrences", [])
+        if expected_occurrences or fasteners.objects(document):
+            actual_occurrences = fasteners.capture(document)
+            if actual_occurrences != sorted(
+                expected_occurrences, key=lambda row: row["object_name"]
+            ):
+                raise WorkspaceError(
+                    "Retrieved standard associations differ from the uploaded evidence"
+                )
         for reference in entry["references"]:
             obj = document.getObject(reference["object_name"])
-            target = obj.LinkedObject if obj is not None else None
+            if reference["property_name"] == "BaseObject":
+                attached = fasteners.attachment(obj) if obj is not None else None
+                if not attached or attached[1] != reference["target_subelement"]:
+                    raise WorkspaceError("Pinned fastener subelement did not resolve")
+                target = attached[0]
+            else:
+                target = obj.LinkedObject if obj is not None else None
             expected = documents[reference["target_file_id"]]
             if (
                 target is None

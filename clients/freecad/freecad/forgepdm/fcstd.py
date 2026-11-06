@@ -1,9 +1,10 @@
 """Conservative FCStd inspection/rewriting; no FreeCAD imports or file extraction."""
 
-from pathlib import Path, PurePosixPath
-from copy import copy
 import os
+import re
 import xml.etree.ElementTree as ET
+from copy import copy
+from pathlib import Path, PurePosixPath
 from zipfile import BadZipFile, ZipFile
 
 from .techdraw import embedded_templates
@@ -64,7 +65,20 @@ def inspect(path):
             for link in prop.iter("XLink"):
                 if not link.get("file"):
                     continue
-                if (
+                proxy = obj.find("./Properties/Property[@name='Proxy']/Python")
+                fastener = (
+                    objects.get(obj.get("name")) == "Part::FeaturePython"
+                    and proxy is not None
+                    and proxy.get("module") == "FastenersCmd"
+                    and proxy.get("class", "").startswith("FS")
+                    and prop.get("name") == "BaseObject"
+                    and prop.get("type") == "App::PropertyXLinkSub"
+                    and re.fullmatch(r"(?:Edge|Face|Vertex)[1-9][0-9]*", link.get("sub", ""))
+                    is not None
+                    and not list(link)
+                    and link.get("count") in (None, "0")
+                )
+                if not fastener and (
                     objects.get(obj.get("name")) not in ("App::Link", "Assembly::AssemblyLink")
                     or prop.get("name") != "LinkedObject"
                     or prop.get("type") != "App::PropertyXLink"
@@ -87,6 +101,7 @@ def inspect(path):
                         "target_object_name": link.get("name"),
                         "file": link.get("file"),
                         "element": link,
+                        **({"target_subelement": link.get("sub")} if fastener else {}),
                     }
                 )
             if prop.get("type") in ("App::PropertyFile", "App::PropertyPath"):
@@ -116,7 +131,9 @@ def validate(path, references, source_path=None):
         )
     for entry in actual:
         reference = expected[(entry["object_name"], entry["property_name"])]
-        if entry["target_object_name"] != reference["target_object_name"]:
+        if entry["target_object_name"] != reference["target_object_name"] or entry.get(
+            "target_subelement"
+        ) != reference.get("target_subelement"):
             raise CADIntegrityError("Native link target object differs from the recorded manifest")
         if source_path is not None and "target_path" in reference:
             actual_path = (Path(source_path).parent / entry["file"]).resolve()

@@ -1,0 +1,62 @@
+{
+  "checks": [
+    "Managed plate uploaded",
+    "Circular attachment edge found",
+    "Upload preflight registers and associates",
+    "All occurrences associated",
+    "Document-root fastener participates in preflight",
+    "Four families registered",
+    "Unchanged preflight reuses associations",
+    "Purchased S model inserted twice",
+    "Direct attachments captured",
+    "Upload with external attachments succeeds",
+    "Mixed BOM quantities",
+    "Reviewed BOM synchronized",
+    "Atomic check-in completes",
+    "Check-in response recovery",
+    "Historical associations reconstructed",
+    "Historical BOM quantities retained",
+    "Retrieved document clean",
+    "Attachment targets preserved",
+    "Size edit invalidates association",
+    "Canceled association stops preflight",
+    "Backend rejects stale geometry evidence",
+    "Failed upload preserves engineering BOM",
+    "Copied fastener initially shares UUID",
+    "Preflight repairs copied UUID",
+    "Copied UUID now unique",
+    "Deletion restores original count",
+    "Missing proxy fails safely",
+    "Missing attachment subelement rejected",
+    "Saved edit invalidates BOM review",
+    "Linked subassembly counts once without embedded fastener flattening",
+    "Nested assembly retrieval preserves direct BOM boundary",
+    "Native subassembly containing embedded fasteners uploads"
+  ],
+  "freecad": [
+    "1",
+    "1",
+    "4"
+  ],
+  "families": [
+    "ISO4017",
+    "ISO4032",
+    "ISO7089",
+    "ISO4762"
+  ],
+  "fasteners_version": "0.5.43",
+  "date": "2026-11-05",
+  "addon_version": "0.7.0",
+  "backend_migrations": [
+    10,
+    11
+  ],
+  "isolation": "Disposable loopback backend/database/storage and CAD documents; no production engineering records modified.",
+  "fixture_directory": "clients/freecad/tools/validation",
+  "check_count": 32,
+  "notes": [
+    "GUI fixture drives real production workflow generators and HTTP; dialogs are automated.",
+    "Common parameter contract supports discovery beyond the four live-tested standards; other families are not individually certified.",
+    "FreeCAD toolbar insertion was separately probed and produces a document-root fastener; root-level capture is included."
+  ]
+}

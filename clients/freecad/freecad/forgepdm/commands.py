@@ -7,20 +7,24 @@ from uuid import UUID
 import FreeCAD
 import FreeCADGui
 
+from . import bom, cad, tree_labels, tree_observer, workspace
 from .api import ForgePDMClient, ForgePDMError
-from .session import Session
-from .ui import QtWidgets, ask_choice, ask_text, execute_dialog, information, warning
+from .i18n import translate
 from .jobs import Request
 from .resources import icon_path
-from .i18n import translate
-from . import bom, cad, tree_labels, tree_observer, workspace
+from .session import Session
 from .ui import (
-    select_bom_occurrences,
+    QtWidgets,
+    ask_choice,
+    ask_text,
+    execute_dialog,
+    information,
     review_bom,
-    select_replacement_occurrences,
     review_component_replacement,
+    select_bom_occurrences,
+    select_replacement_occurrences,
+    warning,
 )
-
 
 METADATA_OBJECT = "ForgePDM_Metadata"
 
@@ -366,6 +370,254 @@ class LogoutCommand(Command):
         information("ForgePDM", "Logged out")
 
 
+class RegisterStandardPartCommand(Command):
+    icon_name = "upload"
+    menu_text = "Register Standard / Purchased Part…"
+    tooltip = "Create an S item without requiring a CAD document"
+
+    def action(self):
+        client = Session.require_client()
+        item = yield from _register_standard(client)
+        if item:
+            choice = ask_choice(
+                "Standard Part",
+                "Metadata-only revision created. Next action?",
+                ["Keep checked out", "Check in metadata", "Check in and release"],
+                "Keep checked out",
+            )
+            if choice in ("Check in metadata", "Check in and release"):
+                yield Request(
+                    "Checking in metadata…",
+                    client.checkin,
+                    (item["current_revision_id"],),
+                    mutates=True,
+                )
+            if choice == "Check in and release":
+                yield Request(
+                    "Releasing standard revision…",
+                    client.transition,
+                    (item["current_revision_id"], "released"),
+                    mutates=True,
+                )
+            information("ForgePDM", "Registered " + item["number"])
+
+
+def _register_standard(client, spec=None):
+    if spec is not None:
+        from .ui import standard_specification_dialog
+
+        selected = standard_specification_dialog(spec["geometry"])
+        if selected is None:
+            return None
+        spec, name, description = (
+            selected["specification"],
+            selected["name"],
+            selected["description"],
+        )
+    else:
+        # Generic purchased items have no Fasteners geometry/specification schema.
+        name = ask_text("Register Standard Part", "Name / purchasing designation", "")
+        if not name:
+            return None
+        description = ask_text("Register Standard Part", "Description (optional)", "")
+        if description is None:
+            return None
+    project = yield from _select_record(
+        "Standard Parts Project",
+        "Choose a project you can edit",
+        client.list_projects,
+        lambda row: row["project_number"] + " — " + row["name"],
+        kwargs={"editable": True},
+        allow_projectless=(Session.user or {}).get("role") == "admin",
+    )
+    if project is None:
+        return None
+    return (
+        yield Request(
+            "Registering standard part…",
+            client.create_item,
+            ("part", name, project.get("id"), description),
+            kwargs={"number_series": "S", "standard_specification": spec},
+            mutates=True,
+            cancellable=False,
+        )
+    )
+
+
+class ChangeStandardPartAssociationCommand(Command):
+    icon_name = "replace-component"
+    menu_text = "Change Standard Part Association…"
+    tooltip = "Choose another S specification for selected fasteners without moving them"
+    needs_document = True
+
+    def action(self):
+        from . import fasteners
+
+        client = Session.require_client()
+        document = _require_document()
+        metadata = _require_metadata(document)
+        name, revision_id = document.Name, metadata.RevisionId
+        selection = list(FreeCADGui.Selection.getSelection())
+        if not selection or any(
+            obj.Document is not document or not fasteners.recognized(obj) for obj in selection
+        ):
+            raise workspace.WorkspaceError(
+                "Select one or more direct Fasteners Workbench objects in the active assembly"
+            )
+        selected_names = {obj.Name for obj in selection}
+        revision = yield from _editable(client, metadata)
+        if revision["item_kind"] != "assembly":
+            raise workspace.WorkspaceError("Standard part reassociation requires an assembly")
+        yield from _authorize_tree_labels(client, document)
+        document = _guard_document(name, revision_id)
+        if document.HasPendingTransaction:
+            raise workspace.WorkspaceError(
+                "Finish the current FreeCAD operation before changing associations"
+            )
+        if not (yield from _associate_fasteners(client, document, selected_names=selected_names)):
+            return
+        information(
+            "ForgePDM",
+            "Selected standard part associations updated. Upload the assembly, then review BOM synchronization. Geometry and attachments were preserved.",
+        )
+
+
+def _associate_fasteners(client, document, selected_names=None):
+    from . import fasteners
+    from .standard_contract import encode
+
+    all_candidates = fasteners.objects(document)
+    candidates = (
+        all_candidates
+        if selected_names is None
+        else [obj for obj in all_candidates if obj.Name in selected_names]
+    )
+    if selected_names is not None and {obj.Name for obj in candidates} != set(selected_names):
+        raise workspace.WorkspaceError(
+            "Selected fasteners changed or disappeared; select them again"
+        )
+    if not candidates:
+        return True
+    document.recompute()
+    cad._builtin_bom_context(document)
+    for obj in candidates:
+        cad.validate_fastener_membership(document, obj)
+        fasteners.attachment(obj)
+    capability = yield Request("Checking Fasteners integration…", client.standard_capabilities)
+    if capability.get("version") != 1 or not capability.get("snapshot_evidence"):
+        raise workspace.WorkspaceError("Update the backend for Fasteners integration")
+    name = document.Name
+    revision_id = _require_metadata(document).RevisionId if selected_names is not None else None
+
+    def baseline_state():
+        current = fasteners.objects(document)
+        if selected_names is not None:
+            current = [obj for obj in current if obj.Name in selected_names]
+        return [
+            (obj.Name, fasteners.extract(obj), getattr(obj, fasteners.ASSOCIATION, ""))
+            for obj in current
+        ]
+
+    baseline = baseline_state()
+    groups, retained, seen, identities = {}, [], set(), {}
+    if selected_names is not None:
+        for obj in all_candidates:
+            if obj.Name not in selected_names:
+                entry = fasteners.association(obj)
+                if entry:
+                    seen.add(entry["occurrence_id"])
+    for obj in candidates:
+        entry = fasteners.association(obj)
+        if selected_names is not None:
+            if entry and entry["occurrence_id"] not in seen:
+                identities[obj.Name] = entry["occurrence_id"]
+                seen.add(entry["occurrence_id"])
+            entry = None
+        if entry:
+            revision = yield Request(
+                "Validating standard association…", client.get_revision, (entry["revision_id"],)
+            )
+            if revision["lifecycle_state"] == "obsolete":
+                entry = None
+        if entry:
+            identifier = entry["occurrence_id"] if entry["occurrence_id"] not in seen else None
+            if identifier:
+                seen.add(identifier)
+            retained.append((obj.Name, entry["revision_id"], identifier))
+        else:
+            groups.setdefault(encode(fasteners.extract(obj)), []).append(obj.Name)
+    resolved = list(retained)
+    for key, names in groups.items():
+        import json
+
+        geometry = json.loads(key)
+        matches = yield Request("Finding catalog fasteners…", client.standard_matches, (geometry,))
+        choices = [
+            row["number"]
+            + " — "
+            + row["name"]
+            + " — Rev "
+            + row["revision_label"]
+            + " — "
+            + fasteners.describe(row["specification"])
+            for row in matches["items"]
+        ]
+        selected = ask_choice(
+            "Associate Fasteners",
+            "{} occurrence(s): {}. Confirm the full purchasing specification.".format(
+                len(names), fasteners.describe(geometry)
+            ),
+            choices + ["Register a new S item"],
+            choices[0] if choices else "Register a new S item",
+        )
+        if selected is None:
+            return False
+        if selected == "Register a new S item":
+            item = yield from _register_standard(client, dict(geometry=geometry))
+            if item is None:
+                return False
+            information(
+                "ForgePDM",
+                "Registered {}. This item remains available even if assembly upload is canceled.".format(
+                    item["number"]
+                ),
+            )
+        else:
+            item = matches["items"][choices.index(selected)]
+        resolved.extend(
+            (obj_name, item["current_revision_id"], identities.get(obj_name)) for obj_name in names
+        )
+    document = (
+        _guard_document(name, revision_id) if selected_names is not None else _guard_document(name)
+    )
+    if selected_names is not None:
+        yield from _editable(client, _require_metadata(document))
+        yield from _authorize_tree_labels(client, document)
+        document = _guard_document(name, revision_id)
+        if document.HasPendingTransaction:
+            raise workspace.WorkspaceError(
+                "Finish the current FreeCAD operation before changing associations"
+            )
+    if baseline_state() != baseline:
+        raise workspace.WorkspaceError("Fasteners changed during association; retry upload")
+    document.openTransaction("Associate ForgePDM standard parts")
+    try:
+        for obj_name, revision_id, occurrence_id in resolved:
+            obj = document.getObject(obj_name)
+            old = fasteners.association(obj)
+            if (
+                not old
+                or old["revision_id"] != revision_id
+                or old["occurrence_id"] != occurrence_id
+            ):
+                fasteners.associate(obj, revision_id, occurrence_id)
+        document.commitTransaction()
+    except BaseException:
+        document.abortTransaction()
+        raise
+    return True
+
+
 class UploadCommand(Command):
     icon_name = "upload"
     menu_text = "Create / Upload Current Document"
@@ -380,7 +632,12 @@ class UploadCommand(Command):
         project = None
         new = metadata is None or not metadata.ItemId
         if new:
-            kind = ask_choice("New ForgePDM Item", "Item kind", ["part", "assembly"], "part")
+            kind = ask_choice(
+                "New ForgePDM Item",
+                "Item kind",
+                ["part", "assembly", "standard/purchased part"],
+                "part",
+            )
             if not kind:
                 return
             project = yield from _select_record(
@@ -396,6 +653,8 @@ class UploadCommand(Command):
         else:
             yield from _editable(client, metadata)
         document = _guard_document(document_name)
+        if not (yield from _associate_fasteners(client, document)):
+            return
         references = cad.capture(document)
         yield Request(
             "Checking linked component snapshots…", client.validate_references, (references,)
@@ -411,7 +670,12 @@ class UploadCommand(Command):
             result = yield Request(
                 "Creating item…",
                 client.create_item,
-                (kind, document.Label, project.get("id")),
+                (
+                    "part" if kind == "standard/purchased part" else kind,
+                    document.Label,
+                    project.get("id"),
+                ),
+                kwargs={"number_series": "S"} if kind == "standard/purchased part" else {},
                 mutates=True,
                 cancellable=False,
             )
@@ -521,6 +785,8 @@ class CheckInCommand(Command):
                     )
                 return
         yield from _editable(client, metadata)
+        if not (yield from _associate_fasteners(client, document)):
+            return
         references = cad.capture(document)
         path = yield from _ensure_working(client, document)
         if path is None:
@@ -699,7 +965,11 @@ class ReplaceRevisionCommand(Command):
         yield from _editable(client, metadata)
         yield from _authorize_tree_labels(client, document)
         baseline = cad.capture_bom(document)
-        by_name = {ref["object_name"]: ref for ref in baseline}
+        by_name = {
+            ref["object_name"]: ref
+            for ref in baseline
+            if ref.get("property_name", "LinkedObject") == "LinkedObject"
+        }
         selected_names = {
             obj.Name for obj in FreeCADGui.Selection.getSelection() if obj.Document is document
         }
@@ -709,6 +979,8 @@ class ReplaceRevisionCommand(Command):
             )
         groups = {}
         for ref in baseline:
+            if ref.get("property_name", "LinkedObject") != "LinkedObject":
+                continue
             groups.setdefault((ref["target_item_id"], ref["target_revision_id"]), []).append(ref)
         if not groups:
             raise workspace.WorkspaceError(
@@ -1138,7 +1410,7 @@ class PublishDrawingsCommand(Command):
 
     def action(self):
         from . import drawing_export
-        from .ui import select_drawing_pages, review_drawing_publication
+        from .ui import review_drawing_publication, select_drawing_pages
 
         client = Session.require_client()
         document = _require_document()
@@ -1381,6 +1653,14 @@ class DownloadCommand(Command):
 
     def action(self):
         client = Session.require_client()
+        series = ask_choice(
+            "Catalog",
+            "Browse which items?",
+            ["All items", "Standard / purchased parts"],
+            "All items",
+        )
+        if series is None:
+            return
         query = ask_text(
             "Find ForgePDM Item", "Item number, name or description (blank to browse)", ""
         )
@@ -1392,6 +1672,7 @@ class DownloadCommand(Command):
             client.search_items,
             lambda record: record["number"] + " — " + record["name"],
             args=(query,),
+            kwargs={"number_series": "S"} if series == "Standard / purchased parts" else {},
         )
         if item is None:
             return

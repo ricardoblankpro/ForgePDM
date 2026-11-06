@@ -56,7 +56,7 @@ def propose_lines(manifest, selected_occurrences):
         key = (reference["object_name"], reference["property_name"])
         if (
             any(not isinstance(value, str) or not value for value in key)
-            or reference["property_name"] != "LinkedObject"
+            or reference["property_name"] not in ("LinkedObject", "PDMStandardAssociation")
         ):
             raise ValueError("Unsupported CAD occurrence")
         if key in references:

@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 from forgepdm.application import revisions as revision_clock
 from forgepdm.application.datasets import _media_type, _safe_filename
 from forgepdm.application.manifests import REFERENCE_FIELDS, ManifestService
+from forgepdm.application.standard_parts import persist_occurrences, read_occurrences
 from forgepdm.domain.entities import Conflict, Forbidden, NotFound
 
 
@@ -108,6 +109,11 @@ class CheckInService:
         if (staged.content_hash, staged.byte_size) != (content_hash, byte_size):
             staged.path.unlink(missing_ok=True)
             raise ValueError("uploaded bytes differ from the declared hash or size")
+        try:
+            occurrences = read_occurrences(staged.path)
+        except BaseException:
+            staged.path.unlink(missing_ok=True)
+            raise
         storage_key = self.storage.promote(staged)
         self.storage.verify(storage_key, content_hash, byte_size)
         with self.database.transaction() as connection:
@@ -139,20 +145,34 @@ class CheckInService:
                 "INSERT INTO datasets(id,revision_id,dataset_type,name,created_by,created_at) VALUES (?,?,'native_cad','Native CAD',?,?)",
                 (dataset_id, revision_id, user.id, timestamp),
             )
+            persist_occurrences(connection, self.authorization, user, dataset_id, occurrences)
             connection.execute(
                 "INSERT INTO dataset_files(dataset_id,file_id,position) VALUES (?,?,0)",
                 (dataset_id, file_id),
             )
             connection.execute(
-                "INSERT INTO dataset_manifests(dataset_id,source_file_id,profile,created_by,created_at) VALUES (?,?,'freecad-app-link-v1',?,?)",
-                (dataset_id, file_id, user.id, timestamp),
+                "INSERT INTO dataset_manifests(dataset_id,source_file_id,profile,created_by,created_at) VALUES (?,?,?,?,?)",
+                (
+                    dataset_id,
+                    file_id,
+                    "freecad-fasteners-v1"
+                    if any(r["property_name"] == "BaseObject" for r in references)
+                    else "freecad-app-link-v1",
+                    user.id,
+                    timestamp,
+                ),
             )
             for reference in references:
                 connection.execute(
                     "INSERT INTO dataset_references(id,dataset_id,object_name,property_name,"
-                    "target_revision_id,target_dataset_id,target_file_id,target_object_name) "
-                    "VALUES (?,?,?,?,?,?,?,?)",
-                    (str(uuid4()), dataset_id, *(reference[field] for field in REFERENCE_FIELDS)),
+                    "target_revision_id,target_dataset_id,target_file_id,target_object_name,target_subelement) "
+                    "VALUES (?,?,?,?,?,?,?,?,?)",
+                    (
+                        str(uuid4()),
+                        dataset_id,
+                        *(reference[field] for field in REFERENCE_FIELDS),
+                        reference.get("target_subelement"),
+                    ),
                 )
             connection.execute(
                 "UPDATE item_revisions SET change_note=CASE WHEN ?='' THEN change_note ELSE ? END, modified_at=? WHERE id=?",

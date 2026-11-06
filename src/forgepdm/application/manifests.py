@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from forgepdm.domain.entities import Conflict, NotFound
 
 PROFILE = "freecad-app-link-v1"
+FASTENERS_PROFILE = "freecad-fasteners-v1"
 REFERENCE_FIELDS = (
     "object_name",
     "property_name",
@@ -50,7 +51,10 @@ class ManifestService:
             raise ValueError("too many CAD references")
         result, seen = [], set()
         for reference in references:
-            if not isinstance(reference, dict) or set(reference) != set(REFERENCE_FIELDS):
+            if not isinstance(reference, dict) or set(reference) not in (
+                set(REFERENCE_FIELDS),
+                set(REFERENCE_FIELDS) | {"target_subelement"},
+            ):
                 raise ValueError("invalid reference fields")
             entry = dict(reference)
             for field in ("object_name", "property_name", "target_object_name"):
@@ -62,7 +66,17 @@ class ManifestService:
                     or any(character in value for character in "\x00/\\")
                 ):
                     raise ValueError("invalid reference object/property name")
-            if entry["property_name"] != "LinkedObject":
+            if entry["property_name"] == "BaseObject":
+                import re
+
+                if (
+                    re.fullmatch(
+                        r"(?:Edge|Face|Vertex)[1-9][0-9]*", entry.get("target_subelement", "")
+                    )
+                    is None
+                ):
+                    raise ValueError("Unsupported fastener attachment subelement")
+            elif entry["property_name"] != "LinkedObject" or "target_subelement" in entry:
                 raise ValueError("unsupported CAD reference property")
             for field in ("target_revision_id", "target_dataset_id", "target_file_id"):
                 if not isinstance(entry[field], str):
@@ -98,9 +112,14 @@ class ManifestService:
                 raise Conflict("CAD dataset reference cycle is not allowed")
 
     def attach(self, user, dataset_id, source_file_id, references, profile=PROFILE):
-        if profile != PROFILE:
+        if profile not in (PROFILE, FASTENERS_PROFILE):
             raise ValueError("unsupported reference manifest profile")
         references = self._references(references)
+        if (
+            any(r["property_name"] == "BaseObject" for r in references)
+            and profile != FASTENERS_PROFILE
+        ):
+            raise ValueError("Fasteners attachments require the fasteners manifest profile")
         with self.database.transaction() as connection:
             source = self._dataset(connection, dataset_id)
             self.authorization.require_edit_revision(user, source["revision_id"], connection)
@@ -131,9 +150,14 @@ class ManifestService:
             for reference in references:
                 connection.execute(
                     "INSERT INTO dataset_references(id,dataset_id,object_name,property_name,"
-                    "target_revision_id,target_dataset_id,target_file_id,target_object_name) "
-                    "VALUES (?,?,?,?,?,?,?,?)",
-                    (str(uuid4()), dataset_id, *(reference[field] for field in REFERENCE_FIELDS)),
+                    "target_revision_id,target_dataset_id,target_file_id,target_object_name,target_subelement) "
+                    "VALUES (?,?,?,?,?,?,?,?,?)",
+                    (
+                        str(uuid4()),
+                        dataset_id,
+                        *(reference[field] for field in REFERENCE_FIELDS),
+                        reference.get("target_subelement"),
+                    ),
                 )
             connection.execute(
                 "INSERT INTO audit_events(id,actor_id,event_type,entity_type,entity_id,occurred_at,details_json) "
@@ -157,14 +181,36 @@ class ManifestService:
             raise NotFound("dataset reference manifest not found")
         references = connection.execute(
             "SELECT object_name,property_name,target_revision_id,target_dataset_id,target_file_id,"
-            "target_object_name FROM dataset_references WHERE dataset_id=? ORDER BY object_name,property_name",
+            "target_object_name,target_subelement FROM dataset_references WHERE dataset_id=? ORDER BY object_name,property_name",
             (dataset_id,),
         ).fetchall()
         for reference in references:
             self.authorization.require_read_revision(
                 user, reference["target_revision_id"], connection
             )
-        return {**dict(row), "references": [dict(reference) for reference in references]}
+        occurrences = []
+        for occurrence in connection.execute(
+            "SELECT object_name,occurrence_id,revision_id,geometry_json FROM dataset_standard_occurrences WHERE dataset_id=? ORDER BY object_name",
+            (dataset_id,),
+        ):
+            self.authorization.require_read_revision(user, occurrence["revision_id"], connection)
+            occurrences.append(
+                dict(
+                    object_name=occurrence["object_name"],
+                    occurrence_id=occurrence["occurrence_id"],
+                    revision_id=occurrence["revision_id"],
+                    geometry=json.loads(occurrence["geometry_json"]),
+                )
+            )
+        result = {
+            **dict(row),
+            "references": [
+                {k: v for k, v in dict(ref).items() if v is not None} for ref in references
+            ],
+        }
+        if occurrences:
+            result["standard_occurrences"] = occurrences
+        return result
 
     def get(self, user, dataset_id):
         with self.database.connection() as connection:

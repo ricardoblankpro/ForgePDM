@@ -106,7 +106,7 @@ def select_bom_occurrences(references):
     layout = QtWidgets.QVBoxLayout(dialog)
     layout.addWidget(
         QtWidgets.QLabel(
-            "Select component occurrences to count. Local geometry is excluded.\n"
+            "Select linked components and associated fasteners to count. Other local geometry is excluded.\n"
             "External assemblies count as one component; their children are not flattened."
         )
     )
@@ -270,3 +270,149 @@ def review_component_replacement(
         )
         == QtWidgets.QMessageBox.Yes
     )
+
+
+def standard_specification_dialog(geometry):
+    """Select controlled specification values; catalog text is generated, not typed."""
+    from . import standard_options as options
+
+    dialog = QtWidgets.QDialog(parent_window())
+    dialog.setWindowTitle("Register Standard Fastener")
+    layout = QtWidgets.QVBoxLayout(dialog)
+    layout.addWidget(
+        QtWidgets.QLabel("Geometry from Fasteners Workbench: " + geometry["Type"].upper())
+    )
+    form = QtWidgets.QFormLayout()
+    kind, family, material, grade, finish = [QtWidgets.QComboBox(dialog) for _ in range(5)]
+    for name, combo in [
+        ("type", kind),
+        ("family", family),
+        ("material", material),
+        ("grade", grade),
+        ("finish", finish),
+    ]:
+        combo.setObjectName("standard_" + name)
+    extended = QtWidgets.QCheckBox("Show extended materials, classes and finishes", dialog)
+    extended.setObjectName("standard_extended")
+    for label, widget in [
+        ("Type", kind),
+        ("Family", family),
+        ("Material", material),
+        ("Mechanical class", grade),
+        ("Finish", finish),
+    ]:
+        widget.setEditable(False)
+        widget.setMaxVisibleItems(20)
+        form.addRow(label, widget)
+    layout.addLayout(form)
+    layout.addWidget(extended)
+    preview = QtWidgets.QLabel(dialog)
+    preview.setObjectName("standard_name_preview")
+    preview.setWordWrap(True)
+    preview.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+    layout.addWidget(QtWidgets.QLabel("Generated catalog name"))
+    layout.addWidget(preview)
+    buttons = QtWidgets.QDialogButtonBox(
+        QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
+    )
+    buttons.accepted.connect(dialog.accept)
+    buttons.rejected.connect(dialog.reject)
+    layout.addWidget(buttons)
+    result = [None]
+
+    def fill(combo, rows, previous=None):
+        combo.blockSignals(True)
+        combo.clear()
+        for entry in rows:
+            combo.addItem(entry["label"], entry["id"])
+        index = combo.findData(previous)
+        combo.setCurrentIndex(index if index >= 0 else 0)
+        combo.blockSignals(False)
+
+    def update_preview(*args):
+        try:
+            spec = options.selected_spec(
+                geometry,
+                material.currentData(),
+                grade.currentData(),
+                finish.currentData(),
+                kind.currentText(),
+                family.currentText(),
+                extended.isChecked(),
+            )
+            name, description = options.catalog_text(spec, kind.currentText(), family.currentText())
+            result[0] = dict(specification=spec, name=name, description=description)
+            preview.setText(name)
+            buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
+        except ValueError as error:
+            result[0] = None
+            preview.setText(str(error))
+            buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
+
+    def update_dependent(*args):
+        fill(
+            grade,
+            options.grades(
+                material.currentData(),
+                kind.currentText(),
+                family.currentText(),
+                geometry,
+                extended.isChecked(),
+            ),
+            grade.currentData(),
+        )
+        fill(
+            finish,
+            options.finishes(material.currentData(), extended.isChecked()),
+            finish.currentData(),
+        )
+        update_preview()
+
+    def update_family(*args):
+        previous = family.currentText()
+        family.blockSignals(True)
+        family.clear()
+        if classified is None:
+            family.addItem("SELECT FAMILY")
+        family.addItems(options.TYPES[kind.currentText()])
+        index = family.findText(previous)
+        family.setCurrentIndex(index if index >= 0 else 0)
+        family.blockSignals(False)
+        update_dependent()
+
+    def update_materials(*args):
+        fill(
+            material,
+            [o for o in options.MATERIALS if extended.isChecked() or not o["extended"]],
+            material.currentData(),
+        )
+        update_dependent()
+
+    kind.addItems(list(options.TYPES))
+    classified = options.classification(geometry)
+    if classified:
+        kind.setCurrentText(classified[0])
+    fill(material, [o for o in options.MATERIALS if not o["extended"]])
+    update_family()
+    if classified:
+        family.setCurrentText(classified[1])
+        kind.setEnabled(False)
+        family.setEnabled(False)
+    else:
+        # Unknown standards need an explicit classification choice.
+        kind.insertItem(0, "SELECT TYPE")
+        kind.setCurrentIndex(0)
+        family.clear()
+    kind.currentIndexChanged.connect(
+        lambda *_: update_family() if kind.currentText() in options.TYPES else update_preview()
+    )
+    family.currentIndexChanged.connect(update_dependent)
+    material.currentIndexChanged.connect(update_dependent)
+    grade.currentIndexChanged.connect(update_preview)
+    finish.currentIndexChanged.connect(update_preview)
+    extended.toggled.connect(update_materials)
+    update_dependent()
+    dialog.resize(780, 420)
+    if not execute_dialog(dialog):
+        return None
+    return result[0]

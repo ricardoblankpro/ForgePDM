@@ -11,6 +11,16 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 
 ## Active development-direction roadmap
 
+**Standard/purchased component catalog delivered (addon 0.7.3).** S-numbered
+parts reuse ForgePDM Items, revisions, permissions and managed BOM/CAD workflows.
+Fasteners integration resolves catalog associations during upload/check-in,
+supports selected-occurrence reassociation and provides controlled specification
+choices with generated uppercase catalog names. Purchased CAD models reuse managed
+links. User pilot testing is in progress; supported cases and limitations are in
+[standard parts](standard-parts.md), with the final sequence in
+[the catalog plan](component-catalog-plan.md). Phase 5 reliability debt remains
+tracked below; this feature does not mark Phase 5 complete.
+
 | Phase | Scope | Status / next gate |
 |---|---|---|
 | 0 | Architecture review and governance | Baseline assessment and phase approvals recorded |
@@ -23,8 +33,9 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 | 7 | Addon Manager distribution and stable deployment | Requires licensing, distribution approval and operational gates |
 | 8 | Web interface, ERPNext and future integrations | Browsing plus user/password/project administration, my checkouts and scoped activity implemented locally; engineering editing and integrations deferred |
 
-The user approved bringing basic web browsing forward while Phase 5 remains the
-next backend reliability priority. The first web increment is served at `/app/`
+The user approved bringing basic web browsing forward. Phase 5 remains the
+backend reliability workstream; the component catalog above is delivered for
+user pilot testing. The first web increment is served at `/app/`
 and provides authorized project/item browsing, exact revision history, datasets,
 where-used and direct/multilevel BOM views. User-approved account/project management, my checkouts and activity history
 are now implemented; see [the functional GUI report](web-management.md). Engineering
@@ -94,4 +105,9 @@ The initial `clients/freecad/ForgePDM` Workbench now provides login, create/uplo
 
 ## Not in MVP
 
-Approval workflow designer, effectivity/configuration management, alternate/substitute parts, supplier/manufacturer catalogs, notifications, client verification, multi-CAD clients, browser administration UI, and PostgreSQL production deployment are deferred until core consistency and pilot needs are understood.
+Approval workflow designer, effectivity/configuration management,
+alternate/substitute parts, full supplier/manufacturer catalog integrations,
+notifications, client verification, multi-CAD clients, and PostgreSQL production
+deployment remain deferred. A personal component catalog with basic supplier
+metadata remains separate from the delivered component identity catalog; browser administration has already
+been brought forward.

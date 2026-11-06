@@ -106,7 +106,7 @@ def _resolve(client, value, operation):
     if (
         manifest is None
         or manifest["source_file_id"] != record["id"]
-        or manifest["profile"] != "freecad-app-link-v1"
+        or manifest["profile"] not in ("freecad-app-link-v1", "freecad-fasteners-v1")
         or manifest["references"] != operation.get("references", [])
     ):
         raise ws.WorkspaceError("The committed CAD manifest is inconsistent; journal was preserved")

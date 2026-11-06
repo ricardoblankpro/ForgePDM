@@ -1,0 +1,40 @@
+{
+  "checks": [
+    "Specification form has no free-text inputs",
+    "Uppercase name preview: SCREW CARBON STEEL HEX HEAD ISO4016 M12X70 8.8 ZINC PLATED",
+    "Material change removes incompatible steel class",
+    "Polymer class offers explicit not-applicable",
+    "Polymer finish excludes zinc plating",
+    "Restored choices reproduce same name",
+    "Registered item uses generated name ISO4016",
+    "Description generated without second prompt ISO4016",
+    "Structured specification stored ISO4016",
+    "Specification form has no free-text inputs",
+    "Uppercase name preview: NUT CARBON STEEL HEX ISO4032 M12 8 ZINC PLATED",
+    "Registered item uses generated name ISO4032",
+    "Description generated without second prompt ISO4032",
+    "Structured specification stored ISO4032",
+    "Specification form has no free-text inputs",
+    "Uppercase name preview: WASHER CARBON STEEL FLAT ISO7089 M12 200HV ZINC PLATED",
+    "Registered item uses generated name ISO7089",
+    "Description generated without second prompt ISO7089",
+    "Structured specification stored ISO7089",
+    "Specification form has no free-text inputs",
+    "Uppercase name preview: SCREW CARBON STEEL HEX HEAD ISO4016 M12X70 8.8 ZINC PLATED",
+    "Canceled dialog creates no catalog item",
+    "Unknown norm requires explicit type/family selection",
+    "Unknown norm still requires family",
+    "Unknown norm can be explicitly classified",
+    "User document preserved: A000003",
+    "User document preserved: P000007",
+    "User document preserved: P000008"
+  ],
+  "freecad": [
+    "1",
+    "1",
+    "4"
+  ],
+  "isolation": "Disposable loopback backend; real Qt form and production registration generator; user CAD unchanged",
+  "addon_version": "0.7.3",
+  "check_count": 28
+}

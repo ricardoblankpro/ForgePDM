@@ -5,7 +5,15 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from forgepdm.application.revisions import CHECKOUT_DURATION
-from forgepdm.domain.entities import Item, ItemKind, ItemRevision, LifecycleState, NotFound
+from forgepdm.domain.entities import (
+    Conflict,
+    Item,
+    ItemKind,
+    ItemRevision,
+    LifecycleState,
+    NotFound,
+)
+from forgepdm.domain.standard_parts import encode, specification
 from forgepdm.infrastructure.database import Database
 
 
@@ -22,7 +30,15 @@ class ItemService:
         created_by: str,
         project_id: str | None = None,
         change_note: str = "Initial revision",
+        number_series: str | None = None,
+        standard_specification: dict | None = None,
     ) -> Item:
+        series = number_series if number_series is not None else kind.number_prefix
+        if (kind.value, series) not in {("part", "P"), ("part", "S"), ("assembly", "A")}:
+            raise ValueError("invalid item kind and numbering series")
+        spec = specification(standard_specification) if standard_specification is not None else None
+        if spec is not None and series != "S":
+            raise ValueError("Standard specifications require S numbering")
         name = name.strip()
         if not name:
             raise ValueError("name must not be empty")
@@ -43,24 +59,49 @@ class ItemService:
                 if project is None:
                     raise NotFound("active project not found")
 
+            scope = project_id or ("user:" + created_by)
+            if spec is not None:
+                existing = connection.execute(
+                    "SELECT item_id FROM standard_specifications WHERE scope=? AND specification_json=?",
+                    (scope, encode(spec)),
+                ).fetchone()
+                if existing is not None:
+                    raise Conflict(
+                        "This specification already exists in the selected project; refresh catalog matches"
+                    )
             connection.execute(
-                "INSERT OR IGNORE INTO number_counters(item_kind, next_value) VALUES (?, 1)",
-                (kind.value,),
+                "INSERT OR IGNORE INTO series_counters(series, next_value) VALUES (?, 1)",
+                (series,),
             )
             counter = connection.execute(
-                "SELECT next_value FROM number_counters WHERE item_kind = ?", (kind.value,)
+                "SELECT next_value FROM series_counters WHERE series = ?", (series,)
             ).fetchone()
             value = counter["next_value"]
-            number = f"{kind.number_prefix}{value:06d}"
+            number = f"{series}{value:06d}"
             connection.execute(
-                "UPDATE number_counters SET next_value = ? WHERE item_kind = ?",
-                (value + 1, kind.value),
+                "UPDATE series_counters SET next_value = ? WHERE series = ?",
+                (value + 1, series),
             )
             connection.execute(
-                "INSERT INTO items(id, number, kind, name, description, created_by, created_at, current_revision_id) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (item_id, number, kind.value, name, description.strip(), created_by, now, revision_id),
+                "INSERT INTO items(id, number, kind, name, description, created_by, created_at, current_revision_id, number_series) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    item_id,
+                    number,
+                    kind.value,
+                    name,
+                    description.strip(),
+                    created_by,
+                    now,
+                    revision_id,
+                    series,
+                ),
             )
+            if spec is not None:
+                connection.execute(
+                    "INSERT INTO standard_specifications VALUES (?,?,?,?)",
+                    (item_id, scope, encode(spec["geometry"]), encode(spec)),
+                )
             connection.execute(
                 "INSERT INTO item_revisions(id, item_id, label, sequence, lifecycle_state, change_note, created_by, created_at, modified_at) "
                 "VALUES (?, ?, 'A', 1, 'working', ?, ?, ?, ?)",
@@ -74,7 +115,13 @@ class ItemService:
             connection.execute(
                 "INSERT INTO audit_events(id, actor_id, event_type, entity_type, entity_id, occurred_at, details_json) "
                 "VALUES (?, ?, 'item.created', 'Item', ?, ?, ?)",
-                (str(uuid4()), created_by, item_id, now, json.dumps({"number": number, "kind": kind.value})),
+                (
+                    str(uuid4()),
+                    created_by,
+                    item_id,
+                    now,
+                    json.dumps({"number": number, "kind": kind.value}),
+                ),
             )
             connection.execute(
                 "INSERT INTO audit_events(id, actor_id, event_type, entity_type, entity_id, occurred_at) "
@@ -108,15 +155,23 @@ class ItemService:
         if row is None:
             raise NotFound("item not found")
         item = Item(
-            id=row["id"], number=row["number"], kind=ItemKind(row["kind"]), name=row["name"],
-            description=row["description"], created_by=row["created_by"],
-            created_at=datetime.fromisoformat(row["created_at"]), current_revision_id=row["current_revision_id"],
+            id=row["id"],
+            number=row["number"],
+            kind=ItemKind(row["kind"]),
+            name=row["name"],
+            description=row["description"],
+            created_by=row["created_by"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+            current_revision_id=row["current_revision_id"],
         )
         revision = ItemRevision(
-            id=row["current_revision_id"], item_id=row["id"], label=row["label"],
-            sequence=row["sequence"], lifecycle_state=LifecycleState(row["lifecycle_state"]),
-            change_note=row["change_note"], created_by=row["revision_created_by"],
+            id=row["current_revision_id"],
+            item_id=row["id"],
+            label=row["label"],
+            sequence=row["sequence"],
+            lifecycle_state=LifecycleState(row["lifecycle_state"]),
+            change_note=row["change_note"],
+            created_by=row["revision_created_by"],
             created_at=datetime.fromisoformat(row["revision_created_at"]),
         )
         return item, revision
-

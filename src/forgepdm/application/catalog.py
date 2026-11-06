@@ -42,14 +42,18 @@ class CatalogService:
             project["can_edit"] = bool(project["can_edit"])
         return result
 
-    def search_items(self, user: User, *, query="", project_id=None, limit=50, offset=0):
+    def search_items(
+        self, user: User, *, query="", project_id=None, number_series=None, limit=50, offset=0
+    ):
         self._bounds(limit, offset)
+        if number_series not in (None, "P", "A", "S"):
+            raise ValueError("invalid numbering series")
         query = query.strip()
         if len(query) > 200:
             raise ValueError("search text must contain at most 200 characters")
         with self.database.connection() as connection:
             rows = connection.execute(
-                "SELECT i.id, i.number, i.kind, i.name, i.description, i.current_revision_id, "
+                "SELECT i.id, i.number, i.number_series, i.kind, i.name, i.description, i.current_revision_id, "
                 "r.label AS revision_label, r.lifecycle_state FROM items i "
                 "JOIN item_revisions r ON r.id=i.current_revision_id "
                 "WHERE (?='admin' OR EXISTS (SELECT 1 FROM project_items pi "
@@ -60,6 +64,7 @@ class CatalogService:
                 "AND scope.project_id=? AND p.archived=0 AND (?='admin' OR EXISTS "
                 "(SELECT 1 FROM project_memberships member WHERE member.project_id=p.id "
                 "AND member.user_id=?)))) "
+                "AND (? IS NULL OR i.number_series=?) "
                 "AND (?='' OR instr(lower(i.number),lower(?))>0 "
                 "OR instr(lower(i.name),lower(?))>0 OR instr(lower(i.description),lower(?))>0) "
                 "ORDER BY i.number, i.id LIMIT ? OFFSET ?",
@@ -70,6 +75,8 @@ class CatalogService:
                     project_id,
                     user.role,
                     user.id,
+                    number_series,
+                    number_series,
                     query,
                     query,
                     query,

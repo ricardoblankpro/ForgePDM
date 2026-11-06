@@ -8,10 +8,10 @@ from uuid import uuid4
 
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.application.revisions import RevisionService
+from forgepdm.application.standard_parts import persist_occurrences, read_occurrences
 from forgepdm.domain.entities import Dataset, DatasetType, File, Forbidden, NotFound, User
 from forgepdm.infrastructure.database import Database
 from forgepdm.infrastructure.storage import FileStorage
-
 
 MEDIA_TYPE_PATTERN = re.compile(r"^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$")
 
@@ -20,7 +20,9 @@ def _safe_filename(value: str | None) -> str:
     if not value:
         raise ValueError("an original filename is required")
     candidate = PurePosixPath(value.replace("\\", "/")).name
-    candidate = "".join(character for character in candidate if ord(character) >= 32 and ord(character) != 127)
+    candidate = "".join(
+        character for character in candidate if ord(character) >= 32 and ord(character) != 127
+    )
     candidate = candidate.strip()
     if not candidate or candidate in {".", ".."} or len(candidate) > 255:
         raise ValueError("invalid original filename")
@@ -83,6 +85,13 @@ class DatasetService:
 
         staged = self.storage.stage(source)
         # Blob promotion precedes the DB commit; a failed commit can leave an orphan blob.
+        try:
+            occurrences = (
+                read_occurrences(staged.path) if dataset_type == DatasetType.NATIVE_CAD else []
+            )
+        except BaseException:
+            staged.path.unlink(missing_ok=True)
+            raise
         storage_key = self.storage.promote(staged)
         file_id, dataset_id = str(uuid4()), str(uuid4())
         now = datetime.now(timezone.utc).isoformat()
@@ -113,6 +122,7 @@ class DatasetService:
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 (dataset_id, revision_id, dataset_type.value, dataset_name, user.id, now),
             )
+            persist_occurrences(connection, self.authorization, user, dataset_id, occurrences)
             connection.execute(
                 "INSERT INTO dataset_files(dataset_id, file_id, position) VALUES (?, ?, 0)",
                 (dataset_id, file_id),

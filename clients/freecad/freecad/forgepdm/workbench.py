@@ -21,6 +21,8 @@ class ForgePDMWorkbench(Gui.Workbench):
         entries = (
             ("ForgePDM_Login", commands.LoginCommand),
             ("ForgePDM_Logout", commands.LogoutCommand),
+            ("ForgePDM_RegisterStandardPart", commands.RegisterStandardPartCommand),
+            ("ForgePDM_ChangeStandardPartAssociation", commands.ChangeStandardPartAssociationCommand),
             ("ForgePDM_Upload", commands.UploadCommand),
             ("ForgePDM_Checkout", commands.CheckoutCommand),
             ("ForgePDM_CheckIn", commands.CheckInCommand),

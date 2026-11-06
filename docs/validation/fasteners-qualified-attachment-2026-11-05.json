@@ -1,0 +1,17 @@
+{
+  "checks": [
+    "Qualified local Assembly/link/feature/edge path resolves",
+    "Local qualified attachment creates no fake external dependency",
+    "Qualified attachment survives save/reopen and path rewrite",
+    "Referenced component resolves to rewritten exact child file",
+    "User documents, dirty/touched states and saved file hashes preserved"
+  ],
+  "freecad": [
+    "1",
+    "1",
+    "4"
+  ],
+  "observed_attachment": "Body002.Hole.Edge5",
+  "server_mutations": false,
+  "addon_version": "0.7.1"
+}

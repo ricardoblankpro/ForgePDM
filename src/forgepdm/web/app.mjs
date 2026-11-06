@@ -71,6 +71,7 @@ function resetSession(message = "") {
   $("#project-links").replaceChildren(); $("#project-cards").replaceChildren();
   $("#account-name").textContent = ""; $("#account-avatar").textContent = "";
   $("#project-filter").replaceChildren(el("option", { value: "" }, "All accessible projects"));
+  $("#series-filter").value = "";
   $("#search").value = ""; $(".skip-link").setAttribute("href", "#main");
   $("#password").value = "";
   $("#login-error").textContent = message; $("#login-error").hidden = !message;
@@ -164,6 +165,7 @@ function chooseProject(id) {
   setPage("catalog"); location.hash = ""; loadItems();
 }
 $("#project-filter").addEventListener("change", () => chooseProject($("#project-filter").value));
+$("#series-filter").addEventListener("change", () => { state.offset = 0; loadItems(); });
 $("#search-form").addEventListener("submit", event => {
   event.preventDefault(); state.query = $("#search").value.trim(); state.offset = 0; loadItems();
 });
@@ -180,6 +182,7 @@ async function loadItems() {
   $("#previous").disabled = $("#next").disabled = true;
   const params = new URLSearchParams({ q: state.query, limit: "20", offset: String(state.offset) });
   if (state.project) params.set("project_id", state.project);
+  if ($("#series-filter").value) params.set("number_series", $("#series-filter").value);
   try {
     const page = await request(`/items?${params}`);
     if (version !== listVersion || !state.user) return;
@@ -290,7 +293,7 @@ async function loadTab(content) {
 }
 function renderOverview(content) {
   const { item, revision } = state;
-  const properties = [["Item type", item.kind === "assembly" ? "Assembly" : "Part"],
+  const properties = [["Number series", item.number_series || item.number[0]], ["Item type", item.kind === "assembly" ? "Assembly" : "Part"],
     ["Lifecycle state", badge(revision.lifecycle_state)], ["Selected revision", `Revision ${revision.label}`],
     ["Revision created", dateLabel(revision.created_at)]];
   const info = el("dl", { class: "info-grid" }, ...properties.map(([label, value]) => el("div", {}, el("dt", {}, label), el("dd", {}, value))));
@@ -302,6 +305,7 @@ function renderOverview(content) {
   content.replaceChildren(el("h3", { class: "section-caption" }, "Revision information"), el("div", { class: "info-card" }, info),
     el("div", { class: "section-header" }, el("h3", {}, "Change note")),
     el("p", { class: "description" }, revision.change_note || "No change note recorded."), el("br"),
+    item.standard_specification && el("div", { class: "info-card" }, el("h3", { class: "section-caption" }, "Standard specification"), el("dl", { class: "info-grid" }, ...[...Object.entries(item.standard_specification.geometry), ...["material", "grade", "finish"].map(key => [key, item.standard_specification[key] || "Unknown"])].map(([key, value]) => el("div", {}, el("dt", {}, key.replace(/([a-z])([A-Z])/g, "$1 $2")), el("dd", {}, String(value)))))),
     item.description && el("div", { class: "info-card" }, el("h3", { class: "section-caption" }, "Item description"), el("p", { class: "description" }, item.description)),
     el("div", { class: "section-header" }, el("h3", {}, "Revision history"), el("span", { class: "small-muted" }, `${state.revisions.length} revision${state.revisions.length === 1 ? "" : "s"}`)), table);
   if (state.revisions.length > 8) content.append(button(state.historyAll ? "Show recent revisions" : "Show all revisions", () => { state.historyAll = !state.historyAll; renderOverview(content); }, { class: "quiet" }));

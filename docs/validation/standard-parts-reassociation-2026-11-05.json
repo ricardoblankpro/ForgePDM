@@ -1,0 +1,23 @@
+{
+  "checks": [
+    "Selected screw changes to grade 10.9 S revision",
+    "Unselected screw remains grade 8.8 byte-for-byte",
+    "Occurrence UUIDs preserved",
+    "Placements preserved",
+    "Attachments preserved",
+    "Command leaves server BOM unchanged",
+    "Mixed grades produce separate BOM lines",
+    "Uploaded and retrieved grades remain distinct",
+    "User document preserved: A000003",
+    "User document preserved: P000007",
+    "User document preserved: P000008"
+  ],
+  "freecad": [
+    "1",
+    "1",
+    "4"
+  ],
+  "isolation": "Disposable backend and CAD documents; actual user documents and session preserved",
+  "addon_version": "0.7.2",
+  "attachments": "Both disposable screws were attached to a local support edge."
+}

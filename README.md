@@ -118,3 +118,5 @@ Authenticated catalog endpoints are `GET /api/v1/projects`, `GET /api/v1/items`
 can request `editable=true`. Search filters project permissions before paging;
 revision retrieval never silently substitutes the current revision for a
 requested historical one. Existing write API contracts remain unchanged.
+
+Standard/purchased parts and Fasteners integration: [usage and supported cases](docs/standard-parts.md).

@@ -2,6 +2,10 @@
 <TS version="2.1" language="en" sourcelanguage="en">
   <context>
     <name>ForgePDM</name>
+    <message><source>Change Standard Part Association…</source><translation type="unfinished" /></message>
+    <message><source>Choose another S specification for selected fasteners without moving them</source><translation type="unfinished" /></message>
+    <message><source>Register Standard / Purchased Part…</source><translation type="unfinished" /></message>
+    <message><source>Create an S item without requiring a CAD document</source><translation type="unfinished" /></message>
     <message>
       <source>Refresh ForgePDM Tree Labels</source>
       <translation>Refresh ForgePDM Tree Labels</translation>
