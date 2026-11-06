@@ -28,18 +28,29 @@ class CatalogService:
         self._bounds(limit, offset)
         with self.database.connection() as connection:
             rows = connection.execute(
-                "SELECT p.id, p.project_number, p.name, "
+                "SELECT p.id, p.project_number, p.name, p.is_standard_library, "
                 "CASE WHEN ? = 'admin' THEN 1 WHEN pm.role IN ('owner','editor') "
                 "THEN 1 ELSE 0 END AS can_edit FROM projects p "
                 "LEFT JOIN project_memberships pm ON pm.project_id=p.id AND pm.user_id=? "
                 "WHERE p.archived=0 AND (?='admin' OR pm.user_id IS NOT NULL) "
                 "AND (?=0 OR ?='admin' OR pm.role IN ('owner','editor')) "
+                "AND (?=0 OR p.is_standard_library=0) "
                 "ORDER BY p.project_number, p.id LIMIT ? OFFSET ?",
-                (user.role, user.id, user.role, int(editable), user.role, limit + 1, offset),
+                (
+                    user.role,
+                    user.id,
+                    user.role,
+                    int(editable),
+                    user.role,
+                    int(editable),
+                    limit + 1,
+                    offset,
+                ),
             ).fetchall()
         result = self._page(rows, limit, offset)
         for project in result["items"]:
             project["can_edit"] = bool(project["can_edit"])
+            project["is_standard_library"] = bool(project["is_standard_library"])
         return result
 
     def search_items(

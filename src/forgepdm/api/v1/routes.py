@@ -224,7 +224,9 @@ def create_item(
     """Create an Item and its initial Working revision atomically."""
     try:
         project_id = str(payload.project_id) if payload.project_id else None
-        authorization.require_create_item(user, project_id)
+        project_id = authorization.require_create_item(
+            user, project_id, number_series=payload.number_series
+        )
         item = service.create_item(
             kind=payload.kind,
             number_series=payload.number_series,
@@ -259,8 +261,22 @@ def list_projects(
 
 
 @router.get("/standard-parts/capabilities")
-def standard_capabilities(user: User = Depends(current_user)):
-    return {"version": 1, "adapter": "fasteners-v1", "snapshot_evidence": True}
+def standard_capabilities(
+    user: User = Depends(current_user), catalog: CatalogService = Depends(get_catalog_service)
+):
+    from forgepdm.application.standard_library import can_register, library
+
+    with catalog.database.connection() as connection:
+        project = library(connection)
+        writable = can_register(connection, user.id, user.role, project["id"])
+    return {
+        "version": 1,
+        "adapter": "fasteners-v1",
+        "snapshot_evidence": True,
+        "shared_library": True,
+        "library_project_id": project["id"],
+        "can_register": writable,
+    }
 
 
 @router.post("/standard-parts/matches")

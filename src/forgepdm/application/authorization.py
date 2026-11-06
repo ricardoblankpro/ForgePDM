@@ -1,5 +1,6 @@
 """Project-level authorization policies."""
 
+from forgepdm.application.standard_library import creation_project
 from forgepdm.domain.entities import Conflict, Forbidden, NotFound, User
 from forgepdm.infrastructure.database import Database
 
@@ -8,18 +9,20 @@ class AuthorizationService:
     def __init__(self, database: Database):
         self.database = database
 
-    def require_create_item(self, user: User, project_id: str | None) -> None:
-        if user.role == "admin":
-            return
-        if project_id is None:
-            raise Forbidden("only administrators may create projectless items")
+    def require_create_item(self, user: User, project_id: str | None, number_series=None):
         with self.database.connection() as connection:
+            project_id = creation_project(connection, user.id, user.role, number_series, project_id)
+            if user.role == "admin":
+                return project_id
+            if project_id is None:
+                raise Forbidden("only administrators may create projectless items")
             row = connection.execute(
-                "SELECT role FROM project_memberships WHERE user_id = ? AND project_id = ?",
+                "SELECT role FROM project_memberships WHERE user_id=? AND project_id=?",
                 (user.id, project_id),
             ).fetchone()
-        if row is None or row["role"] not in {"owner", "editor"}:
+        if row is None or row["role"] not in ("owner", "editor"):
             raise Forbidden("project editor access is required")
+        return project_id
 
     def require_read_item(self, user: User, item_id: str) -> None:
         if user.role == "admin":

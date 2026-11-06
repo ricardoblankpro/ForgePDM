@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from forgepdm.application.auth import hash_password, verify_password
 from forgepdm.application.catalog import CatalogService
+from forgepdm.application.standard_library import enroll_reader
 from forgepdm.domain.entities import Conflict, Forbidden, NotFound
 
 ACTIVITY_SCOPE = "((e.entity_type='User' AND e.entity_id=?) OR (e.entity_type='Project' AND EXISTS (SELECT 1 FROM project_memberships pm WHERE pm.project_id=e.entity_id AND pm.user_id=?)) OR EXISTS (SELECT 1 FROM project_items pi JOIN project_memberships pm ON pm.project_id=pi.project_id WHERE pi.item_id=COALESCE(i.id,r.item_id) AND pm.user_id=?))"
@@ -90,6 +91,7 @@ class ManagementService:
                 "INSERT INTO users(id,username,display_name,enabled,role,password_hash,must_change_password,created_at) VALUES (?,?,?,1,?,?,1,?)",
                 (identifier, username, display_name, role, encoded, now()),
             )
+            enroll_reader(connection, identifier)
             self.audit(
                 connection,
                 actor,
@@ -134,6 +136,8 @@ class ManagementService:
                 identifier,
                 {"enabled": enabled, "role": role},
             )
+            if enabled and not old["enabled"]:
+                enroll_reader(connection, identifier)
             return public_user(
                 connection.execute(
                     f"SELECT {USER_COLUMNS} FROM users WHERE id=?", (identifier,)
@@ -210,7 +214,9 @@ class ManagementService:
         with self.database.transaction() as connection:
             self.admin(connection, actor)
             if identifier:
-                self.project_access(connection, actor, identifier)
+                existing = self.project_access(connection, actor, identifier)
+                if existing.get("is_standard_library") and values["archived"]:
+                    raise Conflict("Standard Parts Library cannot be archived")
             if connection.execute(
                 "SELECT 1 FROM projects WHERE project_number=? AND id!=?",
                 (values["project_number"], identifier or ""),

@@ -1,6 +1,8 @@
 # ADR-010: S numbering and embedded Fasteners occurrences
 
 Status: implemented, 2026-11-05. See [usage and limits](../standard-parts.md).
+Project-scoped registration below is superseded by
+[ADR-011](ADR-011-shared-standard-parts-library.md) from migration 12.
 
 S is an Item numbering series, not a structural kind. S items retain ordinary
 part revisions, permissions, checkout and lifecycle. Migration 10 copies P/A

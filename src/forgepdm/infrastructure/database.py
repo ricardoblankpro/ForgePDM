@@ -250,6 +250,24 @@ CREATE TABLE dataset_standard_occurrences (
 ALTER TABLE dataset_references ADD COLUMN target_subelement TEXT;
 """
 
+SHARED_STANDARD_LIBRARY_SCHEMA = """
+ALTER TABLE projects ADD COLUMN is_standard_library INTEGER NOT NULL DEFAULT 0 CHECK(is_standard_library IN (0,1));
+CREATE UNIQUE INDEX projects_standard_library_idx ON projects(is_standard_library) WHERE is_standard_library=1;
+CREATE TEMP TABLE _standard_library_seed AS SELECT lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-4'||substr(lower(hex(randomblob(2))),1,3)||'-8'||substr(lower(hex(randomblob(2))),1,3)||'-'||lower(hex(randomblob(6))) AS id;
+INSERT INTO projects(id,project_number,name,description,archived,created_at,is_standard_library)
+SELECT id,CASE WHEN EXISTS(SELECT 1 FROM projects WHERE project_number='LIB-STANDARD') THEN 'LIB-STANDARD-'||id ELSE 'LIB-STANDARD' END,
+'Standard Parts Library','Shared standard and purchased component catalog',0,strftime('%Y-%m-%dT%H:%M:%f+00:00','now'),1 FROM _standard_library_seed;
+INSERT INTO project_memberships(project_id,user_id,role,granted_at)
+SELECT p.id,u.id,CASE WHEN EXISTS(SELECT 1 FROM items i WHERE i.number_series='S' AND i.created_by=u.id) THEN 'editor' ELSE 'viewer' END,
+strftime('%Y-%m-%dT%H:%M:%f+00:00','now') FROM projects p JOIN users u ON u.enabled=1 WHERE p.is_standard_library=1;
+DELETE FROM project_items WHERE item_id IN (SELECT id FROM items WHERE number_series='S');
+INSERT INTO project_items(project_id,item_id,added_at)
+SELECT p.id,i.id,strftime('%Y-%m-%dT%H:%M:%f+00:00','now') FROM projects p JOIN items i ON i.number_series='S' WHERE p.is_standard_library=1;
+UPDATE standard_specifications SET scope=(SELECT id FROM projects WHERE is_standard_library=1)
+WHERE specification_json IN (SELECT specification_json FROM standard_specifications GROUP BY specification_json HAVING count(*)=1);
+DROP TABLE _standard_library_seed;
+"""
+
 MIGRATIONS = (
     (1, SCHEMA),
     (2, AUTHORIZATION_SCHEMA),
@@ -270,6 +288,7 @@ CREATE TABLE series_counters (
 INSERT INTO series_counters SELECT CASE item_kind WHEN 'part' THEN 'P' ELSE 'A' END, next_value FROM number_counters;
 """),
     (11, STANDARD_PARTS_SCHEMA),
+    (12, SHARED_STANDARD_LIBRARY_SCHEMA),
 )
 
 

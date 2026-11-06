@@ -1,7 +1,9 @@
 """Isolated backend fixtures for service and API tests."""
 
+import os
 from datetime import datetime, timezone
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -17,8 +19,13 @@ from forgepdm.domain.entities import User
 from forgepdm.infrastructure.database import Database
 from forgepdm.infrastructure.storage import FileStorage
 
-
 TEST_PASSWORD = "test-password-0123456789"
+
+# Some test modules import main.app during collection, before fixtures run.
+# Keep its eager initialization away from the developer's configured database.
+_collection_root = TemporaryDirectory(prefix="forgepdm-pytest-app-")
+os.environ["FORGEPDM_DATABASE"] = str(Path(_collection_root.name) / "module-app.sqlite3")
+os.environ["FORGEPDM_FILE_ROOT"] = str(Path(_collection_root.name) / "files")
 
 
 @pytest.fixture
@@ -71,6 +78,17 @@ def backend(tmp_path: Path):
                 "INSERT INTO project_memberships(project_id, user_id, role, granted_at) VALUES (?, ?, ?, ?)",
                 (project_id, users[username]["id"], project_role, now),
             )
+
+    from forgepdm.application.standard_library import enroll_reader
+
+    with database.transaction() as connection:
+        for user in users.values():
+            enroll_reader(connection, user["id"])
+        # The fixture's primary editor also maintains the shared catalog.
+        connection.execute(
+            "UPDATE project_memberships SET role='editor' WHERE user_id=? AND project_id=(SELECT id FROM projects WHERE is_standard_library=1)",
+            (users["editor"]["id"],),
+        )
 
     domain_users = {
         name: User(

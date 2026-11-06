@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.4 — 2026-11-05
+
+- Register all S items in the shared Standard Parts Library without a project
+  prompt, including Fasteners registration and native purchased-part uploads.
+- Require shared-library backend capability and maintainer rights before
+  registration. Existing library parts remain reusable by readers.
+- Requires backend migration 12; existing item/revision/BOM identities are retained.
+
 ## 0.7.3 — 2026-11-05
 
 - Replace fastener material/grade/finish text prompts with one controlled selection

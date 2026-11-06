@@ -1,5 +1,43 @@
 # Development status
 
+## 2026-11-05 — Remove dedicated web library navigation
+
+- At user request, undo the dedicated Standard Parts Library sidebar/view and
+  its specialized browsing state. Use the existing Item catalog S-series filter.
+- Restore the previous web project browsing and remove feature-specific browser
+  fixture/report/documentation. Shared library ownership, permissions, migration
+  12 and addon 0.7.4 remain in place. No engineering data change.
+- Validation: restored web files match their pre-feature versions; JS syntax,
+  existing Node model checks and diff checks pass. Backend distributions rebuilt;
+  live HTTP confirms the dedicated entry is absent and S-series filter remains.
+
+## 2026-11-05 — Shared Standard Parts Library (0.7.4)
+
+- Migration 12 creates a dedicated shared project/library and moves all S ownership
+  there, preserving Item/Revision identities, names/specifications, datasets,
+  checkouts and exact BOM pins. Legacy equivalent identities remain separate;
+  new exact specification duplicates are blocked across the library.
+- Enabled users start as library viewers; existing S creators become initial
+  editors. Administrators manage curator membership using existing project
+  management. Engineering-project edit rights grant no library write rights.
+- All S creation routes to this library, including older clients supplying another
+  project. Registration and native S uploads skip the project prompt. P/A creation
+  excludes/rejects the library; library archiving is prohibited. See ADR-011.
+- Validation: 146 backend and 340 addon tests passed; 16 disposable real FreeCAD/
+  HTTP checks cover no-prompt registration, permissions, curator promotion and the
+  same exact S revision in two project BOMs. Open document/object states, saved
+  hashes and user session preserved. Evidence:
+  docs/validation/shared-standard-library-2026-11-05.json.
+- Installed 0.7.4 in both local profiles with verified archive contents and backups;
+  refreshed four registered command instances and verified current backend library
+  capability. Local database is at migration 12 with five S items in the library.
+- Deployment caveat: collection-time import of main.app in existing tests eagerly
+  initialized the local database before the intended pre-migration backup. A private
+  current-state backup exists, but it is not a pre-12 rollback point. Added explicit
+  test-collection database/file-root isolation to prevent recurrence. Migration
+  preservation is covered by synthetic pre-12 tests; local integrity/foreign-key
+  checks pass. Do not claim a full local before/after comparison was available.
+
 ## 2026-11-05 — Specification selections and uppercase catalog text (0.7.3)
 
 - Fasteners-driven registration now uses one form with controlled material,

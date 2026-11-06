@@ -4,12 +4,11 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
+from conftest import TEST_PASSWORD, create_item
 from fastapi.testclient import TestClient
 
 from forgepdm.application.catalog import CatalogService
 from forgepdm.domain.entities import Forbidden, ItemKind, LifecycleState
-
-from conftest import TEST_PASSWORD, create_item
 
 
 def catalog(backend):
@@ -83,10 +82,11 @@ def test_archived_and_unassigned_projects_not_offered(backend):
             "INSERT INTO projects(id, project_number, name, archived, created_at) VALUES (?, 'OTHER', 'Other', 0, ?)",
             (str(uuid4()), datetime.now(timezone.utc).isoformat()),
         )
-    assert len(service.projects(backend.users["editor"])["items"]) == 1
+    assert len(service.projects(backend.users["editor"])["items"]) == 2
     with backend.database.transaction() as connection:
         connection.execute("UPDATE projects SET archived=1 WHERE id=?", (backend.project_id,))
-    assert service.projects(backend.users["editor"])["items"] == []
+    assert all(row["is_standard_library"] for row in service.projects(backend.users["editor"])["items"])
+    assert service.projects(backend.users["editor"], editable=True)["items"] == []
 
 
 def test_catalog_api_authentication_bounds_and_non_disclosure(backend, monkeypatch, tmp_path):

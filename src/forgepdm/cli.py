@@ -1,14 +1,15 @@
 """Local administration commands for bootstrapping the development database."""
 
 import argparse
-from getpass import getpass
 import os
 import sqlite3
 from datetime import datetime, timezone
+from getpass import getpass
 from pathlib import Path
 from uuid import uuid4
 
 from forgepdm.application.auth import MIN_PASSWORD_LENGTH, hash_password
+from forgepdm.application.standard_library import enroll_reader
 from forgepdm.infrastructure.database import Database
 
 
@@ -62,6 +63,7 @@ def main() -> None:
                     "VALUES (?, ?, ?, 1, ?, ?, ?)",
                     (identifier, args.username, args.display_name, now, password_hash, args.role),
                 )
+                enroll_reader(connection, identifier)
             elif args.command == "create-project":
                 identifier = str(uuid4())
                 connection.execute(

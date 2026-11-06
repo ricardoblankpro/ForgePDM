@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from forgepdm.application.revisions import CHECKOUT_DURATION
+from forgepdm.application.standard_library import creation_project
 from forgepdm.domain.entities import (
     Conflict,
     Item,
@@ -48,10 +49,11 @@ class ItemService:
         item_id, revision_id = str(uuid4()), str(uuid4())
         with self.database.transaction() as connection:
             user = connection.execute(
-                "SELECT id FROM users WHERE id = ? AND enabled = 1", (created_by,)
+                "SELECT id,role FROM users WHERE id = ? AND enabled = 1", (created_by,)
             ).fetchone()
             if user is None:
                 raise NotFound("enabled user not found")
+            project_id = creation_project(connection, created_by, user["role"], series, project_id)
             if project_id is not None:
                 project = connection.execute(
                     "SELECT id FROM projects WHERE id = ? AND archived = 0", (project_id,)
@@ -62,12 +64,12 @@ class ItemService:
             scope = project_id or ("user:" + created_by)
             if spec is not None:
                 existing = connection.execute(
-                    "SELECT item_id FROM standard_specifications WHERE scope=? AND specification_json=?",
-                    (scope, encode(spec)),
+                    "SELECT s.item_id FROM standard_specifications s JOIN project_items pi ON pi.item_id=s.item_id WHERE pi.project_id=? AND s.specification_json=?",
+                    (project_id, encode(spec)),
                 ).fetchone()
                 if existing is not None:
                     raise Conflict(
-                        "This specification already exists in the selected project; refresh catalog matches"
+                        "This specification already exists in the Standard Parts Library; refresh catalog matches"
                     )
             connection.execute(
                 "INSERT OR IGNORE INTO series_counters(series, next_value) VALUES (?, 1)",

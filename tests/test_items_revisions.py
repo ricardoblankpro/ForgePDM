@@ -12,7 +12,7 @@ def test_migrations_are_repeatable_and_item_creation_is_atomic(backend):
             row["version"]
             for row in connection.execute("SELECT version FROM schema_version ORDER BY version")
         ]
-    assert versions == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    assert versions == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
     first = create_item(backend, kind="part")
     second = create_item(backend, kind="assembly", name="Test Assembly")
@@ -110,8 +110,9 @@ def test_revision_label_extends_beyond_z(backend):
 
 
 def test_standard_numbering(backend):
-    from forgepdm.domain.entities import ItemKind
     import pytest
+
+    from forgepdm.domain.entities import ItemKind
     service = __import__('forgepdm.application.items', fromlist=['ItemService']).ItemService(backend.database)
     actor = backend.users['admin'].id
     for expected in ('S000001', 'S000002'):

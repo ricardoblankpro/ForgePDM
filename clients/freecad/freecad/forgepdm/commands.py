@@ -402,7 +402,23 @@ class RegisterStandardPartCommand(Command):
             information("ForgePDM", "Registered " + item["number"])
 
 
+def _standard_library_access(client):
+    capability = yield Request(
+        "Checking shared Standard Parts Library…", client.standard_capabilities
+    )
+    if not capability.get("shared_library"):
+        raise workspace.WorkspaceError(
+            "Update/restart the backend to use the shared Standard Parts Library"
+        )
+    if not capability.get("can_register"):
+        raise workspace.WorkspaceError(
+            "You have read-only Standard Parts Library access. Ask an administrator to grant library editor membership to register parts."
+        )
+    return capability
+
+
 def _register_standard(client, spec=None):
+    yield from _standard_library_access(client)
     if spec is not None:
         from .ui import standard_specification_dialog
 
@@ -422,21 +438,11 @@ def _register_standard(client, spec=None):
         description = ask_text("Register Standard Part", "Description (optional)", "")
         if description is None:
             return None
-    project = yield from _select_record(
-        "Standard Parts Project",
-        "Choose a project you can edit",
-        client.list_projects,
-        lambda row: row["project_number"] + " — " + row["name"],
-        kwargs={"editable": True},
-        allow_projectless=(Session.user or {}).get("role") == "admin",
-    )
-    if project is None:
-        return None
     return (
         yield Request(
             "Registering standard part…",
             client.create_item,
-            ("part", name, project.get("id"), description),
+            ("part", name, None, description),
             kwargs={"number_series": "S", "standard_specification": spec},
             mutates=True,
             cancellable=False,
@@ -640,16 +646,20 @@ class UploadCommand(Command):
             )
             if not kind:
                 return
-            project = yield from _select_record(
-                "Projects",
-                "Choose a project",
-                client.list_projects,
-                lambda record: record["project_number"] + " — " + record["name"],
-                kwargs={"editable": True},
-                allow_projectless=(Session.user or {}).get("role") == "admin",
-            )
-            if project is None:
-                return
+            if kind == "standard/purchased part":
+                yield from _standard_library_access(client)
+                project = {"id": None}
+            else:
+                project = yield from _select_record(
+                    "Projects",
+                    "Choose a project",
+                    client.list_projects,
+                    lambda record: record["project_number"] + " — " + record["name"],
+                    kwargs={"editable": True},
+                    allow_projectless=(Session.user or {}).get("role") == "admin",
+                )
+                if project is None:
+                    return
         else:
             yield from _editable(client, metadata)
         document = _guard_document(document_name)

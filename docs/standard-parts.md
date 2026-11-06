@@ -1,17 +1,32 @@
 # Standard parts and Fasteners Workbench
 
-ForgePDM addon 0.7.3 requires backend migrations 10–11 for this integration.
+ForgePDM addon 0.7.4 requires backend migrations 10–12 for this integration.
 Back up the database and file storage before upgrading; deploy the backend and
 addon together. Existing P/A items and historical link-only manifests remain valid.
-No existing engineering data is automatically converted or reclassified.
+Migration 12 moves existing S item ownership into the shared library while preserving
+item/revision IDs, names, CAD files, checkouts and BOM references.
 
 ## Standard and purchased items
 
 S000001 identifies a standard/purchased part. It is an ordinary part with revisions,
 checkout and lifecycle. Use **Register Standard / Purchased Part…** to create a
 metadata-only item, then explicitly keep its checkout, check in metadata, or check
-in and release. Creation requires edit access to the selected project. A library
-project is optional: existing memberships control its access.
+in and release. All S items belong to the shared **Standard Parts Library**.
+There is no project prompt: an assembly references the same S revision from any
+engineering project without copying it or changing its ownership.
+
+Enabled users receive library viewer membership on migration or account creation.
+Library editors/owners and global administrators can register and edit S items;
+ordinary project editor access grants no library write rights. Existing S creators
+receive initial library editor membership during migration. Administrators can
+manage these memberships in the web project-management page. Explicitly revoked
+access remains revoked unless the account is disabled and enabled again.
+
+The library uses the existing project permission infrastructure and is excluded
+from P/A creation pickers. It cannot be archived. Older API clients that submit an
+engineering project for an S item are routed to the library and still need library
+edit rights. Legacy duplicate S identities remain separate; new identical
+Fasteners specification registration is rejected across the library.
 
 **Create / Upload Current Document** also offers a standard/purchased part choice
 for native CAD models. Search in **Download Item / Assembly** can be filtered to S
@@ -81,7 +96,7 @@ Automated tests cover numbering/migrations, concurrent catalog creation, permiss
 metadata-only lifecycle, specification matching, snapshot evidence, atomic replay,
 edit invalidation, copies, unknown proxies and mixed BOM counts. Live evidence is
 recorded under docs/validation/standard-parts-freecad-2026-11-05.json.
-See ADR-010 for persistence and architectural tradeoffs.
+See ADR-010 and ADR-011 for persistence and shared-library architectural tradeoffs.
 
 To reproduce the live fixture, start a dedicated FreeCAD session with Fasteners,
 then run `uv run python clients/freecad/tools/validation/standard_parts_server.py`
@@ -138,3 +153,9 @@ purchased items without a geometry specification retain their manual naming flow
 Validation: docs/validation/standard-parts-form-2026-11-05.json records real Qt
 form/HTTP registration checks on disposable data, including exact screw/nut/washer
 names, dependent selections, cancellation and preservation of user documents.
+
+Shared-library validation: start the same disposable server, then execute
+`clients/freecad/tools/validation/shared_standard_library_gui.py` through FreeCAD
+MCP. It verifies registration without a project prompt, library access, curator
+promotion and reuse in two project BOMs while preserving the current CAD session.
+Run it against a fresh disposable server; it registers synthetic records there.

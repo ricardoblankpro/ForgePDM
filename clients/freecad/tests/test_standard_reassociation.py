@@ -230,10 +230,16 @@ def test_fastener_registration_uses_generated_text_without_text_prompts(commands
         return {"id": "created"}
 
     assert drive(
-        commands._register_standard(SimpleNamespace(create_item=create, list_projects=lambda **kw: {}), {"geometry": geometry})
+        commands._register_standard(
+            SimpleNamespace(
+                create_item=create,
+                standard_capabilities=lambda: {"shared_library": True, "can_register": True},
+            ),
+            {"geometry": geometry},
+        )
     ) == {"id": "created"}
     args, kwargs = captured[0]
-    assert args == ("part", name, "project", description)
+    assert args == ("part", name, None, description)
     assert kwargs == {"number_series": "S", "standard_specification": spec}
 
 
@@ -245,6 +251,58 @@ def test_canceled_specification_form_does_not_ask_for_project_or_create(commands
         commands, "_select_record", lambda *a, **kw: pytest.fail("Canceled registration continued")
     )
     assert (
-        drive(commands._register_standard(SimpleNamespace(), {"geometry": {"Type": "ISO4016"}}))
+        drive(
+            commands._register_standard(
+                SimpleNamespace(
+                    standard_capabilities=lambda: {"shared_library": True, "can_register": True}
+                ),
+                {"geometry": {"Type": "ISO4016"}},
+            )
+        )
         is None
     )
+
+
+def test_standard_registration_requires_library_maintainer_before_prompts(commands, monkeypatch):
+    client = SimpleNamespace(
+        standard_capabilities=lambda: {"shared_library": True, "can_register": False}
+    )
+    monkeypatch.setattr(
+        commands,
+        "ask_text",
+        lambda *a, **kw: pytest.fail("Unauthorized registration opened a prompt"),
+    )
+    with pytest.raises(commands.workspace.WorkspaceError, match="read-only"):
+        drive(commands._register_standard(client))
+
+
+def test_shared_registration_does_not_fall_back_to_projectless_old_server(commands):
+    client = SimpleNamespace(standard_capabilities=lambda: {"version": 1})
+    with pytest.raises(commands.workspace.WorkspaceError, match="Update/restart"):
+        drive(commands._register_standard(client))
+
+
+def test_new_standard_cad_upload_skips_project_picker(commands, case, monkeypatch):
+    monkeypatch.setattr(commands, "_metadata", lambda *a, **kw: None)
+    monkeypatch.setattr(commands, "ask_choice", lambda *a, **kw: "standard/purchased part")
+    monkeypatch.setattr(
+        commands, "_select_record", lambda *a, **kw: pytest.fail("Unexpected project prompt")
+    )
+    case.client.standard_capabilities = lambda: {"shared_library": True, "can_register": True}
+    case.client.validate_references = lambda *_: None
+
+    def associate(*args):
+        if False:
+            yield
+        return True
+
+    monkeypatch.setattr(commands, "_associate_fasteners", associate)
+    monkeypatch.setattr(commands.cad, "capture", lambda *_: [])
+    workflow = commands.UploadCommand().action()
+    try:
+        first = next(workflow)
+        assert first.function == case.client.standard_capabilities
+        second = workflow.send(first.function())
+        assert second.function == case.client.validate_references
+    finally:
+        workflow.close()

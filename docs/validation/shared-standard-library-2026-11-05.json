@@ -1,0 +1,22 @@
+{
+  "checks": [
+    "Backend advertises shared library and administrator registration",
+    "Real FreeCAD registration completes without project/text prompts",
+    "Shared catalog returns generated specification",
+    "Legacy client S request accepted with consuming project",
+    "New engineer gets read-only library capability",
+    "New engineer can read shared S item",
+    "Server denies reader registration",
+    "FreeCAD rejects read-only registration before prompting",
+    "Administrator can grant library maintainer access",
+    "Library editor registers without engineering-project membership",
+    "Exact S revision reusable in project BOM",
+    "Exact S revision reusable in project BOM",
+    "All S items owned only by library",
+    "Legacy request ownership routed to shared library",
+    "User document flags/object states/file hashes preserved",
+    "User session preserved"
+  ],
+  "result": "passed",
+  "data": "disposable backend only; no user CAD changes"
+}

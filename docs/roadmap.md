@@ -11,7 +11,9 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 
 ## Active development-direction roadmap
 
-**Standard/purchased component catalog delivered (addon 0.7.3).** S-numbered
+**Standard/purchased component catalog delivered (addon 0.7.4).** Shared library
+ownership replaces consuming-project assignment; registration skips the project
+prompt, with reader/maintainer permissions (ADR-011). S-numbered
 parts reuse ForgePDM Items, revisions, permissions and managed BOM/CAD workflows.
 Fasteners integration resolves catalog associations during upload/check-in,
 supports selected-occurrence reassociation and provides controlled specification
