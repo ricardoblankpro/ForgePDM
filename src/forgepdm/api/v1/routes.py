@@ -284,6 +284,7 @@ def standard_capabilities(
         "version": 1,
         "adapter": "fasteners-v1",
         "reference_mass_version": 1,
+        "mass_fallback_version": 1,
         "snapshot_evidence": True,
         "shared_library": True,
         "library_project_id": project["id"],

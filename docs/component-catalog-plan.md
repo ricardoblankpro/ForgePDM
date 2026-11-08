@@ -12,7 +12,7 @@ deferred. This replaces the earlier three-increment catalog proposal.
 
 Status: implemented in addon 0.7.0 and migrations 10–11. See [current usage and validation](standard-parts.md).
 
-Current client: **0.10.0**, schema **16**. Shared S/M library ownership, controlled
+Current client: **0.11.0**, schema **16**. Shared S/M library ownership, controlled
 Fasteners registration and optional revision-bound supplier reference mass have
 since been delivered. Use [Standard Parts](standard-parts.md),
 [materials](material-management.md) and [reference mass](supplier-reference-mass.md)

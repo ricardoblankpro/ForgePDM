@@ -6,7 +6,7 @@ proposal. See [usage and limits](docs/standard-parts.md),
 [ADR-010](docs/decisions/ADR-010-standard-parts-and-fasteners.md) and
 [live evidence](docs/validation/standard-parts-freecad-2026-11-05.json).
 
-The sequence below is historical. Current addon 0.10.0/backend schema 16 add the
+The sequence below is historical. Current addon 0.11.0/backend schema 16 add the
 shared S/M library, simple descriptions, physical P mass and optional supplier S
 mass; see the current usage guides linked above and
 [supplier reference mass](docs/supplier-reference-mass.md).

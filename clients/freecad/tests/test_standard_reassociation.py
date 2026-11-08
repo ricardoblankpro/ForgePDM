@@ -187,7 +187,7 @@ def test_selected_occurrence_can_register_a_different_purchasing_specification(
     )
     registered = []
 
-    def register(client, specification):
+    def register(client, specification, mass_object=None):
         if False:
             yield
         registered.append(specification)

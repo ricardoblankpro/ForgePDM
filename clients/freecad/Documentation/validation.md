@@ -1,7 +1,7 @@
 # FreeCAD validation and manual acceptance
 
-Current client: **0.10.0**, backend schema **16**. The latest checked suites contain
-199 backend tests and 356 addon tests; live FreeCAD/browser evidence and scope are
+Current client: **0.11.0**, backend schema **16**. The latest checked suites contain
+221 backend tests and 364 addon tests; live FreeCAD/browser evidence and scope are
 recorded in `DEVELOPMENT_STATUS.md` and the 2026-11-07 material/reference reports.
 Use [the current validation/upgrade guide](../../../docs/upgrade-and-validation.md)
 for configuration, packaging, native harnesses and browser checks. Addon lint and

@@ -11,15 +11,29 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
     try {
       if(item.number.startsWith("S")) {
         const path=`/revisions/${revision.id}/reference-mass`;
-        const mass=await api.request(path);
+        const [mass,checkout]=await Promise.all([api.request(path),api.request(`/revisions/${revision.id}/checkout`)]);
         if(!host.isConnected)return;
-        host.replaceChildren(el("h3",{},"Supplier reference mass"),el("p",{},mass.mass_kg!=null?`${Number(mass.mass_kg)*1000} g per piece`:`Mass unavailable: ${mass.reason}`));
-        if(mass.mass_kg!=null)host.append(el("p",{},`${mass.supplier} · ${mass.source_article} · retrieved ${mass.retrieved_at.slice(0,10)}`),el("a",{href:mass.source_url,target:"_blank",rel:"noopener noreferrer"},"Supplier source"));
-        if(mass.mass_kg==null && revision.lifecycle_state==="working") {
-          const checkout=await api.request(`/revisions/${revision.id}/checkout`);
-          if(checkout?.user_id===state.user?.id)host.append(button("Find reference mass",async()=>{try{await api.request(path+"/lookup",{method:"POST",body:{}});await render(host,item,revision);}catch(e){error(host,e);}}));
-          else host.append(el("p",{},"Acquire a Working checkout to save reference mass."));
-        }
+        const label={supplier_reference:"Supplier reference",cad_estimate:"Estimated from CAD",manual:"Manual entry"}[mass.status];
+        host.replaceChildren(el("h3",{},"Standard part mass"),el("p",{},mass.mass_kg!=null?`${Number((Number(mass.mass_kg)*1000).toPrecision(8))} g per piece`:`Mass unavailable: ${mass.reason}`));
+        if(label)host.append(el("p",{},label));
+        if(mass.status==="supplier_reference")host.append(el("p",{},`${mass.supplier} · ${mass.source_article} · retrieved ${mass.retrieved_at.slice(0,10)}`),el("a",{href:mass.source_url,target:"_blank",rel:"noopener noreferrer"},"Supplier source"));
+        if(mass.status==="cad_estimate")host.append(el("p",{},`Reference density: ${mass.density_reference.density_kg_m3} kg/m³ (${mass.density_reference.name}); ${mass.thread_mode} threads. Actual fastener mass may differ.`));
+        if(mass.status==="manual"&&mass.note)host.append(el("p",{},mass.note));
+        const editable=revision.lifecycle_state==="working"&&checkout?.user_id===state.user?.id;
+        if(editable) {
+          if(mass.status!=="supplier_reference")host.append(button("Find reference mass",async()=>{try{await api.request(path+"/lookup",{method:"POST",body:{}});await render(host,item,revision);}catch(e){error(host,e);}}));
+          if(mass.status!=="supplier_reference") {
+            const value=field("Mass per piece (g)",mass.status==="manual"?(mass.source_mass||String(Number(mass.mass_kg)*1000)):"");
+            const note=field("Mass note (optional)",mass.note||"");
+            value.input.inputMode="decimal";value.input.maxLength=100;note.input.maxLength=500;
+            host.append(el("details",{},el("summary",{},"Enter mass manually"),value.node,note.node,button("Save manual mass",async()=>{
+              try{if(!value.input.value.trim())throw new Error("Enter mass per piece in grams.");await api.request(path+"/fallback",{method:"PUT",body:{method:"manual",mass_g:value.input.value.trim(),note:note.input.value,expected_token:mass.token}});await render(host,item,revision);}catch(e){error(host,e);}
+            })));
+            if(!mass.mass_kg)host.append(el("p",{},"FreeCAD can estimate mass from a recognized selected material when you upload or associate a fastener."));
+          }
+        } else if(revision.lifecycle_state==="working") {
+          host.append(el("p",{},"Acquire a Working checkout to save mass."),button("Acquire checkout",async()=>{try{await api.request(`/revisions/${revision.id}/checkout`,{method:"POST"});await render(host,item,revision);}catch(e){error(host,e);}}));
+        } else if(revision.lifecycle_state==="released")host.append(el("p",{},"Create a new S revision to change mass."));
         if(state.user?.role==="admin") {
           const upload=el("input",{type:"file",accept:".csv,text/csv"});
           host.append(el("label",{},"Import supplier reference CSV",upload));

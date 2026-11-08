@@ -312,10 +312,42 @@ def standard_specification_dialog(geometry):
     preview.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
     layout.addWidget(QtWidgets.QLabel("Generated catalog name"))
     layout.addWidget(preview)
+    manual = QtWidgets.QCheckBox("Enter mass manually if no supplier match", dialog)
+    manual.setObjectName("standard_manual_mass")
+    layout.addWidget(manual)
+    manual_details = QtWidgets.QWidget(dialog)
+    manual_form = QtWidgets.QFormLayout(manual_details)
+    manual_value = QtWidgets.QLineEdit()
+    manual_value.setObjectName("standard_manual_mass_g")
+    manual_value.setMaxLength(100)
+    manual_note = QtWidgets.QLineEdit()
+    manual_note.setObjectName("standard_manual_mass_note")
+    manual_note.setMaxLength(500)
+    manual_form.addRow("Mass per piece (g)", manual_value)
+    manual_form.addRow("Note (optional)", manual_note)
+    layout.addWidget(manual_details)
+    manual_details.hide()
+    manual.toggled.connect(manual_details.setVisible)
     buttons = QtWidgets.QDialogButtonBox(
         QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
     )
-    buttons.accepted.connect(dialog.accept)
+
+    def accept():
+        if manual.isChecked():
+            from decimal import Decimal, InvalidOperation
+
+            try:
+                value = Decimal(manual_value.text().strip())
+                if not value.is_finite() or not Decimal("1e-9") <= value <= Decimal("1e7"):
+                    raise ValueError("invalid mass")
+            except (ValueError, InvalidOperation):
+                QtWidgets.QMessageBox.warning(
+                    dialog, "Mass", "Enter a positive mass per piece in grams."
+                )
+                return
+        dialog.accept()
+
+    buttons.accepted.connect(accept)
     buttons.rejected.connect(dialog.reject)
     layout.addWidget(buttons)
     result = [None]
@@ -415,4 +447,11 @@ def standard_specification_dialog(geometry):
     dialog.resize(780, 420)
     if not execute_dialog(dialog):
         return None
-    return result[0]
+    selected = result[0]
+    if selected is not None and manual.isChecked():
+        selected = {
+            **selected,
+            "manual_mass_g": manual_value.text().strip(),
+            "manual_mass_note": manual_note.text().strip(),
+        }
+    return selected

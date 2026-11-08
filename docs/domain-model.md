@@ -55,7 +55,7 @@ Schema 16 also contains these engineering extensions:
 | Revision description | Frozen selected M revision/text on P, free text on A, catalog text on M. Changes need owned Working checkout and concurrency tokens. |
 | Physical material link | Optional M-revision source UUID/name/density/attribution snapshot. P revisions freeze selected physical snapshots separately; M edits do not rewrite them. |
 | Dataset description/mass evidence | Immutable native description, final-solid volume/material evidence and computed kg tied to exact CAD dataset/file hash. CAD measures volume; backend validates the snapshot and arithmetic. |
-| S reference mass | Supplier mass per piece with exact specification hash and original quantity/unit/source/provenance, saved on an owned Working S revision. Released values stay immutable; new revisions copy them. |
+| S mass | Supplier reference, CAD volume/reference-density estimate or explicit manual grams per piece. Optimistic tokens protect fallback edits; audit retains source changes. Saved on an owned Working S revision, copied forward, immutable after release. |
 | Supplier feed/attempt | Administrator-imported exact-specification CSV references and bounded lookup cooldowns; neither is an inventory or purchasing ledger. |
 
 Advanced manufacturing inputs and requirements from migration 13 remain stored

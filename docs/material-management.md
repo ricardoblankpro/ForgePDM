@@ -130,7 +130,7 @@ Backend migration 14 is additive: it creates description/evidence tables and
 seeds descriptions for existing M revisions using their prior specification
 text, item description or item name. It does not assign materials to existing
 parts or modify historical P/A revisions. Back up SQLite, storage and installed
-addons before starting an upgraded backend. The current addon is **0.10.0** and
+addons before starting an upgraded backend. The current addon is **0.11.0** and
 requires the backend through **migration 16**; physical links/mass originated in
 migration 15. See [the upgrade checklist](upgrade-and-validation.md).
 

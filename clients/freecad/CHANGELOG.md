@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0 — 2026-11-07
+
+- Estimate missing S fastener mass from a valid native solid and an explicit
+  reference density for its selected material; label source and thread detail.
+- Add optional manual grams per piece in fastener registration and the web
+  Description tab, with checkout/concurrency checks and source-preserving audit.
+- Reuse saved manual/estimated masses and preserve Released revisions. Supplier
+  lookup may upgrade Working estimates; unknown materials/invalid solids stay
+  unavailable. No schema migration beyond 16; assembly totals remain future work.
+
 ## 0.10.0 — 2026-11-07
 
 - Automatically retrieve verified supplier reference mass when registering supported

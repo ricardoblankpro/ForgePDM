@@ -1,5 +1,47 @@
 # Development status
 
+## 2026-11-07 — S fastener CAD/manual mass fallbacks installed (0.11.0)
+
+- Extend the existing S revision mass record with explicit cad_estimate/manual
+  sources and optimistic tokens. Supplier/CSV lookup remains first. When no mass
+  is saved, the addon reads one valid Fasteners solid's volume and BRep hash;
+  the backend uses a reviewed reference density for the selected material and
+  validates geometry identity/Decimal arithmetic. Keep density-card identity,
+  thread representation and generator provenance. No native shape, placement,
+  material or occurrence identity is changed. Unknown/unmapped materials and
+  invalid/null/multiple solids remain unavailable, never zero.
+- Add optional manual grams per piece plus a note in the controlled native
+  registration form and the web S Description tab. Manual values replace unknowns
+  or estimates under owned Working checkouts; supplier references are protected.
+  Estimates never overwrite manual/saved estimates. Lookup may upgrade an owned
+  Working estimate to verified supplier data, protecting concurrent manual edits.
+  Before/after provenance is audited. Released records stay immutable and new
+  revisions copy mass. Generic S items may receive manual mass without a spec.
+- Upload/association includes retained fasteners as well as newly selected ones,
+  coalescing optional mass work per S revision. It does not acquire child checkouts
+  or replace revision pins. Existing saved estimates are reused across occurrences;
+  thread-display changes do not recalculate the stored S value. Approximate
+  reference densities are explicit surrogates from FreeCAD 1.1.4 cards, not
+  certified properties of every alloy/grade/coating. Assembly totals remain future.
+- Validation: 221 backend tests, 364 addon tests; 41 real browser checks (8 fallback,
+  26 existing, 7 simple-material), no page errors; three real FreeCAD 1.1.4 checks
+  cover automatic ISO4016 solid estimate, unknown material registration and optional
+  manual registration/Released reuse. Unit/API coverage includes source priority,
+  arithmetic bounds, stale writes, permissions, copy-forward and in-flight supplier
+  vs manual races. Lint/format, web model/syntax, manifest/ZIP/backend builds pass.
+- Installed backend and both addon profiles at 0.11.0 with schema 16; no migration
+  or data backfill. Pre-update backup:
+  var/backups/before-mass-fallbacks-20261108T021643Z. All 38 tables including schema
+  history and 181 stored-file hashes unchanged; SQLite integrity/foreign keys pass.
+  Hot-refreshed UI/API/command instances while preserving login, three open
+  documents, active document, saved hashes, labels and current dirty state. No
+  production test records or mass values were created. Refresh the web page for
+  the new mass-source/manual controls; FreeCAD is already updated.
+- Design: ADR-016. Usage/density table/API: docs/supplier-reference-mass.md.
+  Evidence: docs/validation/mass-fallbacks-2026-11-07.json and installed report.
+  Backend fallback API is required despite unchanged schema number. No assembly
+  mass rollup, TechDraw BOM tables, inventory or ERP synchronization added.
+
 ## 2026-11-07 — Documentation audit and GitHub publication preparation
 
 - Review the pending implementation against current guides. Update root/addon
@@ -887,9 +929,9 @@ Evidence:
 ## Next session
 
 1. Read root/nested `AGENTS.md`, this handoff and Git status before changes.
-   Current delivery is addon 0.10.0/backend schema 16. Standard Parts/shared
+   Current delivery is addon 0.11.0/backend schema 16. Standard Parts/shared
    catalog, simple P/A/M descriptions, physical P mass and bounded S supplier
-   reference mass are implemented. Use docs/material-management.md,
+   reference mass plus CAD/manual fallbacks are implemented. Use docs/material-management.md,
    docs/supplier-reference-mass.md and docs/upgrade-and-validation.md. The older
    component-catalog implementation plan is historical, not pending work.
 2. Follow the user's next priority. Assembly mass rollup, TechDraw BOM tables,

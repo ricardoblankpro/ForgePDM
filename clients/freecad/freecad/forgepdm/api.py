@@ -138,6 +138,11 @@ class ForgePDMClient:
             "POST", "/api/v1/revisions/{}/reference-mass/lookup".format(revision_id), {}
         )
 
+    def save_reference_mass(self, revision_id, payload):
+        return self._json_request(
+            "PUT", "/api/v1/revisions/{}/reference-mass/fallback".format(revision_id), payload
+        )
+
     def physical_capabilities(self):
         return self._json_request("GET", "/api/v1/materials/capabilities")
 

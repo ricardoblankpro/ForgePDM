@@ -1,0 +1,80 @@
+{
+  "date": "2026-11-07",
+  "addon_version": "0.11.0",
+  "schema": 16,
+  "new_migration": false,
+  "backend_tests": 221,
+  "addon_tests": 364,
+  "native": {
+    "runtime": [
+      "1",
+      "1",
+      "4"
+    ],
+    "checks": [
+      "real controlled registration automatically estimates a real ISO4016 solid using selected carbon-steel reference density",
+      "unknown selected material remains unavailable and registration succeeds",
+      "optional native manual grams entry persists and is reused on the Released S revision"
+    ],
+    "scope": "Disposable server and native objects; existing user documents preserved"
+  },
+  "browser": {
+    "fallback": {
+      "checks": [
+        "CAD estimates show their source, reference density and simplified-thread limitation",
+        "manual grams entry explicitly replaces an estimate and displays its note",
+        "stale manual edits are rejected without overwriting a concurrent value",
+        "unknown mass is displayed as unavailable rather than zero",
+        "unknown-material entries accept explicit manual mass without density",
+        "Released manual mass remains read-only",
+        "verified supplier references retain their source display and cannot be overwritten by fallback controls",
+        "fallback mass view fits mobile viewport"
+      ],
+      "pageErrors": []
+    },
+    "existing_checks": [
+      "login shell loads without credentials or fixture content",
+      "bad password remains on login and is cleared",
+      "authorized projects only",
+      "multilevel BOM preserves per-parent quantities",
+      "direct BOM excludes descendants",
+      "collapse hides nested rows",
+      "expand restores nested rows",
+      "BOM navigation opens pinned historical A instead of latest B",
+      "authenticated download filename and bytes",
+      "where-used shows both accessible parent assemblies",
+      "where-used opens exact parent revision",
+      "dataset list belongs to selected B rather than older A",
+      "item names render as text without executing HTML",
+      "private item is not disclosed",
+      "project filter scopes item results",
+      "project cards use authorized project data",
+      "pagination advances within authorized project",
+      "search resets pagination",
+      "mobile layout has no document-wide horizontal overflow",
+      "no persistent bearer storage",
+      "no content security policy violations",
+      "logout clears protected UI state",
+      "refresh requires login because token is memory-only",
+      "expired/revoked session clears data and asks for sign-in",
+      "browser performs no engineering writes",
+      "no uncaught browser exceptions"
+    ],
+    "simple_material_checks": [
+      "register M material with description only and no specification form",
+      "advanced material requirements and readiness controls are absent",
+      "part selection lists M items and stores the exact material revision with its description",
+      "catalog and detail subtitle show saved description instead of CAD name",
+      "part material can be cleared without entering quantities",
+      "assembly description is free text with no material selection",
+      "simple description form fits mobile viewport"
+    ]
+  },
+  "lint_format_manifest_build": "passed",
+  "mass_sources": [
+    "supplier_reference",
+    "cad_estimate",
+    "manual",
+    "unavailable"
+  ]
+}

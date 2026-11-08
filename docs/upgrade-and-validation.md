@@ -1,4 +1,4 @@
-# Upgrade and validation — addon 0.10.0 / schema 16
+# Upgrade and validation — addon 0.11.0 / schema 16
 
 The backend runs separately from FreeCAD. Use Python 3.11+ and `uv`; the native
 material workflow is validated on Linux with FreeCAD 1.1.4. Other FreeCAD/platform
@@ -20,7 +20,7 @@ combinations have not received the same acceptance coverage.
    uv run --project clients/freecad --extra dev --locked python clients/freecad/tools/addon.py build
    ```
 
-   The archive is `clients/freecad/dist/ForgePDM-0.10.0.zip`. Replace the previous
+   The archive is `clients/freecad/dist/ForgePDM-0.11.0.zip`. Replace the previous
    `Mod/ForgePDM` installation with the archive contents; do not overlay old files.
    Restart FreeCAD after a normal installation. Do not install the backend package
    or another Qt binding into FreeCAD.
@@ -32,7 +32,9 @@ combinations have not received the same acceptance coverage.
 
    Startup applies unapplied SQLite migrations transactionally. The current schema
    is 16. Migration 13 extends the shared catalog to M; 14 adds simple descriptions;
-   15 adds physical links and native mass evidence; 16 adds S supplier references.
+   15 adds physical links and native mass evidence; 16 adds S mass references.
+   Addon 0.11.0 adds fallback statuses/optimistic tokens using that existing table;
+   upgrade backend code as well even though the schema version stays 16.
    Earlier migrations remain part of a clean install. No existing part material
    or supplier mass is inferred. Refresh the browser after updating web assets.
 6. Verify `/health`, sign-in, project/catalog access, historical BOM pins and a
@@ -56,7 +58,7 @@ Backup automation/disaster recovery and PostgreSQL deployment remain future work
 | `FORGEPDM_DATABASE` | SQLite path; `var/forgepdm.sqlite3` |
 | `FORGEPDM_FILE_ROOT` | Immutable blob root; `var/files` |
 | `FORGEPDM_MAX_UPLOAD_BYTES` | Maximum upload; 1 GiB |
-| `FORGEPDM_SUPPLIER_LOOKUP` | `1` enables live Fabory lookup (default); `0` disables it while preserving CSV lookup and saved references |
+| `FORGEPDM_SUPPLIER_LOOKUP` | `1` enables live Fabory lookup (default); `0` disables it while preserving CSV lookup, CAD/manual fallbacks and saved references |
 
 Supplier lookup performs outbound HTTPS only for supported explicit Fabory pages
 and robots policy. It does not require a supplier account or purchase anything.
@@ -110,6 +112,11 @@ are developer fixtures executed inside a running FreeCAD GUI, not pytest tests:
 - `simple_descriptions_gui.py`: P/M selection, A free text, tree display and retrieval.
 - `physical_materials_gui.py`: native registration/linking, final-solid mass,
   recompute, publication, legacy-copy upgrade and missing-cache recovery.
+- `mass_fallback_gui.py`: real Fasteners solid estimate, unknown material and optional
+  manual registration. Run with a fresh disposable backend with
+  `FORGEPDM_SUPPLIER_LOOKUP=0`; its `MASS_FALLBACK_QA_CASE` global can select the
+  case directory. Then run `tests/web/mass-fallback-browser.mjs` against the same
+  directory once; it intentionally edits only those disposable records.
 - `reference_mass_gui.py`: controlled S registration with live Fabory lookup,
   reference reuse and Released immutability. Use a fresh fixture server at
   `/tmp/forgepdm-reference-mass-qa`; it expects source checkout

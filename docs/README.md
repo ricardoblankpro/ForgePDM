@@ -1,6 +1,6 @@
 # ForgePDM documentation
 
-Current delivery: **FreeCAD addon 0.10.0**, **backend SQLite schema 16**.
+Current delivery: **FreeCAD addon 0.11.0**, **backend SQLite schema 16**.
 Start with [the project README](../README.md) and
 [development handoff](../DEVELOPMENT_STATUS.md).
 
@@ -25,6 +25,7 @@ Start with [the project README](../README.md) and
 - [ADR-013: current simple descriptions](decisions/ADR-013-simple-material-and-assembly-descriptions.md)
 - [ADR-014: native physical materials and part mass](decisions/ADR-014-physical-material-links-and-part-mass.md)
 - [ADR-015: supplier reference mass](decisions/ADR-015-supplier-reference-mass.md)
+- [ADR-016: CAD/manual S mass fallbacks](decisions/ADR-016-standard-part-mass-fallbacks.md)
 
 Permanent P/A/S/M codes reuse one Item/revision system. ForgePDM owns engineering
 metadata, CAD and revision-pinned BOMs. Stock, purchasing, costing and production

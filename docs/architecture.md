@@ -1,6 +1,6 @@
 # ForgePDM Architecture
 
-Current implementation: addon **0.10.0**, SQLite schema **16**. The proposal and
+Current implementation: addon **0.11.0**, SQLite schema **16**. The proposal and
 legacy assessment below explain the original boundaries; later accepted decisions
 and the implementation summary describe delivered behavior.
 
@@ -101,3 +101,9 @@ no ERP client or supplier credential belongs in the FreeCAD domain layer. Assemb
 mass aggregation, TechDraw BOM tables and cutting/stock optimization remain future
 work. Historical advanced material inputs remain as compatibility APIs, not the
 normal UI; ADR-013 supersedes that part of ADR-012.
+
+ADR-016 extends the same S mass record with CAD estimates and explicit manual
+entries under optimistic tokens. The backend selects versioned reference densities
+for recognized S materials; the addon measures one valid native Fasteners solid
+without changing its shape/material/placement. Unknowns stay unavailable. No schema
+migration beyond 16 is required; the backend API must still be updated for 0.11.0.

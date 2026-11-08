@@ -1,6 +1,6 @@
 # Standard parts and Fasteners Workbench
 
-Current addon **0.10.0** requires the backend through **migration 16**. The core
+Current addon **0.11.0** requires the backend through **migration 16**. The core
 Standard Parts/Fasteners implementation originated in migrations 10–12; supplier
 reference mass adds migration 16. M raw materials share the library introduced
 for S items. Existing S numbers, specifications and revision pins are preserved.
@@ -168,7 +168,7 @@ Run it against a fresh disposable server; it registers synthetic records there.
 Structured S registration optionally retrieves a verified supplier mass without
 adding required form fields. Association/reassociation reuses saved mass or
 attempts lookup while you hold the S Working checkout. Supplier outages,
-unsupported types and incomplete specifications leave mass unavailable; they do
+unsupported types and incomplete specifications leave supplier mass unavailable; they do
 not block engineering work. Released S references are not changed. New revisions
 copy their reference, and earlier assemblies keep their original revision pins.
 
@@ -180,3 +180,14 @@ material/finish values and custom geometry are never inferred or substituted.
 See [coverage and reference-feed instructions](supplier-reference-mass.md) and
 [ADR-015](decisions/ADR-015-supplier-reference-mass.md). Assembly mass rollup is
 not yet implemented.
+
+## Missing supplier mass (0.11.0)
+
+Normal registration/association/upload can estimate a supported native fastener's
+mass from its single solid and an explicit reference density for the selected S
+material. Labels distinguish **Estimated from CAD**, **Supplier reference** and
+**Manual entry**; unknown values never become zero. The optional registration
+manual field and checked-out web Description tab accept grams per piece and a
+note. Released values stay immutable, manual values are preserved, and verified
+supplier data may upgrade Working estimates. No automatic estimate replaces a
+saved supplier/manual value. See [fallback workflow and density table](supplier-reference-mass.md).

@@ -400,11 +400,11 @@ class RegisterStandardPartCommand(Command):
                     (item["current_revision_id"], "released"),
                     mutates=True,
                 )
+            from .standard_mass import label
+
             mass = item.get("reference_mass") or {}
             suffix = (
-                "\nSupplier reference mass: {} kg each ({}).".format(
-                    mass["mass_kg"], mass["supplier"]
-                )
+                "\n{}: {} kg each.".format(label(mass), mass["mass_kg"])
                 if mass.get("mass_kg") is not None
                 else "\nSupplier reference mass unavailable."
                 if item.get("reference_mass")
@@ -428,14 +428,21 @@ def _standard_library_access(client):
     return capability
 
 
-def _register_standard(client, spec=None):
-    yield from _standard_library_access(client)
+def _register_standard(client, spec=None, mass_object=None):
+    capability = yield from _standard_library_access(client)
+    manual = None
     if spec is not None:
         from .ui import standard_specification_dialog
 
         selected = standard_specification_dialog(spec["geometry"])
         if selected is None:
             return None
+        if selected.get("manual_mass_g") is not None:
+            if not capability.get("mass_fallback_version"):
+                raise workspace.WorkspaceError(
+                    "Update the backend before entering standard-part mass"
+                )
+            manual = selected
         spec, name, description = (
             selected["specification"],
             selected["name"],
@@ -449,16 +456,64 @@ def _register_standard(client, spec=None):
         description = ask_text("Register Standard Part", "Description (optional)", "")
         if description is None:
             return None
-    return (
-        yield Request(
-            "Registering standard part…",
-            client.create_item,
-            ("part", name, None, description),
-            kwargs={"number_series": "S", "standard_specification": spec},
-            mutates=True,
-            cancellable=False,
-        )
+    item = yield Request(
+        "Registering standard part…",
+        client.create_item,
+        ("part", name, None, description),
+        kwargs={"number_series": "S", "standard_specification": spec},
+        mutates=True,
+        cancellable=False,
     )
+    if capability.get("mass_fallback_version"):
+        mass = yield from _enrich_standard_mass(
+            client, item["current_revision_id"], mass_object, manual=manual
+        )
+        if mass is not None:
+            item["reference_mass"] = mass
+    return item
+
+
+def _enrich_standard_mass(client, revision_id, obj=None, manual=None):
+    """Optional enrichment must never invalidate a successful S registration."""
+    from . import standard_mass
+
+    if not hasattr(client, "lookup_reference_mass"):
+        return None
+    try:
+        current = yield Request(
+            "Looking up standard-part mass…",
+            client.lookup_reference_mass,
+            (revision_id,),
+            mutates=True,
+        )
+        if not hasattr(client, "save_reference_mass"):
+            return current
+        if manual is not None and current.get("status") != "supplier_reference":
+            payload = {
+                "method": "manual",
+                "mass_g": manual["manual_mass_g"],
+                "note": manual.get("manual_mass_note", ""),
+                "expected_token": current["token"],
+            }
+        else:
+            payload = standard_mass.estimate(obj, current)
+        if payload:
+            current = yield Request(
+                "Saving standard-part mass…",
+                client.save_reference_mass,
+                (revision_id, payload),
+                mutates=True,
+                cancellable=False,
+            )
+        return current
+    except (ForgePDMError, ValueError, AttributeError, ReferenceError, RuntimeError) as error:
+        # Geometry/provider/checkout failures leave the engineering operation intact.
+        console = getattr(FreeCAD, "Console", None)
+        if console is not None and hasattr(console, "PrintWarning"):
+            console.PrintWarning(
+                "ForgePDM: mass remains unavailable or unchanged: {}\n".format(error)
+            )
+        return None
 
 
 class ChangeStandardPartAssociationCommand(Command):
@@ -590,7 +645,9 @@ def _associate_fasteners(client, document, selected_names=None):
         if selected is None:
             return False
         if selected == "Register a new S item":
-            item = yield from _register_standard(client, dict(geometry=geometry))
+            item = yield from _register_standard(
+                client, dict(geometry=geometry), mass_object=document.getObject(names[0])
+            )
             if item is None:
                 return False
             information(
@@ -601,27 +658,25 @@ def _associate_fasteners(client, document, selected_names=None):
             )
         else:
             item = matches["items"][choices.index(selected)]
-        # Reference mass is optional enrichment; catalog association must work
-        # offline and against older servers as well. Never alter Released items.
-        if hasattr(client, "lookup_reference_mass"):
-            try:
-                mass = yield Request(
-                    "Looking up supplier reference mass…",
-                    client.lookup_reference_mass,
-                    (item["current_revision_id"],),
-                    mutates=True,
-                )
-                if mass.get("mass_kg") is not None:
-                    FreeCAD.Console.PrintMessage(
-                        "ForgePDM {}: {} kg each (supplier reference).\n".format(
-                            item["number"], mass["mass_kg"]
-                        )
-                    )
-            except ForgePDMError:
-                pass
         resolved.extend(
             (obj_name, item["current_revision_id"], identities.get(obj_name)) for obj_name in names
         )
+    # Include retained associations: older Working S entries can gain estimates
+    # without changing their identity, placement or CAD association metadata.
+    measured = set()
+    for object_name, target_revision, _occurrence in resolved:
+        if target_revision in measured:
+            continue
+        measured.add(target_revision)
+        mass = yield from _enrich_standard_mass(
+            client, target_revision, document.getObject(object_name)
+        )
+        if mass and mass.get("mass_kg") is not None:
+            from .standard_mass import label
+
+            FreeCAD.Console.PrintMessage(
+                "ForgePDM: {} kg each ({}).\n".format(mass["mass_kg"], label(mass))
+            )
     document = (
         _guard_document(name, revision_id) if selected_names is not None else _guard_document(name)
     )

@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-07",
+  "backup": "var/backups/before-mass-fallbacks-20261108T021643Z",
+  "preservation": {
+    "tables_including_schema_version": 38,
+    "stored_files": 181,
+    "schema": 16,
+    "migration_needed": false
+  },
+  "sqlite_integrity": "ok",
+  "foreign_key_violations": 0,
+  "profiles_installed": 2,
+  "files_verified_per_profile": 55,
+  "gui": {
+    "addon_version": "0.11.0",
+    "open_documents_preserved": 3,
+    "dirty_documents_preserved": 0,
+    "session_preserved": true,
+    "command_dispatch": [
+      "RegisterStandardPartCommand.action",
+      "UploadCommand.action",
+      "CheckInCommand.action",
+      "ChangeStandardPartAssociationCommand.action"
+    ],
+    "fallback_api_available": true,
+    "production_records_created": 0,
+    "restart_required": false
+  }
+}
