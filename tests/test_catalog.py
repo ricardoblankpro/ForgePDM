@@ -1,6 +1,6 @@
 """Catalog queries must filter permissions before pagination and selection."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -80,12 +80,14 @@ def test_archived_and_unassigned_projects_not_offered(backend):
     with backend.database.transaction() as connection:
         connection.execute(
             "INSERT INTO projects(id, project_number, name, archived, created_at) VALUES (?, 'OTHER', 'Other', 0, ?)",
-            (str(uuid4()), datetime.now(timezone.utc).isoformat()),
+            (str(uuid4()), datetime.now(UTC).isoformat()),
         )
     assert len(service.projects(backend.users["editor"])["items"]) == 2
     with backend.database.transaction() as connection:
         connection.execute("UPDATE projects SET archived=1 WHERE id=?", (backend.project_id,))
-    assert all(row["is_standard_library"] for row in service.projects(backend.users["editor"])["items"])
+    assert all(
+        row["is_standard_library"] for row in service.projects(backend.users["editor"])["items"]
+    )
     assert service.projects(backend.users["editor"], editable=True)["items"] == []
 
 
@@ -129,3 +131,18 @@ def test_catalog_api_authentication_bounds_and_non_disclosure(backend, monkeypat
             ]
             == "A"
         )
+
+
+def test_catalog_exposes_and_searches_current_revision_description(backend):
+    from forgepdm.application.descriptions import DescriptionService
+
+    service = DescriptionService(backend.database, backend.authorization, backend.revisions)
+    user = backend.users["editor"]
+    # Assembly text exercises the same description query without extra catalog setup.
+    assembly = create_item(backend, kind="assembly", name="model")
+    current = service.read(user, assembly.current_revision_id)
+    service.save(user, assembly.current_revision_id, "General mounting", None, current["token"])
+    result = catalog(backend).search_items(user, query="mounting")["items"]
+    assert [row["id"] for row in result] == [assembly.id]
+    assert result[0]["revision_description"] == "General mounting"
+    assert result[0]["name"] == "model"

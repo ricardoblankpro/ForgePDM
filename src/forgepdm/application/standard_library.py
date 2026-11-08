@@ -25,7 +25,7 @@ def can_register(connection, user_id, role, project_id):
 
 
 def creation_project(connection, user_id, role, series, project_id):
-    if series == "S":
+    if series in ("S", "M"):
         project_id = library(connection)["id"]
         if not can_register(connection, user_id, role, project_id):
             raise Forbidden(
@@ -37,7 +37,7 @@ def creation_project(connection, user_id, role, series, project_id):
         ).fetchone()
         if row is not None and row["is_standard_library"]:
             raise ValueError(
-                "Standard Parts Library accepts S items only; choose an engineering project for P/A items"
+                "Standard Parts Library accepts S/M items only; choose an engineering project for P/A items"
             )
     return project_id
 

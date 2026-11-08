@@ -1,5 +1,6 @@
 """Authorized catalog queries for thin clients; no CAD dependencies."""
 
+from forgepdm.application.descriptions import DescriptionService
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.domain.entities import NotFound, User
 from forgepdm.infrastructure.database import Database
@@ -57,7 +58,7 @@ class CatalogService:
         self, user: User, *, query="", project_id=None, number_series=None, limit=50, offset=0
     ):
         self._bounds(limit, offset)
-        if number_series not in (None, "P", "A", "S"):
+        if number_series not in (None, "P", "A", "S", "M"):
             raise ValueError("invalid numbering series")
         query = query.strip()
         if len(query) > 200:
@@ -65,8 +66,9 @@ class CatalogService:
         with self.database.connection() as connection:
             rows = connection.execute(
                 "SELECT i.id, i.number, i.number_series, i.kind, i.name, i.description, i.current_revision_id, "
-                "r.label AS revision_label, r.lifecycle_state FROM items i "
+                "r.label AS revision_label, r.lifecycle_state, rd.description AS revision_description FROM items i "
                 "JOIN item_revisions r ON r.id=i.current_revision_id "
+                "LEFT JOIN revision_descriptions rd ON rd.revision_id=r.id "
                 "WHERE (?='admin' OR EXISTS (SELECT 1 FROM project_items pi "
                 "JOIN project_memberships pm ON pm.project_id=pi.project_id "
                 "WHERE pi.item_id=i.id AND pm.user_id=?)) "
@@ -77,7 +79,8 @@ class CatalogService:
                 "AND member.user_id=?)))) "
                 "AND (? IS NULL OR i.number_series=?) "
                 "AND (?='' OR instr(lower(i.number),lower(?))>0 "
-                "OR instr(lower(i.name),lower(?))>0 OR instr(lower(i.description),lower(?))>0) "
+                "OR instr(lower(i.name),lower(?))>0 OR instr(lower(i.description),lower(?))>0 "
+                "OR instr(lower(COALESCE(rd.description,'')),lower(?))>0) "
                 "ORDER BY i.number, i.id LIMIT ? OFFSET ?",
                 (
                     user.role,
@@ -88,6 +91,7 @@ class CatalogService:
                     user.id,
                     number_series,
                     number_series,
+                    query,
                     query,
                     query,
                     query,
@@ -125,4 +129,5 @@ class CatalogService:
                 "FROM item_revisions r JOIN items i ON i.id=r.item_id WHERE r.id=?",
                 (revision_id,),
             ).fetchone()
-        return dict(row)
+            description_record = DescriptionService.read_in(connection, revision_id)
+        return {**dict(row), "description_record": description_record}

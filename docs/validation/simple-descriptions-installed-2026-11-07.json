@@ -1,0 +1,29 @@
+{
+  "version": "0.8.1",
+  "dispatch": [
+    "AssignMaterialsCommand.action",
+    "UploadCommand.action",
+    "CheckInCommand.action"
+  ],
+  "documents_preserved": 3,
+  "existing_unsaved_documents_preserved": 1,
+  "session_preserved": true,
+  "tree_headers": [
+    [
+      "Labels & Attributes",
+      "Description",
+      "Internal name",
+      "PDM status",
+      "Description"
+    ]
+  ],
+  "material_catalog_readable": true,
+  "visible_tree_headers": [
+    [
+      "Labels & Attributes",
+      "PDM status",
+      "Description"
+    ]
+  ],
+  "native_description_column_data_preserved": true
+}

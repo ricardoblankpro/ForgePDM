@@ -32,21 +32,32 @@ def run(case_directory):
     # FreeCAD retains old callback instances on live reload. This is confined
     # to the test harness; a normal addon installation requires a restart.
     import gc
-    classes = {name: value for name, value in vars(commands).items()
-               if isinstance(value, type) and name.endswith("Command")}
+
+    classes = {
+        name: value
+        for name, value in vars(commands).items()
+        if isinstance(value, type) and name.endswith("Command")
+    }
     for instance in gc.get_objects():
         previous = type(instance)
         if previous.__module__ == commands.__name__ and previous.__name__ in classes:
             instance.__class__ = classes[previous.__name__]
     case = Path(case_directory)
     config = json.loads((case / "connection.json").read_text())
-    report = {"freecad": App.Version(), "python": sys.version, "qt": ui.QtCore.qVersion(),
-              "checks": [], "scope": "Real FreeCAD GUI, isolated HTTP server, automated dialog choices"}
+    report = {
+        "freecad": App.Version(),
+        "python": sys.version,
+        "qt": ui.QtCore.qVersion(),
+        "checks": [],
+        "scope": "Real FreeCAD GUI, isolated HTTP server, automated dialog choices",
+    }
     main_thread = get_ident()
     threads, ticks = [], [0]
     executor = ThreadPoolExecutor(max_workers=1)
-    originals = {name: getattr(commands, name) for name in
-                 ("ask_choice", "ask_text", "_choose_workspace", "information", "warning")}
+    originals = {
+        name: getattr(commands, name)
+        for name in ("ask_choice", "ask_text", "_choose_workspace", "information", "warning")
+    }
     selected = {"kind": "part", "project": "PRJ-SMOKE"}
 
     def check(name, condition):
@@ -57,13 +68,16 @@ def run(case_directory):
         def execute():
             threads.append(get_ident())
             return function(*args, **kwargs)
+
         future = executor.submit(execute)
         loop = ui.QtCore.QEventLoop()
         timer = ui.QtCore.QTimer()
+
         def poll():
             ticks[0] += 1
             if future.done():
                 loop.quit()
+
         timer.timeout.connect(poll)
         timer.start(5)
         loop.exec()
@@ -123,8 +137,13 @@ def run(case_directory):
         return document, upload(document, "assembly")
 
     def retrieve(root, entry):
-        return worker(client.retrieve_configuration, str(root), entry["revision_id"],
-                      entry["dataset_id"], entry["file_id"])
+        return worker(
+            client.retrieve_configuration,
+            str(root),
+            entry["revision_id"],
+            entry["dataset_id"],
+            entry["file_id"],
+        )
 
     def open_config(configuration):
         result = cad.open_configuration(configuration, commands._set_metadata)
@@ -140,19 +159,44 @@ def run(case_directory):
         commands._choose_workspace = lambda *args: str(case / "source-workspace")
         commands.information = lambda *args: None
         commands.warning = lambda *args: None
-        names = ["Login", "Logout", "Upload", "Checkout", "CheckIn", "Release",
-                 "NewRevision", "Download", "ShowBOM"]
-        check("nine command IDs registered", all("ForgePDM_" + n in Gui.listCommands() for n in names))
+        names = [
+            "Login",
+            "Logout",
+            "Upload",
+            "Checkout",
+            "CheckIn",
+            "Release",
+            "NewRevision",
+            "Download",
+            "ShowBOM",
+        ]
+        check(
+            "nine command IDs registered", all("ForgePDM_" + n in Gui.listCommands() for n in names)
+        )
         first, first_a = component("P3First", "original-one", 10, "PRJ-SMOKE")
         second, second_a = component("P3Second", "original-two", 30, "PRJ-HIDDEN")
         sub, sub_a = assembly("P3Sub", [first.Box, first.Box])
         root, root_a = assembly("P3Root", [sub.Assembly, second.Box])
-        check("nested assemblies uploaded with exact manifests", len(worker(client.get_manifest, root_a["dataset_id"])["references"]) == 2)
+        check(
+            "nested assemblies uploaded with exact manifests",
+            len(worker(client.get_manifest, root_a["dataset_id"])["references"]) == 2,
+        )
         # Deliberately set engineering BOM through its existing API, never by CAD extraction.
         for parent, children in [(sub_a, [first_a]), (root_a, [sub_a, second_a])]:
-            lines = [{"component_revision_id": child["revision_id"], "quantity": "1", "position": str(index + 1)}
-                     for index, child in enumerate(children)]
-            worker(client._json_request, "PUT", "/api/v1/revisions/" + parent["revision_id"] + "/bom", {"lines": lines})
+            lines = [
+                {
+                    "component_revision_id": child["revision_id"],
+                    "quantity": "1",
+                    "position": str(index + 1),
+                }
+                for index, child in enumerate(children)
+            ]
+            worker(
+                client._json_request,
+                "PUT",
+                "/api/v1/revisions/" + parent["revision_id"] + "/bom",
+                {"lines": lines},
+            )
         for entry in (first_a, second_a, sub_a, root_a):
             worker(client.checkin, entry["revision_id"], "Verified A")
             worker(client.transition, entry["revision_id"], "released")
@@ -164,7 +208,10 @@ def run(case_directory):
         first.Box.Length = 15
         first.recompute()
         upload(first)
-        check("new revision uses a separate file", Path(first.FileName) != old_path and workspace.digest(old_path) == old_hash)
+        check(
+            "new revision uses a separate file",
+            Path(first.FileName) != old_path and workspace.digest(old_path) == old_hash,
+        )
         target_root = case / "retrieval-workspace"
         configuration = retrieve(target_root, root_a)
         opened = open_config(configuration)
@@ -172,11 +219,25 @@ def run(case_directory):
         old_first = documents[first_a["file_id"]]
         old_sub = documents[sub_a["file_id"]]
         old_root = opened["root"]
-        check("historical component geometry retained", old_first.Box.Length.Value == 10 and first.Box.Length.Value == 15)
-        check("same-basename components remain distinct", old_first is not documents[second_a["file_id"]] and documents[second_a["file_id"]].Box.Length.Value == 30)
-        check("repeated components share exact pinned document", old_sub.Occurrence0.LinkedObject.Document is old_first and old_sub.Occurrence1.LinkedObject.Document is old_first)
+        check(
+            "historical component geometry retained",
+            old_first.Box.Length.Value == 10 and first.Box.Length.Value == 15,
+        )
+        check(
+            "same-basename components remain distinct",
+            old_first is not documents[second_a["file_id"]]
+            and documents[second_a["file_id"]].Box.Length.Value == 30,
+        )
+        check(
+            "repeated components share exact pinned document",
+            old_sub.Occurrence0.LinkedObject.Document is old_first
+            and old_sub.Occurrence1.LinkedObject.Document is old_first,
+        )
         check("occurrence placement retained", old_sub.Occurrence1.Placement.Base.x == 20)
-        check("nested link points to pinned assembly object", old_root.Occurrence0.LinkedObject is old_sub.Assembly)
+        check(
+            "nested link points to pinned assembly object",
+            old_root.Occurrence0.LinkedObject is old_sub.Assembly,
+        )
         ledger = json.loads((Path(configuration["directory"]) / workspace.MANIFEST).read_text())
         check("complete ledger after GUI reference verification", ledger["state"] == "complete")
         root_relative = Path(old_root.FileName).relative_to(target_root)
@@ -185,9 +246,17 @@ def run(case_directory):
         shutil.move(str(target_root), relocated)
         before_names = set(App.listDocuments())
         moved = App.openDocument(str(relocated / root_relative))
-        check("relocated root resolves nested assembly", moved.Occurrence0.LinkedObject.Document.Occurrence0.LinkedObject.Length.Value == 10)
-        moved_documents = [doc for name, doc in App.listDocuments().items() if name not in before_names]
-        check("relocated references stay inside relocated workspace", all(Path(doc.FileName).is_relative_to(relocated) for doc in moved_documents))
+        check(
+            "relocated root resolves nested assembly",
+            moved.Occurrence0.LinkedObject.Document.Occurrence0.LinkedObject.Length.Value == 10,
+        )
+        moved_documents = [
+            doc for name, doc in App.listDocuments().items() if name not in before_names
+        ]
+        check(
+            "relocated references stay inside relocated workspace",
+            all(Path(doc.FileName).is_relative_to(relocated) for doc in moved_documents),
+        )
         cad.close_owned(moved_documents)
         # Existing editable working copy is dirty: no implicit overwrite/adoption.
         second.Box.Length = 31
@@ -204,26 +273,39 @@ def run(case_directory):
         worker(viewer.login, config["viewer_username"], config["viewer_password"])
         denied = case / "denied-workspace"
         try:
-            worker(viewer.retrieve_configuration, str(denied), root_a["revision_id"], root_a["dataset_id"], root_a["file_id"])
+            worker(
+                viewer.retrieve_configuration,
+                str(denied),
+                root_a["revision_id"],
+                root_a["dataset_id"],
+                root_a["file_id"],
+            )
         except api.ForgePDMError as error:
             check("private dependency denies retrieval", error.status == 403)
         else:
             raise AssertionError("private component retrieval accepted")
-        check("denied retrieval publishes no configuration", not list(denied.glob("configurations/*")))
+        check(
+            "denied retrieval publishes no configuration", not list(denied.glob("configurations/*"))
+        )
         # Real network failure after one verified cache fill; retry may reuse it.
         retry_root = case / "retry-workspace"
         original_download = client.download_file
         downloads = [0]
+
         def interrupted(*args, **kwargs):
             downloads[0] += 1
             if downloads[0] == 2:
                 raise api.ForgePDMError("Injected interrupted transfer")
             return original_download(*args, **kwargs)
+
         client.download_file = interrupted
         try:
             retrieve(retry_root, root_a)
         except api.ForgePDMError:
-            check("interrupted graph has no published configuration", not list(retry_root.glob("configurations/*")))
+            check(
+                "interrupted graph has no published configuration",
+                not list(retry_root.glob("configurations/*")),
+            )
         finally:
             client.download_file = original_download
         retried = retrieve(retry_root, root_a)
@@ -235,13 +317,26 @@ def run(case_directory):
         commands._choose_workspace = lambda *args: str(case / "command-download")
         before_command = set(App.listDocuments())
         drive(commands.DownloadCommand())
-        command_documents = [doc for name, doc in App.listDocuments().items()
-                             if name not in before_command]
-        check("Download command opens verified four-document configuration", len(command_documents) == 4)
-        command_ledgers = list((case / "command-download/configurations").glob("*/" + workspace.MANIFEST))
-        check("Download command completes workspace ledger", len(command_ledgers) == 1 and json.loads(command_ledgers[0].read_text())["state"] == "complete")
+        command_documents = [
+            doc for name, doc in App.listDocuments().items() if name not in before_command
+        ]
+        check(
+            "Download command opens verified four-document configuration",
+            len(command_documents) == 4,
+        )
+        command_ledgers = list(
+            (case / "command-download/configurations").glob("*/" + workspace.MANIFEST)
+        )
+        check(
+            "Download command completes workspace ledger",
+            len(command_ledgers) == 1
+            and json.loads(command_ledgers[0].read_text())["state"] == "complete",
+        )
         cad.close_owned(command_documents)
-        check("HTTP and transfer work stayed off GUI thread", threads and all(thread != main_thread for thread in threads))
+        check(
+            "HTTP and transfer work stayed off GUI thread",
+            threads and all(thread != main_thread for thread in threads),
+        )
         check("GUI timers remained responsive during requests", ticks[0] > 20)
         report["heartbeat_ticks"] = ticks[0]
         report["status"] = "passed"

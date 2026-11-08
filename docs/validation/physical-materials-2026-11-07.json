@@ -1,0 +1,76 @@
+{
+  "date": "2026-11-07",
+  "backend_tests": 182,
+  "addon_tests": 351,
+  "native": {
+    "runtime": [
+      "1",
+      "1",
+      "4"
+    ],
+    "checks": [
+      "real two-field registration dialog creates an M item linked to native material and density",
+      "existing description-only catalog entry links through the native material dialog",
+      "selecting one M entry assigns native Body material and calculates 7.8 kg without double-counting its feature",
+      "owned-document geometry recompute automatically updates mass to 15.6 kg",
+      "upload and atomic check-in publish material/density/mass with the exact CAD source hash",
+      "download/reopen rebuilds a missing managed material cache and preserves frozen native density and mass",
+      "clearing a material removes its native density and marks mass unavailable rather than zero"
+    ],
+    "part_id": "979e1d32-81e1-4cae-839a-bd61a58a2a84",
+    "revision_id": "42560868-2419-4cc4-81d9-6ced6131c7fd",
+    "scope": "Disposable server/documents and generated ForgePDM cache cards; original material libraries unchanged"
+  },
+  "browser_material_checks": [
+    "register M material with description only and no specification form",
+    "advanced material requirements and readiness controls are absent",
+    "part selection lists M items and stores the exact material revision with its description",
+    "catalog and detail subtitle show saved description instead of CAD name",
+    "part material can be cleared without entering quantities",
+    "assembly description is free text with no material selection",
+    "simple description form fits mobile viewport",
+    "web shows pinned physical material, density and source-published part mass"
+  ],
+  "browser_regression": {
+    "browser": "156.0.8078.47",
+    "scope": "Real Chrome and isolated FastAPI/database/storage fixtures; no production data modified",
+    "checks": [
+      "login shell loads without credentials or fixture content",
+      "bad password remains on login and is cleared",
+      "authorized projects only",
+      "multilevel BOM preserves per-parent quantities",
+      "direct BOM excludes descendants",
+      "collapse hides nested rows",
+      "expand restores nested rows",
+      "BOM navigation opens pinned historical A instead of latest B",
+      "authenticated download filename and bytes",
+      "where-used shows both accessible parent assemblies",
+      "where-used opens exact parent revision",
+      "dataset list belongs to selected B rather than older A",
+      "item names render as text without executing HTML",
+      "private item is not disclosed",
+      "project filter scopes item results",
+      "project cards use authorized project data",
+      "pagination advances within authorized project",
+      "search resets pagination",
+      "mobile layout has no document-wide horizontal overflow",
+      "no persistent bearer storage",
+      "no content security policy violations",
+      "logout clears protected UI state",
+      "refresh requires login because token is memory-only",
+      "expired/revoked session clears data and asks for sign-in",
+      "browser performs no engineering writes",
+      "no uncaught browser exceptions"
+    ],
+    "pageErrors": [],
+    "writes": [],
+    "status": "passed"
+  },
+  "packaging": {
+    "addon": "0.9.0",
+    "manifest": "passed",
+    "zip": "built",
+    "backend_wheel_and_sdist": "built"
+  },
+  "scope": "Disposable databases/storage/documents; original user material cards unchanged"
+}

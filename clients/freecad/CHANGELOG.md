@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.10.0 — 2026-11-07
+
+- Automatically retrieve verified supplier reference mass when registering supported
+  S fasteners; reuse saved revision mass during association. Missing data or supplier
+  outages do not block registration. Backend migration 16 required.
+- Add exact-specification supplier CSV import and a simple S mass/provenance web view.
+  Released revisions stay unchanged; assembly mass totals remain future work.
+
+## 0.9.1 — 2026-11-07
+
+- Upgrade matching legacy description metadata during upload/check-in preparation,
+  applying the saved physical material and generating native mass evidence.
+- Rebuild missing mass metadata in matching v2 working copies without replacing
+  conflicting local material edits.
+
+## 0.9.0 — 2026-11-07
+
+- Register raw materials in one native dialog with description and physical material;
+  link existing M entries with curator/checkout protection.
+- Apply native density snapshots on P parts, calculate final-solid mass and refresh
+  it after owned-document geometry recompute and before publication.
+- Preserve source-pinned mass through atomic upload/check-in and portable retrieval.
+  Existing description-only entries and assembly descriptions remain supported.
+- Requires backend migration 15. Managed density cache cards do not overwrite
+  original FreeCAD material cards; FEM/thermal models are not synchronized.
+
+## 0.8.1 — 2026-11-07
+
+- Replace manufacturing-input prompts with M-only material selection for P parts
+  and free-text descriptions for A assemblies.
+- Add one Description tree column beside existing PDM status.
+- Persist revision-bound descriptions through atomic native publication and
+  configuration retrieval. Preserve historical material/BOM records.
+- Requires backend migration 14 for the simple description workflow.
+
+## 0.8.0 — 2026-11-07
+
+- Assign catalog M/S manufacturing inputs to Working P/A revisions.
+- Calculate selected-solid mass from pinned material density, preserving multiple materials.
+- Embed revision-bound evidence for atomic upload/check-in; detect conflicting web edits.
+- Requires backend migration 13 for material workflows; existing commands remain supported.
+
 ## 0.7.4 — 2026-11-05
 
 - Register all S items in the shared Standard Parts Library without a project

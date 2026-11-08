@@ -306,3 +306,37 @@ def test_new_standard_cad_upload_skips_project_picker(commands, case, monkeypatc
         assert second.function == case.client.validate_references
     finally:
         workflow.close()
+
+
+@pytest.mark.parametrize("mass", [{"mass_kg": "0.016"}, {"mass_kg": None}])
+def test_reference_lookup_preserves_occurrence_identity(commands, case, monkeypatch, mass):
+    calls = []
+    case.client.lookup_reference_mass = lambda revision: calls.append(revision) or mass
+    monkeypatch.setattr(
+        commands.FreeCAD, "Console", SimpleNamespace(PrintMessage=lambda text: None), raising=False
+    )
+    original = case.fasteners.association(case.objects[0])
+    drive(commands.ChangeStandardPartAssociationCommand().action())
+    assert calls == [case.new]
+    assert case.fasteners.association(case.objects[0])["occurrence_id"] == original["occurrence_id"]
+    assert case.fasteners.association(case.objects[0])["revision_id"] == case.new
+
+
+def test_reference_lookup_failure_does_not_block_association(commands, case):
+    def fail(revision):
+        raise commands.ForgePDMError("Supplier offline", status=503)
+
+    case.client.lookup_reference_mass = fail
+    workflow = commands.ChangeStandardPartAssociationCommand().action()
+    try:
+        request = next(workflow)
+        while True:
+            try:
+                result = request.function(*request.args, **request.kwargs)
+            except commands.ForgePDMError as error:
+                request = workflow.throw(error)
+            else:
+                request = workflow.send(result)
+    except StopIteration:
+        pass
+    assert case.fasteners.association(case.objects[0])["revision_id"] == case.new

@@ -1,4 +1,4 @@
-# ForgePDM Domain Model Proposal
+# ForgePDM Domain Model
 
 The relational database is the authority for identity, relationships, lifecycle, and audit metadata. CAD bytes are immutable files in the separate blob store. Database IDs are opaque internal identifiers; human-readable item numbers remain stable business identifiers and are never reused.
 
@@ -18,7 +18,7 @@ The relational database is the authority for identity, relationships, lifecycle,
 
 ## Important rules
 
-- Item numbering is allocated transactionally and uniquely. Preserve `P000001` and `A000001` as compatible display patterns unless a reviewed numbering decision changes them.
+- Item numbering is allocated transactionally and uniquely: P manufactured/custom parts, A assemblies, S standard/purchased parts, M raw materials. Codes are permanent seven-character identifiers (prefix + six digits). S/M are part-kind Items in the shared library, not duplicate purchasing identities.
 - New Items start with revision A in Working. Saving working content does not create a new revision. Revision advances after a released revision is revised; the prior released revision and its files remain immutable.
 - Dataset/File relationships are revision-scoped; replacing a file creates a new association/version rather than overwriting bytes.
 - Each uploaded attachment currently creates one Dataset and one File association. Identical file bytes can share the same hash-derived storage object while retaining distinct File metadata and original filenames.
@@ -39,9 +39,31 @@ Released → Obsolete
 
 Checkout is an exclusive lease, not authentication. The API authenticates bearer sessions and checks global role or project membership on item operations. Project roles are owner, editor, and viewer; editors/owners may create project items and viewers may read. Recovery/administrative override records actor, reason, and timestamp. MVP lifecycle transitions are Working → Released → Obsolete; moving from Released back to work requires creating a new revision. A configurable approval workflow is out of scope.
 
-## Deferred model questions
+## Current extensions and deferred questions
 
-Decide before implementing schema: whether numbering is global or partitioned by item type; whether BOM lines may reference non-released child revisions; whether datasets need independent revision/version lifecycle; allowed project membership cardinality; soft-delete/retention rules; and whether quantities support units or only dimensionless counts. The MVP assumes global per-type numbering, explicit child revisions, revision-scoped datasets, many-to-many project membership, no hard deletion through ordinary workflows, and positive decimal quantity with a unit field reserved for later use.
+The implementation uses global independent series counters, many-to-many project
+membership, revision-scoped datasets and positive decimal EBOM quantities.
+Working BOMs may refer to usable Working components; release requires direct
+components to be Released. Independent dataset lifecycle, deletion/retention,
+effectivity and production inventory semantics remain deferred.
+
+Schema 16 also contains these engineering extensions:
+
+| Record | Responsibility |
+|---|---|
+| Standard specification | Existing S Item geometry/material/class/finish identity and exact catalog matching; assemblies pin S revisions. |
+| Revision description | Frozen selected M revision/text on P, free text on A, catalog text on M. Changes need owned Working checkout and concurrency tokens. |
+| Physical material link | Optional M-revision source UUID/name/density/attribution snapshot. P revisions freeze selected physical snapshots separately; M edits do not rewrite them. |
+| Dataset description/mass evidence | Immutable native description, final-solid volume/material evidence and computed kg tied to exact CAD dataset/file hash. CAD measures volume; backend validates the snapshot and arithmetic. |
+| S reference mass | Supplier mass per piece with exact specification hash and original quantity/unit/source/provenance, saved on an owned Working S revision. Released values stay immutable; new revisions copy them. |
+| Supplier feed/attempt | Administrator-imported exact-specification CSV references and bounded lookup cooldowns; neither is an inventory or purchasing ledger. |
+
+Advanced manufacturing inputs and requirements from migration 13 remain stored
+and available through compatibility APIs, but are hidden from the current simple
+UI (ADR-013). No stock consumption is inferred from a material description.
+Assembly mass totals, TechDraw BOM generation and ERPNext synchronization remain
+future work. See [materials](material-management.md),
+[reference mass](supplier-reference-mass.md) and ADR-012 through ADR-015.
 
 ## CAD reference manifests (Phase 3)
 

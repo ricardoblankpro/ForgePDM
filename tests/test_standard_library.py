@@ -90,7 +90,7 @@ def test_library_is_visible_but_not_an_engineering_item_destination(backend):
         not row["is_standard_library"]
         for row in catalog.projects(backend.users["admin"], editable=True)["items"]
     )
-    with pytest.raises(ValueError, match="S items only"):
+    with pytest.raises(ValueError, match="S/M items only"):
         backend.items.create_item(
             kind=ItemKind.PART,
             name="Wrong destination",

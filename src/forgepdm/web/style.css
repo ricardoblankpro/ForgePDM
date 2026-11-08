@@ -19,3 +19,14 @@ textarea{font:inherit;border:1px solid #d7dfe8;border-radius:6px;padding:11px 12
   .drawing-controls select { flex-basis: 100%; }
   .drawing-controls button { flex: 1 1 0; }
 }
+
+/* Material forms share the existing workspace controls and responsive spacing. */
+.material-panel{display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.material-panel label{display:grid;gap:6px;max-width:620px;color:var(--muted,#607186);font-size:13px}
+.material-panel input,.material-panel select{width:100%;min-width:0}
+.material-panel>button{align-self:flex-start}
+.material-panel>div{display:flex;flex-direction:column;gap:8px}
+.material-panel p{margin:0;overflow-wrap:anywhere}
+.material-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+.material-panel input:disabled,.material-panel select:disabled{opacity:.75}
+#new-material{margin:12px 0}

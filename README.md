@@ -15,6 +15,19 @@ fencing and operational hardening remain in progress. TechDraw pages can be
 explicitly published as source-pinned PDFs and viewed/downloaded in the web GUI;
 see [drawing publication](docs/drawing-pdfs.md).
 
+Current client: **0.10.0**; backend schema: **16**. The shared Item catalog uses
+permanent `P000001`, `A000001`, `S000001` and `M000001` codes. Parts select a
+raw-material description; assemblies use free text in the same tree Description
+column. Optional native material links calculate finished part mass; supported S
+fasteners can obtain supplier reference mass. Assembly mass totals, TechDraw BOM
+tables and ERPNext synchronization remain future work.
+
+- [Material and assembly descriptions, physical materials and part mass](docs/material-management.md)
+- [Standard Parts and Fasteners workflows](docs/standard-parts.md)
+- [Supplier reference mass and supported families](docs/supplier-reference-mass.md)
+- [Upgrade, backup and validation checklist](docs/upgrade-and-validation.md)
+- [Documentation index and historical reports](docs/README.md)
+
 See [Development status](DEVELOPMENT_STATUS.md) for the current handoff, recent
 fixes, validation evidence and remaining work.
 
@@ -31,7 +44,7 @@ uv run forgepdm grant-project PROJECT_UUID ALICE_UUID --role editor
 uv run uvicorn forgepdm.main:app --app-dir src --reload
 ```
 
-The CLI prompts for a password when creating a user and prints generated UUIDs. Use the project UUID as `project_id` when creating an item. Log in at `POST /api/v1/auth/login`, then pass its bearer token to protected API routes. Passwords are hashed with scrypt; bearer tokens are random opaque values stored only as SHA-256 hashes and expire after eight hours. Global admins can access all items. Other users need project membership (`owner`, `editor`, or `viewer`); only owners/editors can create or edit items in that project. Projectless items are admin-only. Accounts created before authentication was added have no password; set one with `uv run forgepdm set-password USERNAME` and grant admin role locally if needed with `uv run forgepdm set-role USERNAME admin`.
+The CLI prompts for a password when creating a user and prints generated UUIDs. Use the project UUID as `project_id` when creating an item. Log in at `POST /api/v1/auth/login`, then pass its bearer token to protected API routes. Passwords are hashed with scrypt; bearer tokens are random opaque values stored only as SHA-256 hashes and expire after eight hours. Global admins can access all items. Other users need project membership (`owner`, `editor`, or `viewer`); only owners/editors can create or edit items in that project. Ordinary projectless P/A items are admin-only. S/M catalog items use the shared library; enabled readers can select them and library editors/admins can register them. Accounts created before authentication was added have no password; set one with `uv run forgepdm set-password USERNAME` and grant admin role locally if needed with `uv run forgepdm set-role USERNAME admin`.
 
 Example request (replace the UUID placeholders with CLI output):
 
@@ -79,7 +92,10 @@ JavaScript dependency installation or build is required.
 The workspace supports authorized project/item browsing, search,
 revision history, direct/multilevel BOMs, where-used navigation and dataset file
 downloads. BOM links open their exact recorded revisions. Newer revisions are
-shown separately; the browser does not update components or engineering data.
+shown separately. The Description tab edits checked-out P/A/M descriptions and
+material assignments; S entries show supplier reference mass and allow lookup
+under an owned Working checkout. Administrators can import supplier reference CSV.
+The browser does not replace CAD components or edit the engineering BOM.
 
 Administrators can manage users, reset passwords, maintain project properties
 (customer, due date and description), and assign project membership/roles. All
@@ -120,3 +136,7 @@ revision retrieval never silently substitutes the current revision for a
 requested historical one. Existing write API contracts remain unchanged.
 
 Standard/purchased parts and Fasteners integration: [usage and supported cases](docs/standard-parts.md).
+
+Material descriptions, native physical links and finished part mass: [usage and API](docs/material-management.md). Advanced material-input/requirements APIs remain available for compatibility, but are hidden from the normal workflow.
+
+Supplier reference mass: [workflow and coverage](docs/supplier-reference-mass.md).

@@ -22,7 +22,10 @@ class ForgePDMWorkbench(Gui.Workbench):
             ("ForgePDM_Login", commands.LoginCommand),
             ("ForgePDM_Logout", commands.LogoutCommand),
             ("ForgePDM_RegisterStandardPart", commands.RegisterStandardPartCommand),
-            ("ForgePDM_ChangeStandardPartAssociation", commands.ChangeStandardPartAssociationCommand),
+            (
+                "ForgePDM_ChangeStandardPartAssociation",
+                commands.ChangeStandardPartAssociationCommand,
+            ),
             ("ForgePDM_Upload", commands.UploadCommand),
             ("ForgePDM_Checkout", commands.CheckoutCommand),
             ("ForgePDM_CheckIn", commands.CheckInCommand),
@@ -34,6 +37,9 @@ class ForgePDMWorkbench(Gui.Workbench):
             ("ForgePDM_PublishDrawings", commands.PublishDrawingsCommand),
             ("ForgePDM_RefreshPDMStatus", commands.RefreshPDMStatusCommand),
             ("ForgePDM_ShowBOM", commands.ShowBOMCommand),
+            ("ForgePDM_AssignMaterials", commands.AssignMaterialsCommand),
+            ("ForgePDM_RegisterRawMaterial", commands.RegisterRawMaterialCommand),
+            ("ForgePDM_LinkPhysicalMaterial", commands.LinkPhysicalMaterialCommand),
             ("ForgePDM_RefreshTreeLabels", commands.RefreshTreeLabelsCommand),
             ("ForgePDM_ReplaceRevision", commands.ReplaceRevisionCommand),
             ("ForgePDM_ReplaceComponent", commands.ReplaceComponentCommand),
@@ -47,6 +53,11 @@ class ForgePDMWorkbench(Gui.Workbench):
 
         tree_observer.install()
         self._initialized = True
+
+    def Activated(self):
+        from . import tree_status
+
+        tree_status.enable()
 
     def GetClassName(self):
         return "Gui::PythonWorkbench"

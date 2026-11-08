@@ -80,6 +80,11 @@ class TreeObserver:
             self.queue(obj.Document)
 
     def slotChangedObject(self, obj, property_name):
+        if property_name in ("Shape", "ShapeMaterial"):
+            metadata = obj.Document.getObject("ForgePDM_Metadata")
+            if metadata is not None and getattr(metadata, "PDMPartPhysicalData", ""):
+                self.queue(obj.Document)
+            return
         if property_name not in (
             "LinkedObject",
             "Group",
@@ -100,6 +105,11 @@ class TreeObserver:
                     for link in parent.Objects
                 ):
                     self.queue(parent)
+
+    def slotRecomputedDocument(self, document):
+        metadata = document.getObject("ForgePDM_Metadata")
+        if metadata is not None and getattr(metadata, "PDMPartPhysicalData", ""):
+            self.queue(document)
 
     def slotDeletedDocument(self, document):
         _leases.pop(document.Name, None)
@@ -123,6 +133,15 @@ class TreeObserver:
                 continue
             try:
                 tree_labels.refresh(document)
+                metadata = document.getObject("ForgePDM_Metadata")
+                if metadata is not None and getattr(metadata, "PDMPartPhysicalData", ""):
+                    from . import physical_materials
+
+                    try:
+                        physical_materials.refresh(document, metadata)
+                    except Exception as error:
+                        physical_materials._set(metadata, "PDMPartMassKg", "")
+                        physical_materials._set(metadata, "PDMPartMassStatus", str(error))
             except Exception as error:
                 App.Console.PrintWarning("ForgePDM tree labels ({}): {}\n".format(name, error))
         if self.pending:

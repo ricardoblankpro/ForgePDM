@@ -93,7 +93,11 @@ def apply(
     selected = list(selected_names)
     if not selected or len(selected) != len(set(selected)):
         raise WorkspaceError("Choose distinct component occurrences to replace")
-    by_name = {ref["object_name"]: ref for ref in references if ref.get("property_name", "LinkedObject") == "LinkedObject"}
+    by_name = {
+        ref["object_name"]: ref
+        for ref in references
+        if ref.get("property_name", "LinkedObject") == "LinkedObject"
+    }
     if target_snapshot is not None:
         if target_names is not None or not all(
             target_snapshot.get(key) for key in ("dataset_id", "file_id")

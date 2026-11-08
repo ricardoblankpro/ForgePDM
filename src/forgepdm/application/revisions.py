@@ -5,7 +5,14 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from forgepdm.application.authorization import AuthorizationService
-from forgepdm.domain.entities import Checkout, Conflict, ItemRevision, LifecycleState, NotFound, User
+from forgepdm.domain.entities import (
+    Checkout,
+    Conflict,
+    ItemRevision,
+    LifecycleState,
+    NotFound,
+    User,
+)
 from forgepdm.infrastructure.database import Database
 
 
@@ -75,7 +82,9 @@ class RevisionService:
                 )
                 event = "checkout.acquired"
             self._audit(connection, user.id, event, "ItemRevision", revision_id, now, {})
-            row = connection.execute("SELECT * FROM checkouts WHERE id = ?", (checkout_id,)).fetchone()
+            row = connection.execute(
+                "SELECT * FROM checkouts WHERE id = ?", (checkout_id,)
+            ).fetchone()
             return _checkout(row)
 
     def renew_checkout(self, user: User, revision_id: str) -> Checkout:
@@ -95,8 +104,12 @@ class RevisionService:
                 "UPDATE checkouts SET expires_at = ?, version = version + 1 WHERE id = ?",
                 (expires.isoformat(), active["id"]),
             )
-            self._audit(connection, user.id, "checkout.renewed", "ItemRevision", revision_id, now, {})
-            row = connection.execute("SELECT * FROM checkouts WHERE id = ?", (active["id"],)).fetchone()
+            self._audit(
+                connection, user.id, "checkout.renewed", "ItemRevision", revision_id, now, {}
+            )
+            row = connection.execute(
+                "SELECT * FROM checkouts WHERE id = ?", (active["id"],)
+            ).fetchone()
             return _checkout(row)
 
     def release_checkout(self, user: User, revision_id: str, reason: str = "") -> Checkout:
@@ -116,7 +129,9 @@ class RevisionService:
                 if user.role != "admin":
                     raise Conflict("only the checkout owner or an administrator can release it")
                 if not reason:
-                    raise ValueError("an administrator must provide a reason to release another user's checkout")
+                    raise ValueError(
+                        "an administrator must provide a reason to release another user's checkout"
+                    )
             connection.execute(
                 "UPDATE checkouts SET released_at = ?, release_reason = ?, version = version + 1 WHERE id = ?",
                 (now.isoformat(), reason or "released", active["id"]),
@@ -130,7 +145,9 @@ class RevisionService:
                 now,
                 {"owner_id": active["user_id"], "reason": reason or "released"},
             )
-            row = connection.execute("SELECT * FROM checkouts WHERE id = ?", (active["id"],)).fetchone()
+            row = connection.execute(
+                "SELECT * FROM checkouts WHERE id = ?", (active["id"],)
+            ).fetchone()
             return _checkout(row)
 
     def require_checkout_owner(self, user: User, revision_id: str, connection=None) -> Checkout:
@@ -183,15 +200,22 @@ class RevisionService:
                 {"change_note": change_note},
             )
 
-    def transition_lifecycle(
-        self, user: User, revision_id: str, target: LifecycleState
-    ) -> None:
+    def transition_lifecycle(self, user: User, revision_id: str, target: LifecycleState) -> None:
         now = _now()
         with self.database.transaction() as connection:
             self.authorization.require_manage_revision(user, revision_id, connection)
             row = connection.execute(
                 "SELECT lifecycle_state FROM item_revisions WHERE id = ?", (revision_id,)
             ).fetchone()
+            material = connection.execute(
+                "SELECT i.number_series FROM items i JOIN item_revisions r ON r.item_id=i.id WHERE r.id=?",
+                (revision_id,),
+            ).fetchone()
+            if target == LifecycleState.RELEASED and material[0] == "M":
+                if not connection.execute(
+                    "SELECT 1 FROM revision_descriptions WHERE revision_id=? AND trim(description)!=''", (revision_id,)
+                ).fetchone():
+                    raise Conflict("raw materials require a description before release")
             current = LifecycleState(row["lifecycle_state"])
             allowed = {
                 LifecycleState.WORKING: LifecycleState.RELEASED,
@@ -214,7 +238,9 @@ class RevisionService:
                     (revision_id,),
                 ).fetchone()
                 if checkout is not None and datetime.fromisoformat(checkout["expires_at"]) > now:
-                    raise Conflict("check in and release the active checkout before releasing this revision")
+                    raise Conflict(
+                        "check in and release the active checkout before releasing this revision"
+                    )
                 if checkout is not None:
                     connection.execute(
                         "UPDATE checkouts SET released_at = ?, release_reason = 'expired' WHERE id = ?",
@@ -310,6 +336,33 @@ class RevisionService:
                         now.isoformat(),
                     ),
                 )
+            connection.execute("INSERT INTO revision_reference_mass SELECT ?,payload_json FROM revision_reference_mass WHERE revision_id=?", (revision_id,previous_id))
+            connection.execute("INSERT INTO material_physical_links SELECT ?,snapshot_json FROM material_physical_links WHERE revision_id=?",(revision_id,previous_id))
+            connection.execute("INSERT INTO part_physical_assignments SELECT ?,snapshot_json FROM part_physical_assignments WHERE revision_id=?",(revision_id,previous_id))
+            connection.execute("INSERT INTO revision_descriptions SELECT ?,description,material_revision_id FROM revision_descriptions WHERE revision_id=?",(revision_id,previous_id))
+            connection.execute(
+                "INSERT INTO revision_material_data SELECT ?,specification_json FROM revision_material_data WHERE revision_id=?",
+                (revision_id, previous_id),
+            )
+            material_bom = connection.execute(
+                "SELECT payload_json FROM material_boms WHERE revision_id=?", (previous_id,)
+            ).fetchone()
+            if material_bom:
+                copied = json.loads(material_bom[0])
+                copied["readiness"] = "unreviewed"
+                connection.execute(
+                    "INSERT INTO material_boms VALUES (?,?,?,?)",
+                    (revision_id, json.dumps(copied), user.id, now.isoformat()),
+                )
+            for line in connection.execute(
+                "SELECT component_revision_id FROM material_bom_lines WHERE parent_revision_id=?",
+                (previous_id,),
+            ).fetchall():
+                self.authorization.require_read_revision(user, line[0], connection)
+            connection.execute(
+                "INSERT INTO material_bom_lines SELECT ?,component_revision_id,position,quantity,uom,allowance_percent,note FROM material_bom_lines WHERE parent_revision_id=?",
+                (revision_id, previous_id),
+            )
             checkout_id = str(uuid4())
             connection.execute(
                 "INSERT INTO checkouts(id, revision_id, user_id, acquired_at, expires_at) "

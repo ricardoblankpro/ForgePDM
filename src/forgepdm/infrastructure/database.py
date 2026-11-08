@@ -289,6 +289,70 @@ INSERT INTO series_counters SELECT CASE item_kind WHEN 'part' THEN 'P' ELSE 'A' 
 """),
     (11, STANDARD_PARTS_SCHEMA),
     (12, SHARED_STANDARD_LIBRARY_SCHEMA),
+    (13, """
+CREATE TABLE dataset_material_evidence (
+ dataset_id TEXT PRIMARY KEY REFERENCES datasets(id),
+ payload_json TEXT NOT NULL
+);
+CREATE TABLE material_identities (
+ item_id TEXT PRIMARY KEY REFERENCES items(id),
+ identity_json TEXT NOT NULL UNIQUE,
+ base_uom TEXT NOT NULL
+);
+CREATE TABLE revision_material_data (
+ revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id),
+ specification_json TEXT NOT NULL DEFAULT '{}'
+);
+CREATE TABLE material_boms (
+ revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id),
+ payload_json TEXT NOT NULL,
+ modified_by TEXT NOT NULL REFERENCES users(id),
+ modified_at TEXT NOT NULL
+);
+CREATE TABLE material_bom_lines (
+ parent_revision_id TEXT NOT NULL REFERENCES item_revisions(id),
+ component_revision_id TEXT NOT NULL REFERENCES item_revisions(id),
+ position INTEGER NOT NULL CHECK(position>0),
+ quantity TEXT NOT NULL,
+ uom TEXT NOT NULL CHECK(uom IN ('ea','mm','cm','m','mm2','m2','g','kg')),
+ allowance_percent TEXT NOT NULL,
+ note TEXT NOT NULL DEFAULT '',
+ PRIMARY KEY(parent_revision_id,position)
+);
+CREATE INDEX material_bom_component_idx ON material_bom_lines(component_revision_id);
+CREATE TABLE requirement_snapshots (
+ id TEXT PRIMARY KEY,
+ actor_id TEXT NOT NULL REFERENCES users(id),
+ payload_json TEXT NOT NULL,
+ created_at TEXT NOT NULL
+);
+"""),
+    (14, """
+CREATE TABLE revision_descriptions (
+ revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id),
+ description TEXT NOT NULL DEFAULT '',
+ material_revision_id TEXT REFERENCES item_revisions(id)
+);
+CREATE INDEX description_material_idx ON revision_descriptions(material_revision_id);
+CREATE TABLE dataset_descriptions (
+ dataset_id TEXT PRIMARY KEY REFERENCES datasets(id),
+ payload_json TEXT NOT NULL
+);
+INSERT INTO revision_descriptions(revision_id,description)
+SELECT r.id,COALESCE(NULLIF(json_extract(d.specification_json,'$.description'),''),NULLIF(i.description,''),i.name)
+FROM item_revisions r JOIN items i ON i.id=r.item_id LEFT JOIN revision_material_data d ON d.revision_id=r.id
+WHERE i.number_series='M';
+"""),
+    (15, """
+CREATE TABLE material_physical_links (revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id), snapshot_json TEXT NOT NULL);
+CREATE TABLE part_physical_assignments (revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id), snapshot_json TEXT NOT NULL);
+CREATE TABLE dataset_part_mass (dataset_id TEXT PRIMARY KEY REFERENCES datasets(id), payload_json TEXT NOT NULL);
+"""),
+    (16, """
+CREATE TABLE revision_reference_mass (revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id), payload_json TEXT NOT NULL);
+CREATE TABLE supplier_mass_feed (specification_key TEXT PRIMARY KEY, payload_json TEXT NOT NULL);
+CREATE TABLE supplier_mass_attempts (revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id), attempted_at TEXT NOT NULL);
+"""),
 )
 
 
@@ -320,12 +384,26 @@ class Database:
                 "CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)"
             )
             for version, sql in MIGRATIONS:
+                if version == 13:
+                    connection.execute("PRAGMA foreign_keys=OFF")
                 connection.execute("BEGIN IMMEDIATE")
                 try:
                     applied = connection.execute(
                         "SELECT 1 FROM schema_version WHERE version = ?", (version,)
                     ).fetchone()
                     if not applied:
+                        if version == 13:
+                            for table in ("items", "series_counters"):
+                                original = connection.execute(
+                                    "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,)
+                                ).fetchone()[0]
+                                replacement = original.replace("('P','A','S')", "('P','A','S','M')")
+                                replacement = replacement.replace("CREATE TABLE " + table, "CREATE TABLE " + table + "_new", 1)
+                                connection.execute(replacement)
+                                connection.execute(f"INSERT INTO {table}_new SELECT * FROM {table}")
+                                connection.execute(f"DROP TABLE {table}")
+                                connection.execute(f"ALTER TABLE {table}_new RENAME TO {table}")
+                            connection.execute("UPDATE projects SET name='Shared Item Library' WHERE is_standard_library=1")
                         for statement in sql.split(";"):
                             if statement.strip():
                                 connection.execute(statement)
@@ -333,7 +411,10 @@ class Database:
                             "INSERT INTO schema_version(version, applied_at) VALUES (?, datetime('now'))",
                             (version,),
                         )
+                    if connection.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                        raise RuntimeError("migration foreign key validation failed")
                     connection.commit()
+                    connection.execute("PRAGMA foreign_keys=ON")
                 except BaseException:
                     connection.rollback()
                     raise

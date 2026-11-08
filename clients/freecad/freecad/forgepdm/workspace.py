@@ -446,6 +446,8 @@ def retrieve(client, root, revision_id, dataset_id, file_id):
                     if manifest
                     else [],
                 }
+                if "description_record" in revision:
+                    node["description_record"] = revision["description_record"]
                 if revision["item_kind"] == "assembly":
                     bom = client.get_bom(revision_id)
                     matched = {line["component_revision_id"] for line in bom} == {

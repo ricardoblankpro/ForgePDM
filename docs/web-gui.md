@@ -3,6 +3,15 @@
 The initial read-only browsing increment below is retained as implementation
 history. User/account/project administration, My checkouts and scoped activity
 are now implemented; see [functional workspace usage and validation](web-management.md).
+As of addon 0.10.0/schema 16, the existing catalog also registers description-only
+M records; Description tabs edit P material/A free text/M text under checkout and
+show physical P mass. S Description tabs show supplier reference mass, lookup and
+administrator CSV import. Catalog/detail subtitles prefer exact revision
+engineering descriptions. See [materials](material-management.md),
+[supplier mass](supplier-reference-mass.md) and
+[current upgrade/validation](upgrade-and-validation.md). Historical read-only
+claims below apply to that initial increment only. General CAD/BOM browser editing,
+assembly mass totals and ERP synchronization remain outside the current scope.
 
 ## Initial read-only increment
 

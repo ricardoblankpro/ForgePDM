@@ -144,8 +144,8 @@ def run(
             "tooltip has expiry and refresh time",
             "until" in other.toolTip(3) and "Last server check" in other.toolTip(3),
         )
-        tree.setColumnCount(5)
-        tree.headerItem().setText(4, "Fixture extension")
+        tree.setColumnCount(6)
+        tree.headerItem().setText(5, "Fixture extension")
         controller.column.clear()
         check(
             "private statuses clear even if another extension adds a column",
@@ -153,7 +153,7 @@ def run(
         )
         check(
             "status removal preserves another extension's column",
-            tree.columnCount() == 5 and tree.headerItem().text(4) == "Fixture extension",
+            tree.columnCount() == 6 and tree.headerItem().text(5) == "Fixture extension",
         )
         tree.setColumnCount(3)
         controller.column.render(alice, controller.snapshot)

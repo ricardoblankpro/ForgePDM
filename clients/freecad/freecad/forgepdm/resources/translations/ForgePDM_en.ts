@@ -2,6 +2,12 @@
 <TS version="2.1" language="en" sourcelanguage="en">
   <context>
     <name>ForgePDM</name>
+    <message><source>Register Raw Material…</source><translation type="unfinished" /></message>
+    <message><source>Register an M description linked to a FreeCAD physical material</source><translation type="unfinished" /></message>
+    <message><source>Link Physical Material…</source><translation type="unfinished" /></message>
+    <message><source>Link an existing M catalog entry to a FreeCAD physical material</source><translation type="unfinished" /></message>
+    <message><source>Assign Material / Set Description…</source><translation type="unfinished" /></message>
+    <message><source>Select an M material for a part or enter an assembly description</source><translation type="unfinished" /></message>
     <message><source>Change Standard Part Association…</source><translation type="unfinished" /></message>
     <message><source>Choose another S specification for selected fasteners without moving them</source><translation type="unfinished" /></message>
     <message><source>Register Standard / Purchased Part…</source><translation type="unfinished" /></message>

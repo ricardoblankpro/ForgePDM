@@ -1,5 +1,13 @@
 # PDM status in the FreeCAD tree
 
+Current tree integration also provides a read-only **Description** column next
+to PDM status: P rows show the pinned M text and A rows show their free-text
+description, including exact linked revisions. It preserves native labels and
+Label2 data and can display pending local descriptions. See
+[material descriptions](material-management.md). Status refresh remains a read-only
+presentation operation; explicit assignment/recompute may update engineering mass
+metadata only under the owned editing workflow.
+
 ## Implementation plan
 
 1. Add a read-only, bounded batch API for exact revision status. In one metadata

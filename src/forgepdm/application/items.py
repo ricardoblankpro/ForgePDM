@@ -33,13 +33,18 @@ class ItemService:
         change_note: str = "Initial revision",
         number_series: str | None = None,
         standard_specification: dict | None = None,
+        physical_material: dict | None = None,
     ) -> Item:
         series = number_series if number_series is not None else kind.number_prefix
-        if (kind.value, series) not in {("part", "P"), ("part", "S"), ("assembly", "A")}:
+        if (kind.value, series) not in {("part", "P"), ("part", "S"), ("part", "M"), ("assembly", "A")}:
             raise ValueError("invalid item kind and numbering series")
         spec = specification(standard_specification) if standard_specification is not None else None
         if spec is not None and series != "S":
             raise ValueError("Standard specifications require S numbering")
+        if physical_material is not None:
+            if series != "M":raise ValueError("physical material links require M items")
+            from forgepdm.domain.physical_materials import snapshot
+            physical_material = snapshot(physical_material)
         name = name.strip()
         if not name:
             raise ValueError("name must not be empty")
@@ -79,6 +84,8 @@ class ItemService:
                 "SELECT next_value FROM series_counters WHERE series = ?", (series,)
             ).fetchone()
             value = counter["next_value"]
+            if value > 999999:
+                raise Conflict("numbering series exhausted")
             number = f"{series}{value:06d}"
             connection.execute(
                 "UPDATE series_counters SET next_value = ? WHERE series = ?",
@@ -109,6 +116,11 @@ class ItemService:
                 "VALUES (?, ?, 'A', 1, 'working', ?, ?, ?, ?)",
                 (revision_id, item_id, change_note.strip(), created_by, now, now),
             )
+            if physical_material is not None:
+                from forgepdm.domain.physical_materials import encode as encode_physical
+                connection.execute("INSERT INTO material_physical_links VALUES (?,?)",(revision_id,encode_physical(physical_material)))
+            if series == "M":
+                connection.execute("INSERT INTO revision_descriptions(revision_id,description) VALUES (?,?)", (revision_id,description.strip() or name))
             connection.execute(
                 "INSERT INTO checkouts(id, revision_id, user_id, acquired_at, expires_at) "
                 "VALUES (?, ?, ?, ?, ?)",

@@ -91,8 +91,9 @@ def get_file_storage(request: Request) -> FileStorage:
 
 
 class CreateItemRequest(BaseModel):
-    number_series: Literal["P", "A", "S"] | None = None
+    number_series: Literal["P", "A", "S", "M"] | None = None
     standard_specification: dict | None = None
+    physical_material: dict | None = None
     kind: ItemKind
     name: str = Field(min_length=1, max_length=200)
     description: str = Field(default="", max_length=4000)
@@ -216,6 +217,7 @@ def logout(
 @router.post("/items", status_code=status.HTTP_201_CREATED)
 def create_item(
     payload: CreateItemRequest,
+    request: Request,
     user: User = Depends(current_user),
     service: ItemService = Depends(get_item_service),
     authorization: AuthorizationService = Depends(get_authorization_service),
@@ -231,6 +233,7 @@ def create_item(
             kind=payload.kind,
             number_series=payload.number_series,
             standard_specification=payload.standard_specification,
+            physical_material=payload.physical_material,
             name=payload.name,
             description=payload.description,
             project_id=project_id,
@@ -246,7 +249,15 @@ def create_item(
         raise HTTPException(status_code=409, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    return {**_item_response(item), "current_checkout": _checkout_response(checkout)}
+    result = {**_item_response(item), "current_checkout": _checkout_response(checkout)}
+    if payload.number_series == "S" and payload.standard_specification:
+        try:
+            result["reference_mass"] = request.app.state.reference_mass_service.lookup(user, item.current_revision_id)
+        except Exception:
+            # The Item is already committed. Optional enrichment cannot turn a
+            # successful creation into an ambiguous failure/retry.
+            result["reference_mass"] = {"mass_kg": None, "status": "unavailable", "reason": "Supplier enrichment unavailable"}
+    return result
 
 
 @router.get("/projects")
@@ -272,6 +283,7 @@ def standard_capabilities(
     return {
         "version": 1,
         "adapter": "fasteners-v1",
+        "reference_mass_version": 1,
         "snapshot_evidence": True,
         "shared_library": True,
         "library_project_id": project["id"],
@@ -295,7 +307,7 @@ def standard_matches(
 
 @router.get("/items")
 def search_items(
-    number_series: Literal["P", "A", "S"] | None = None,
+    number_series: Literal["P", "A", "S", "M"] | None = None,
     q: str = Query(default="", max_length=200),
     project_id: UUID | None = None,
     limit: int = Query(default=50, ge=1, le=100),

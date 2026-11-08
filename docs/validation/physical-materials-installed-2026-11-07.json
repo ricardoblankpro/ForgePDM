@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-07",
+  "backup": "var/backups/before-physical-materials-20261107T230922Z",
+  "preservation": {
+    "old_tables": 31,
+    "stored_files": 168,
+    "schema": 15
+  },
+  "sqlite_integrity": "ok",
+  "foreign_key_violations": 0,
+  "addon_profiles": 2,
+  "addon_files_verified_per_profile": 54,
+  "gui": {
+    "addon_version": "0.9.0",
+    "open_documents_preserved": 3,
+    "preexisting_dirty_documents": 1,
+    "session_preserved": true,
+    "command_dispatch": [
+      "AssignMaterialsCommand.action",
+      "UploadCommand.action",
+      "CheckInCommand.action",
+      "RegisterRawMaterialCommand.action",
+      "LinkPhysicalMaterialCommand.action"
+    ],
+    "physical_material_api": true,
+    "production_records_created": 0
+  },
+  "new_toolbar_visible": true
+}

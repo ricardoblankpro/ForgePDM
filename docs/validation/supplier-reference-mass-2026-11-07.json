@@ -1,0 +1,227 @@
+{
+  "date": "2026-11-07",
+  "backend_tests": 199,
+  "addon_tests": 356,
+  "native": {
+    "runtime": [
+      "1",
+      "1",
+      "4"
+    ],
+    "checks": [
+      "real controlled Fasteners registration dialog automatically retrieves verified 16 g supplier mass",
+      "repeat association lookup reuses saved reference",
+      "Released S revision reuses reference without modification"
+    ]
+  },
+  "browser": {
+    "reference": {
+      "checks": [
+        "S revision displays supplier mass per piece",
+        "source supplier, article, retrieval date and original product link are visible",
+        "Released S revision offers no automatic mass write",
+        "invalid reference CSV reports validation without changing the saved mass",
+        "reference view fits mobile viewport"
+      ],
+      "pageErrors": []
+    },
+    "regression_checks": [
+      "login shell loads without credentials or fixture content",
+      "bad password remains on login and is cleared",
+      "authorized projects only",
+      "multilevel BOM preserves per-parent quantities",
+      "direct BOM excludes descendants",
+      "collapse hides nested rows",
+      "expand restores nested rows",
+      "BOM navigation opens pinned historical A instead of latest B",
+      "authenticated download filename and bytes",
+      "where-used shows both accessible parent assemblies",
+      "where-used opens exact parent revision",
+      "dataset list belongs to selected B rather than older A",
+      "item names render as text without executing HTML",
+      "private item is not disclosed",
+      "project filter scopes item results",
+      "project cards use authorized project data",
+      "pagination advances within authorized project",
+      "search resets pagination",
+      "mobile layout has no document-wide horizontal overflow",
+      "no persistent bearer storage",
+      "no content security policy violations",
+      "logout clears protected UI state",
+      "refresh requires login because token is memory-only",
+      "expired/revoked session clears data and asks for sign-in",
+      "browser performs no engineering writes",
+      "no uncaught browser exceptions"
+    ],
+    "simple_material_checks": [
+      "register M material with description only and no specification form",
+      "advanced material requirements and readiness controls are absent",
+      "part selection lists M items and stores the exact material revision with its description",
+      "catalog and detail subtitle show saved description instead of CAD name",
+      "part material can be cleared without entering quantities",
+      "assembly description is free text with no material selection",
+      "simple description form fits mobile viewport"
+    ]
+  },
+  "live_supplier_samples": [
+    {
+      "specification": {
+        "geometry": {
+          "Diameter": "m8",
+          "LeftHanded": "false",
+          "Length": "30",
+          "Type": "iso4017"
+        },
+        "material": "steel",
+        "grade": "8.8",
+        "finish": "zinc plated"
+      },
+      "candidate_url": "https://www.fabory.com/en_NL/hexagon-head-screw-iso-4017-steel-zinc-plated-8-8-m8x30/p/01210080030",
+      "unavailable": "TimeoutError"
+    },
+    {
+      "specification": {
+        "geometry": {
+          "Diameter": "m8",
+          "LeftHanded": "false",
+          "Length": "30",
+          "Type": "iso4017"
+        },
+        "material": "steel",
+        "grade": "8.8",
+        "finish": "zinc plated yellow passivated"
+      },
+      "candidate_url": "https://www.fabory.com/en_NL/hexagon-head-screw-iso-4017-steel-zinc-plated-yellow-passivated-8-8-m8x30/p/01230080030",
+      "result": {
+        "supplier": "Fabory",
+        "source_url": "https://www.fabory.com/en_NL/hexagon-head-screw-iso-4017-steel-zinc-plated-yellow-passivated-8-8-m8x30/p/01230080030",
+        "source_article": "01230.080.030",
+        "source_mass": "15",
+        "source_unit": "g",
+        "source_quantity": "1",
+        "mass_kg": "0.015",
+        "source_sha256": "02e17e6a2dd0821061dac6513d99433c316247096592d07d75a607e0a82463ea"
+      }
+    },
+    {
+      "specification": {
+        "geometry": {
+          "Diameter": "m8",
+          "Type": "iso4032"
+        },
+        "material": "steel",
+        "grade": "8",
+        "finish": "zinc plated"
+      },
+      "candidate_url": "https://www.fabory.com/en_NL/hexagon-nut-iso-4032-steel-zinc-plated-8-m8/p/01301080001",
+      "result": {
+        "supplier": "Fabory",
+        "source_url": "https://www.fabory.com/en_NL/hexagon-nut-iso-4032-steel-zinc-plated-8-m8/p/01301080001",
+        "source_article": "01301.080.001",
+        "source_mass": "4.992",
+        "source_unit": "g",
+        "source_quantity": "1",
+        "mass_kg": "0.004992",
+        "source_sha256": "788f9049dc8def5230bbb983a5b28b4428bb17e49bb36ed84b06fdd7f3ee78ce"
+      }
+    },
+    {
+      "specification": {
+        "geometry": {
+          "Diameter": "m8",
+          "Type": "iso4032"
+        },
+        "material": "steel",
+        "grade": "8",
+        "finish": "plain"
+      },
+      "candidate_url": "https://www.fabory.com/en_NL/hexagon-nut-iso-4032-steel-plain-8-m8/p/01104080001",
+      "result": {
+        "supplier": "Fabory",
+        "source_url": "https://www.fabory.com/en_NL/hexagon-nut-iso-4032-steel-plain-8-m8/p/01104080001",
+        "source_article": "01104.080.001",
+        "source_mass": "5",
+        "source_unit": "g",
+        "source_quantity": "1",
+        "mass_kg": "0.005",
+        "source_sha256": "8a7456e038ffc69b9faa77728a1c512d7e0368b888be1b05906b34b496052939"
+      }
+    },
+    {
+      "specification": {
+        "geometry": {
+          "Diameter": "m8",
+          "LeftHanded": "false",
+          "Length": "30",
+          "Type": "iso4762"
+        },
+        "material": "steel",
+        "grade": "10.9",
+        "finish": "plain"
+      },
+      "candidate_url": "https://www.fabory.com/en_NL/hexagon-socket-head-cap-screw-din-912-steel-plain-10-9-m8x30/p/07015080030",
+      "result": {
+        "supplier": "Fabory",
+        "source_url": "https://www.fabory.com/en_NL/hexagon-socket-head-cap-screw-din-912-steel-plain-10-9-m8x30/p/07015080030",
+        "source_article": "07015.080.030",
+        "source_mass": "16",
+        "source_unit": "g",
+        "source_quantity": "1",
+        "mass_kg": "0.016",
+        "source_sha256": "09b2f005fd08a7cd978d2a374a013af2e774ef5d926ef296c8ae73b7b53db61a"
+      }
+    },
+    {
+      "specification": {
+        "geometry": {
+          "Diameter": "m8",
+          "LeftHanded": "false",
+          "Length": "30",
+          "Type": "iso4762"
+        },
+        "material": "stainless steel a2",
+        "grade": "a2-70",
+        "finish": "plain"
+      },
+      "candidate_url": "https://www.fabory.com/en_NL/hexagon-socket-head-cap-screw-din-912-stainless-steel-a2-m8x30/p/51050080030",
+      "result": {
+        "supplier": "Fabory",
+        "source_url": "https://www.fabory.com/en_NL/hexagon-socket-head-cap-screw-din-912-stainless-steel-a2-m8x30/p/51050080030",
+        "source_article": "51050.080.030",
+        "source_mass": "16",
+        "source_unit": "g",
+        "source_quantity": "1",
+        "mass_kg": "0.016",
+        "source_sha256": "5df1413e0d7915fed9ace66a893b2b2b4550c36762e127ee55524d6a54086192"
+      }
+    },
+    {
+      "specification": {
+        "geometry": {
+          "Diameter": "m8",
+          "Type": "iso7089"
+        },
+        "material": "steel",
+        "grade": "200 hv",
+        "finish": "zinc plated"
+      },
+      "candidate_url": "https://www.fabory.com/en_NL/plain-washer-din-125-1a-steel-zinc-plated-200-hv-m8/p/38093080001",
+      "result": {
+        "supplier": "Fabory",
+        "source_url": "https://www.fabory.com/en_NL/plain-washer-din-125-1a-steel-zinc-plated-200-hv-m8/p/38093080001",
+        "source_article": "38093.080.001",
+        "source_mass": "1.5",
+        "source_unit": "g",
+        "source_quantity": "1",
+        "mass_kg": "0.0015",
+        "source_sha256": "498f1e46f729fda6be07c72293890b481104b7244d7d02d4e13e86a30f08f96a"
+      }
+    }
+  ],
+  "packaging": {
+    "version": "0.10.0",
+    "manifest": "passed",
+    "zip": "built",
+    "backend_wheel_and_sdist": "built"
+  }
+}

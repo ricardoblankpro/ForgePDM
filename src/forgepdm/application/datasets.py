@@ -1,11 +1,14 @@
 """Dataset upload, revision association, listing, and retrieval use cases."""
 
+from forgepdm.application.physical_materials import read_native_mass,persist_mass
+from forgepdm.application.descriptions import read_native_description, persist_native_description
 import json
 import re
 from datetime import datetime, timezone
 from pathlib import PurePosixPath
 from uuid import uuid4
 
+from forgepdm.application.material_evidence import read_material_evidence, persist_material_evidence
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.application.revisions import RevisionService
 from forgepdm.application.standard_parts import persist_occurrences, read_occurrences
@@ -86,6 +89,9 @@ class DatasetService:
         staged = self.storage.stage(source)
         # Blob promotion precedes the DB commit; a failed commit can leave an orphan blob.
         try:
+            part_mass = read_native_mass(staged.path) if dataset_type == DatasetType.NATIVE_CAD else None
+            simple_description = read_native_description(staged.path) if dataset_type == DatasetType.NATIVE_CAD else None
+            material_evidence = read_material_evidence(staged.path) if simple_description is None and dataset_type == DatasetType.NATIVE_CAD else None
             occurrences = (
                 read_occurrences(staged.path) if dataset_type == DatasetType.NATIVE_CAD else []
             )
@@ -123,6 +129,11 @@ class DatasetService:
                 (dataset_id, revision_id, dataset_type.value, dataset_name, user.id, now),
             )
             persist_occurrences(connection, self.authorization, user, dataset_id, occurrences)
+            if dataset_type == DatasetType.NATIVE_CAD:
+                if simple_description is None:
+                    persist_material_evidence(connection, self.database, self.authorization, self.revisions, user, revision_id, dataset_id, material_evidence)
+                persist_native_description(connection, self.database, self.authorization, self.revisions, user, revision_id, dataset_id, simple_description)
+                persist_mass(connection,revision_id,dataset_id,part_mass)
             connection.execute(
                 "INSERT INTO dataset_files(dataset_id, file_id, position) VALUES (?, ?, 0)",
                 (dataset_id, file_id),

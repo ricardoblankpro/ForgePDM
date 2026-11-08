@@ -11,7 +11,15 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 
 ## Active development-direction roadmap
 
-**Standard/purchased component catalog delivered (addon 0.7.4).** Shared library
+**Current delivery: addon 0.10.0 / backend schema 16.** Simple P material/A assembly
+descriptions, optional native density links and finished part mass, and bounded
+S supplier reference mass are implemented. Current guides:
+[materials](material-management.md), [supplier mass](supplier-reference-mass.md)
+and [upgrade/validation](upgrade-and-validation.md). Assembly mass rollup,
+TechDraw BOM tables, stock/cutting optimization and ERPNext synchronization remain
+future increments; no new feature order is assumed without user direction.
+
+**Standard/purchased component catalog delivered (originally addon 0.7.4).** Shared library
 ownership replaces consuming-project assignment; registration skips the project
 prompt, with reader/maintainer permissions (ADR-011). S-numbered
 parts reuse ForgePDM Items, revisions, permissions and managed BOM/CAD workflows.
@@ -33,15 +41,16 @@ tracked below; this feature does not mark Phase 5 complete.
 | 5 | Robust checkout/check-in, lifecycle, revisions and datasets | Started: atomic part/assembly check-in with pinned manifests, fenced leases and durable replay implemented; legacy-write fencing and revision retries next |
 | 6 | Security, testing, backup/recovery and operational hardening | Consolidate production-readiness evidence |
 | 7 | Addon Manager distribution and stable deployment | Requires licensing, distribution approval and operational gates |
-| 8 | Web interface, ERPNext and future integrations | Browsing plus user/password/project administration, my checkouts and scoped activity implemented locally; engineering editing and integrations deferred |
+| 8 | Web interface, ERPNext and future integrations | Browsing plus user/password/project administration, my checkouts and scoped activity implemented locally; P/A/M descriptions/material assignment and S mass enrichment delivered; general CAD/BOM editing and ERP integration deferred |
 
 The user approved bringing basic web browsing forward. Phase 5 remains the
 backend reliability workstream; the component catalog above is delivered for
 user pilot testing. The first web increment is served at `/app/`
 and provides authorized project/item browsing, exact revision history, datasets,
 where-used and direct/multilevel BOM views. User-approved account/project management, my checkouts and activity history
-are now implemented; see [the functional GUI report](web-management.md). Engineering
-editing, flattened BOM tools and ERP integrations remain future work. See [the web GUI report](web-gui.md).
+are now implemented; see [the functional GUI report](web-management.md). P/A/M description and material editing plus S supplier-mass enrichment are
+implemented. General CAD/BOM editing, flattened BOM tools and ERP integrations
+remain future work. See [the web GUI report](web-gui.md).
 
 Phase 3 was explicitly authorized after Phase 2. Phase 4 provides reviewed,
 revision-aware BOM synchronization for supported App::Link structures. The
@@ -103,12 +112,12 @@ Direct and recursive BOM reads, atomic BOM replacement, explicit component revis
 
 **Exit:** end-to-end pilot can create, edit, release, revise, and retrieve an assembly and its exact component revisions.
 
-The initial `clients/freecad/ForgePDM` Workbench now provides login, create/upload, checkout, check-in, release, next revision, recursive BOM display, and item/assembly download commands. Installation and workflow documentation is in `clients/freecad/README.md`. It has not yet been exercised inside FreeCAD; assembly external-link relinking and pilot validation remain outstanding.
+The initial Workbench slice (historical) provided login, create/upload, checkout, check-in, release, next revision, recursive BOM display, and item/assembly download commands. Installation and workflow documentation is in `clients/freecad/README.md`. Native workflows have since been exercised in FreeCAD 1.1.4; supported pinned-link reconstruction is implemented. Current acceptance scope and remaining platform/operational gates are in DEVELOPMENT_STATUS.md and the Phase 3–5 reports.
 
 ## Not in MVP
 
 Approval workflow designer, effectivity/configuration management,
-alternate/substitute parts, full supplier/manufacturer catalog integrations,
+alternate/substitute parts, full supplier/manufacturer catalog integrations beyond the delivered bounded reference-mass lookup,
 notifications, client verification, multi-CAD clients, and PostgreSQL production
 deployment remain deferred. A personal component catalog with basic supplier
 metadata remains separate from the delivered component identity catalog; browser administration has already

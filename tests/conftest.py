@@ -21,6 +21,8 @@ from forgepdm.infrastructure.storage import FileStorage
 
 TEST_PASSWORD = "test-password-0123456789"
 
+os.environ["FORGEPDM_SUPPLIER_LOOKUP"] = "0"
+
 # Some test modules import main.app during collection, before fixtures run.
 # Keep its eager initialization away from the developer's configured database.
 _collection_root = TemporaryDirectory(prefix="forgepdm-pytest-app-")

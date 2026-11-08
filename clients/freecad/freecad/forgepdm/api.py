@@ -130,6 +130,48 @@ class ForgePDMClient:
                 self.token = None
                 self.expires_at = None
 
+    def get_reference_mass(self, revision_id):
+        return self._json_request("GET", "/api/v1/revisions/{}/reference-mass".format(revision_id))
+
+    def lookup_reference_mass(self, revision_id):
+        return self._json_request(
+            "POST", "/api/v1/revisions/{}/reference-mass/lookup".format(revision_id), {}
+        )
+
+    def physical_capabilities(self):
+        return self._json_request("GET", "/api/v1/materials/capabilities")
+
+    def get_physical_link(self, revision_id):
+        return self._json_request(
+            "GET", "/api/v1/revisions/{}/physical-material".format(revision_id)
+        )
+
+    def link_physical_material(self, revision_id, physical_material, expected_token):
+        return self._json_request(
+            "PUT",
+            "/api/v1/revisions/{}/physical-material".format(revision_id),
+            {"physical_material": physical_material, "expected_token": expected_token},
+        )
+
+    def get_part_mass(self, revision_id):
+        return self._json_request("GET", "/api/v1/revisions/{}/mass".format(revision_id))
+
+    def get_description(self, revision_id):
+        return self._json_request("GET", "/api/v1/revisions/{}/description".format(revision_id))
+
+    def engineering_properties(self, revision_id):
+        return self._json_request(
+            "GET", "/api/v1/revisions/{}/engineering-properties".format(revision_id)
+        )
+
+    def material_inputs(self, revision_id):
+        return self._json_request("GET", "/api/v1/revisions/{}/material-bom".format(revision_id))
+
+    def material_specification(self, revision_id):
+        return self._json_request(
+            "GET", "/api/v1/revisions/{}/material-specification".format(revision_id)
+        )
+
     def list_projects(self, editable=False, limit=50, offset=0):
         query = urllib.parse.urlencode(
             {"editable": str(editable).lower(), "limit": limit, "offset": offset}
@@ -316,8 +358,11 @@ class ForgePDMClient:
         description="",
         number_series=None,
         standard_specification=None,
+        physical_material=None,
     ):
         payload = {"kind": kind, "name": name, "description": description}
+        if physical_material is not None:
+            payload["physical_material"] = physical_material
         if number_series:
             payload["number_series"] = number_series
         if standard_specification is not None:

@@ -1,0 +1,15 @@
+{
+  "version": "0.8.0",
+  "registered_command_dispatch": [
+    "AssignMaterialsCommand.action",
+    "UploadCommand.action",
+    "CheckInCommand.action"
+  ],
+  "existing_command_instances_updated": 18,
+  "documents_preserved": 3,
+  "session_preserved": true,
+  "material_api": "available",
+  "library_registration": "allowed",
+  "toolbar_visible": true,
+  "documents_clean_after_ui_refresh": true
+}

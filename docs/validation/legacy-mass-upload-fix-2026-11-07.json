@@ -1,0 +1,26 @@
+{
+  "runtime": [
+    "1",
+    "1",
+    "4"
+  ],
+  "checks": [
+    "real two-field registration dialog creates an M item linked to native material and density",
+    "existing description-only catalog entry links through the native material dialog",
+    "legacy open copy with server-assigned physical material upgrades and uploads without reselection",
+    "selecting one M entry assigns native Body material and calculates 7.8 kg without double-counting its feature",
+    "owned-document geometry recompute automatically updates mass to 15.6 kg",
+    "upload and atomic check-in publish material/density/mass with the exact CAD source hash",
+    "download/reopen rebuilds a missing managed material cache and preserves frozen native density and mass",
+    "clearing a material removes its native density and marks mass unavailable rather than zero"
+  ],
+  "part_id": "e0b879e8-db63-48b1-9ea5-13f34998aae4",
+  "revision_id": "57792fa7-f21c-4229-90af-cb559b67fd4d",
+  "scope": "Disposable server/documents and generated ForgePDM cache cards; original material libraries unchanged",
+  "addon_version": "0.9.1",
+  "addon_tests": 353,
+  "profiles_installed": 2,
+  "files_verified_per_profile": 54,
+  "production_records_changed_by_repair": 0,
+  "backend_changed": false
+}

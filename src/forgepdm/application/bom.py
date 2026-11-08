@@ -96,11 +96,19 @@ class BOMService:
 
             for component_revision_id, _, _ in prepared:
                 component = connection.execute(
-                    "SELECT lifecycle_state FROM item_revisions WHERE id = ?",
+                    "SELECT r.lifecycle_state,i.number_series,i.id AS item_id FROM item_revisions r JOIN items i ON i.id=r.item_id WHERE r.id = ?",
                     (component_revision_id,),
                 ).fetchone()
                 if component is None:
                     raise NotFound("component revision not found")
+                if component["number_series"] == "M":
+                    raise Conflict("raw materials belong in the material BOM")
+                inputs = connection.execute("SELECT payload_json FROM material_boms WHERE revision_id=?", (parent_revision_id,)).fetchone()
+                if inputs and component["number_series"] == "S":
+                    for line in json.loads(inputs[0])["lines"]:
+                        input_item = connection.execute("SELECT item_id FROM item_revisions WHERE id=?", (line["component_revision_id"],)).fetchone()
+                        if input_item[0] == component["item_id"]:
+                            raise Conflict("purchased component already occurs in material inputs")
                 if component["lifecycle_state"] == "obsolete":
                     raise Conflict("obsolete revisions cannot be used as BOM components")
                 self.authorization.require_read_revision(user, component_revision_id, connection)
@@ -147,6 +155,11 @@ class BOMService:
                     json.dumps({"line_count": len(new_ids)}),
                 ),
             )
+            material = connection.execute("SELECT payload_json FROM material_boms WHERE revision_id=?", (parent_revision_id,)).fetchone()
+            if material:
+                value = json.loads(material[0])
+                value["readiness"] = "unreviewed"
+                connection.execute("UPDATE material_boms SET payload_json=? WHERE revision_id=?", (json.dumps(value), parent_revision_id))
             result = self._read_bom(connection, user, parent_revision_id, False, 1, set())
         return result
 

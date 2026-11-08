@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-07",
+  "backup": "var/backups/before-supplier-reference-mass-20261108T014119Z",
+  "preservation": {
+    "old_tables": 34,
+    "stored_files": 177,
+    "schema": 16
+  },
+  "integrity": "ok",
+  "foreign_key_violations": 0,
+  "profiles_installed": 2,
+  "addon_files_verified_per_profile": 54,
+  "gui": {
+    "version": "0.10.0",
+    "open_documents_preserved": 3,
+    "unsaved_documents_preserved": 0,
+    "session_preserved": true,
+    "reference_api_available": true,
+    "restart_required": false,
+    "production_records_created": 0
+  },
+  "existing_catalog_coverage": {
+    "structured_S_entries": 5,
+    "automatic_live_matches": 0,
+    "reason": "Existing specifications contain unknown fields, unsupported families or custom geometry; no supplier substitutions or masses were inferred."
+  }
+}

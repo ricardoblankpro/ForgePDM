@@ -1,6 +1,14 @@
-# Phase 1 validation and manual acceptance
+# FreeCAD validation and manual acceptance
 
-The historical checklist below covers Phase 1. For the current Phase 4 addon,
+Current client: **0.10.0**, backend schema **16**. The latest checked suites contain
+199 backend tests and 356 addon tests; live FreeCAD/browser evidence and scope are
+recorded in `DEVELOPMENT_STATUS.md` and the 2026-11-07 material/reference reports.
+Use [the current validation/upgrade guide](../../../docs/upgrade-and-validation.md)
+for configuration, packaging, native harnesses and browser checks. Addon lint and
+format checks match the GitHub workflow; mocked tests remain distinct from native
+GUI execution. Assembly totals and TechDraw BOM tables are still deferred.
+
+The historical checklist below covers Phase 1. For the Phase 4 assembly work,
 see `docs/freecad-addon-phase4.md` in the repository. The live harness is
 `clients/freecad/tests/freecad_phase4_smoke.py`; its module docstring describes
 starting a disposable backend and executing it through the actual FreeCAD MCP.

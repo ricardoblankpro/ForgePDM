@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 
+from forgepdm.application.descriptions import DescriptionService
 from forgepdm.domain.entities import Forbidden, NotFound
 
 
@@ -53,6 +54,8 @@ class TreeStatusService:
                     {
                         "revision_id": revision_id,
                         "available": True,
+                        "description": DescriptionService.read_in(connection, revision_id)["description"],
+                        "description_token": DescriptionService.read_in(connection, revision_id)["token"],
                         "item_id": revision["item_id"],
                         "item_number": revision["number"],
                         "revision_label": revision["label"],

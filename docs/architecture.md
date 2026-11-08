@@ -1,4 +1,8 @@
-# ForgePDM Architecture Proposal
+# ForgePDM Architecture
+
+Current implementation: addon **0.10.0**, SQLite schema **16**. The proposal and
+legacy assessment below explain the original boundaries; later accepted decisions
+and the implementation summary describe delivered behavior.
 
 ## Purpose and scope
 
@@ -19,7 +23,7 @@ The HTML specification contributes reusable business rules: sequential non-reuse
 
 The implementation has concrete risks: hardcoded local PDM roots; JSON files acting as concurrent shared state; direct/non-atomic writes and no coordinated metadata/file transaction; schema shape inconsistencies across macros; labels and filenames parsed as identifiers; broad exception handling that hides errors; UI, FreeCAD access, validation, and persistence coupled together; and a session dialog that lets a user select/confirm a name rather than authenticate credentials. BOM extraction based on linked labels may miss structures not represented as `App::Link` and the relationship update overwrites assembly content from the active document. These patterns should not be carried into the backend.
 
-Requirements needing product decisions include authentication method and roles; project/item access rules; numbering scope and migration of existing IDs; revision label policy; whether BOMs bind exact revisions or resolve latest; which files belong to a revision and their retention/deletion semantics; lifecycle permissions and approval; checkout expiry and admin recovery; backup/restore and supported storage topology; CAD version support; file size/type limits; and audit requirements. The proposed defaults below provide a minimal starting point, not settled policy.
+The legacy assessment originally left product decisions open, including authentication method and roles; project/item access rules; numbering scope and migration of existing IDs; revision label policy; whether BOMs bind exact revisions or resolve latest; which files belong to a revision and their retention/deletion semantics; lifecycle permissions and approval; checkout expiry and admin recovery; backup/restore and supported storage topology; CAD version support; file size/type limits; and audit requirements. The implementation and accepted ADRs now settle authentication, numbering, exact revision pins and checkout/release rules; deployment/retention questions remain open.
 
 ## Transaction and consistency boundary
 
@@ -42,7 +46,7 @@ docs/
 
 The current package uses FastAPI, Python's SQLite driver, and `uv` for dependency management. The Workbench lives in `clients/freecad/freecad/forgepdm/`, uses modern namespaced initialization and Python's standard-library HTTP client, and is packaged independently from the backend. See ADR-002 for packaging and manifest validation details. Keep `references/legacy/` read-only as historical input.
 
-The initial implementation uses FastAPI with Python's SQLite driver, schema migrations, transactional Item plus initial ItemRevision creation, and audit events. Password login issues revocable, expiring opaque bearer sessions. Project membership roles gate item access, with a global administrator role. Revision scoped Dataset records refer to File metadata while immutable bytes live in a separate SHA-256 content addressed filesystem store. Uploads stage and hash content before promotion; download verifies stored bytes. Checkout is an eight-hour exclusive lease enforced by a partial unique index; check-in releases it, and file attachment and BOM edits require the lease owner. Released revisions are immutable, and creating the next revision also creates its initial checkout and copies forward the explicit-revision BOM. Assembly release requires direct BOM components to be Released. The FreeCAD Workbench is a thin API client and stores only item/revision identifiers in a hidden document object. A failed metadata commit can leave an unreferenced blob, so storage reconciliation/garbage collection remains future work. Transport security, login rate limiting, account recovery and production deployment hardening remain future work.
+The initial implementation uses FastAPI with Python's SQLite driver, schema migrations, transactional Item plus initial ItemRevision creation, and audit events. Password login issues revocable, expiring opaque bearer sessions. Project membership roles gate item access, with a global administrator role. Revision scoped Dataset records refer to File metadata while immutable bytes live in a separate SHA-256 content addressed filesystem store. Uploads stage and hash content before promotion; download verifies stored bytes. Checkout is an eight-hour exclusive lease enforced by a partial unique index; check-in releases it, and file attachment and BOM edits require the lease owner. Released revisions are immutable, and creating the next revision also creates its initial checkout and copies forward the explicit-revision BOM. Assembly release requires direct BOM components to be Released. The FreeCAD Workbench is a thin API client and stores item/revision identifiers plus versioned engineering description and mass evidence in a hidden document object. A failed metadata commit can leave an unreferenced blob, so storage reconciliation/garbage collection remains future work. Transport security, login rate limiting, account recovery and production deployment hardening remain future work.
 
 ## References and tradeoffs
 
@@ -54,9 +58,10 @@ Phase 2 adds an authorized application catalog service and additive v1 reads for
 projects, item search and exact revision history/retrieval. The FreeCAD client
 uses GUI-thread workflows with worker-only HTTP/transfer requests, progress and
 cooperative cancellation; see ADR-003. Existing migrations and editing rules
-are unchanged. The atomic check-in/file-association description above remains a
-target: upload and check-in currently use separate requests and transactions,
-which Phase 5 must reconcile before production use.
+remain enforced. Native part/supported assembly check-in now commits bytes,
+manifest pins and checkout release atomically with fenced leases and idempotent
+replay (ADR-008). Separate legacy upload/manifest writes and revision-creation
+retry recovery still need further work; see [Phase 5](phase5-reliable-checkin.md).
 
 The legacy design does not settle authentication strength, authorization granularity, retention/deletion policy, file size limits, backup/restore, revision conflict behavior, or BOM snapshot semantics. Resolve these before production use. SQLite is appropriate for local/small-team MVP use, but concurrent multi-user writes and network filesystem behavior require explicit limits and deployment guidance. A single-server deployment with a local disk is the initial supported topology.
 
@@ -69,5 +74,30 @@ synchronization is implemented by Phase 4's explicit occurrence selection and
 reviewed replacement workflow; see ADR-005. Additive synchronization endpoints
 compare the reviewed BOM snapshot and checkout ID within the write transaction.
 CAD reconstruction follows manifest pins independently of engineering selection;
-revision-set differences are recorded rather than rejected. Atomic check-in and
-general mutation idempotency remain Phase 5.
+revision-set differences are recorded rather than rejected. Native atomic
+check-in is delivered; remaining legacy-write fencing and general mutation
+idempotency stay in Phase 5.
+
+## Engineering descriptions and mass
+
+Reuse Item identity and the shared S/M library. Backend services own revision,
+checkout, authorization and concurrency rules; the FreeCAD adapter reads native
+material libraries and measures final solid volumes. P/A descriptions and P
+physical assignments publish with exact native dataset evidence. Immutable UUID
+snapshot cards preserve FreeCAD density references across retrieval without
+modifying original material cards. See ADR-013 and ADR-014.
+
+Supplier reference mass is a separate S-revision enrichment, not CAD-derived P
+mass. The backend Fabory adapter checks an explicit family list and exact returned
+product attributes, robots policy and response limits. Network I/O occurs outside
+DB transactions, followed by checkout/specification revalidation. CSV references
+are an offline alternative; no match/provider failure blocks ordinary registration.
+See ADR-015 and [supplier lookup coverage](supplier-reference-mass.md).
+
+ForgePDM owns engineering definitions, exact revisions, CAD and engineering BOMs.
+Future ERPNext integration should reuse P/A/S/M codes for inventory, purchasing,
+cost and manufacturing operations. No synchronization is currently implemented;
+no ERP client or supplier credential belongs in the FreeCAD domain layer. Assembly
+mass aggregation, TechDraw BOM tables and cutting/stock optimization remain future
+work. Historical advanced material inputs remain as compatibility APIs, not the
+normal UI; ADR-013 supersedes that part of ADR-012.

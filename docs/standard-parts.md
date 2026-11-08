@@ -1,6 +1,9 @@
 # Standard parts and Fasteners Workbench
 
-ForgePDM addon 0.7.4 requires backend migrations 10–12 for this integration.
+Current addon **0.10.0** requires the backend through **migration 16**. The core
+Standard Parts/Fasteners implementation originated in migrations 10–12; supplier
+reference mass adds migration 16. M raw materials share the library introduced
+for S items. Existing S numbers, specifications and revision pins are preserved.
 Back up the database and file storage before upgrading; deploy the backend and
 addon together. Existing P/A items and historical link-only manifests remain valid.
 Migration 12 moves existing S item ownership into the shared library while preserving
@@ -159,3 +162,21 @@ Shared-library validation: start the same disposable server, then execute
 MCP. It verifies registration without a project prompt, library access, curator
 promotion and reuse in two project BOMs while preserving the current CAD session.
 Run it against a fresh disposable server; it registers synthetic records there.
+
+## Supplier reference mass (0.10.0)
+
+Structured S registration optionally retrieves a verified supplier mass without
+adding required form fields. Association/reassociation reuses saved mass or
+attempts lookup while you hold the S Working checkout. Supplier outages,
+unsupported types and incomplete specifications leave mass unavailable; they do
+not block engineering work. Released S references are not changed. New revisions
+copy their reference, and earlier assemblies keep their original revision pins.
+
+The web Description tab shows grams per piece, source supplier/article/link and
+retrieval date. Administrator CSV reference imports cover other validated sources.
+Live lookup currently supports an explicit subset of Fabory families; Fasteners
+recognition/BOM support is broader than supplier lookup coverage. Unknown grades,
+material/finish values and custom geometry are never inferred or substituted.
+See [coverage and reference-feed instructions](supplier-reference-mass.md) and
+[ADR-015](decisions/ADR-015-supplier-reference-mass.md). Assembly mass rollup is
+not yet implemented.

@@ -1,0 +1,38 @@
+{
+  "scope": "Disposable databases, storage, browser sessions and FreeCAD documents only. No live migration or installed-addon upgrade.",
+  "backend_tests": 165,
+  "addon_tests": 343,
+  "web_model_tests": "passed",
+  "browser_materials": [
+    "create M item and save controlled raw material specification through web",
+    "metadata check-in and material release through existing lifecycle",
+    "select exact catalog revision and review per-unit material inputs",
+    "approved material requirements preserve exact source revision and normalized units",
+    "authenticated requirements CSV download",
+    "mobile requirements layout stays within viewport"
+  ],
+  "browser_existing_checks": 26,
+  "freecad": {
+    "runtime": [
+      "1",
+      "1",
+      "4",
+      "20260928 (Git shallow)",
+      "Unknown",
+      "2026/09/28 13:46:34",
+      "(HEAD detached at 4fd3bf320)",
+      "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+    ],
+    "checks": [
+      "real solid mm3 and catalog density calculate 7.85 kg",
+      "changed real geometry recomputes mass before publication",
+      "real saved FCStd atomically publishes material inputs and replays without duplication",
+      "material evidence API pins selected-solid mass to exact dataset hash",
+      "save and reopen preserve exact material revision and mass evidence"
+    ],
+    "dataset_id": "f7d80caa-295a-4227-b6fa-c4d7a938bb89",
+    "revision_id": "c6213352-6bc6-4e6d-97b7-8937f0ac8ddd",
+    "scope": "Disposable API and CAD only"
+  },
+  "packaging": "Addon 0.8.0 manifest/layout and reproducible archive tests passed; backend wheel and source distribution built."
+}

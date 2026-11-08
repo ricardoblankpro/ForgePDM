@@ -382,6 +382,9 @@ def open_configuration(configuration, set_metadata):
     try:
         documents = {}
         for key in ledger["order"]:
+            from . import physical_materials
+
+            physical_materials.preload(paths[key])
             document = App.openDocument(str(paths[key]))
             owned.append(document)
             documents[key] = document
@@ -394,6 +397,33 @@ def open_configuration(configuration, set_metadata):
                 RevisionLabel=entry["revision_label"],
                 ServerUrl=ledger["server_url"],
             )
+            if entry.get("description_record") is not None and entry["item_number"].startswith(
+                ("P", "A")
+            ):
+                import json
+
+                record = entry["description_record"]
+                set_metadata(
+                    document,
+                    PDMDescription=record["description"],
+                    PDMDescriptionData=json.dumps(
+                        {
+                            "version": 2,
+                            "revision_id": entry["revision_id"],
+                            "description": record["description"],
+                            "material_revision_id": record["material_revision_id"],
+                            "physical_material": record.get("physical_material"),
+                            "expected_token": record["token"],
+                        },
+                        sort_keys=True,
+                    ),
+                )
+                if entry["item_number"].startswith("P"):
+                    physical_materials.apply(
+                        document,
+                        document.getObject("ForgePDM_Metadata"),
+                        record.get("physical_material"),
+                    )
         for key in ledger["order"]:
             document = documents[key]
             for reference in entries[key]["references"]:
@@ -426,6 +456,10 @@ def open_configuration(configuration, set_metadata):
                         link.setLink(target)
                     link.Placement = placement
             document.recompute()
+            metadata = document.getObject("ForgePDM_Metadata")
+            if metadata is not None and getattr(metadata, "ItemNumber", "").startswith("P"):
+                physical_materials.refresh(document, metadata)
+                document.recompute()
             settle_techdraw(document)
             if document.HasPendingTransaction:
                 document.commitTransaction()

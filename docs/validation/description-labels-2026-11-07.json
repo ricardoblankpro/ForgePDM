@@ -1,0 +1,14 @@
+{
+  "checks": [
+    "register M material with description only and no specification form",
+    "advanced material requirements and readiness controls are absent",
+    "part selection lists M items and stores the exact material revision with its description",
+    "catalog and detail subtitle show saved description instead of CAD name",
+    "part material can be cleared without entering quantities",
+    "assembly description is free text with no material selection",
+    "simple description form fits mobile viewport"
+  ],
+  "page_errors": [],
+  "targeted_tests": 12,
+  "scope": "Disposable browser/API data; live backend restarted without data changes"
+}

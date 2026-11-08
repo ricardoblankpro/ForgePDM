@@ -1,3 +1,4 @@
+import { materialsUI } from "./materials.mjs";
 import { managementUI } from "./management.mjs";
 import { drawingViewer } from "./drawings.mjs";
 import { API } from "./api.mjs";
@@ -14,6 +15,17 @@ let detailVersion = 0;
 let tabVersion = 0;
 let toastTimer;
 let management;
+const materialUI = materialsUI({api, el, button, state, descriptionSaved(revision,record) {
+  if(state.revision?.id===revision.id)state.revision.description_record=record;
+  for(const item of state.items)if(item.current_revision_id===revision.id)item.revision_description=record.description;
+  renderItems();
+  const title=document.querySelector(".detail-name");
+  if(title&&state.revision?.id===revision.id)title.textContent=record.description||state.item.name;
+}});
+document.querySelector("#new-material").addEventListener("click", async()=>{
+  const host=document.querySelector("#detail");
+  materialUI.create(host, item=>navigate(item.id,item.current_revision_id));
+});
 const drawingUI = drawingViewer({ state, request, el, button, dateLabel });
 
 function el(tag, attrs = {}, ...children) {
@@ -198,9 +210,9 @@ function renderItems() {
   $("#items-list").replaceChildren(...state.items.map(item => button([
     el("span", { class: `type-icon ${item.kind}` }, icon(item.kind)),
     el("span", { class: "item-row-copy" }, el("span", { class: "item-number" }, item.number),
-      el("span", { class: "item-row-title" }, item.name),
+      el("span", { class: "item-row-title" }, item.revision_description || item.name),
       el("span", { class: "item-row-bottom" }, `Revision ${item.revision_label}`, badge(item.lifecycle_state)))
-  ], () => navigate(item.id), { class: `item-row${active === item.id ? " selected" : ""}`, "aria-current": active === item.id ? "true" : null, "aria-label": `${item.number}, ${item.name}, revision ${item.revision_label}` })));
+  ], () => navigate(item.id), { class: `item-row${active === item.id ? " selected" : ""}`, "aria-current": active === item.id ? "true" : null, "aria-label": `${item.number}, ${item.revision_description || item.name}, revision ${item.revision_label}` })));
   if (!state.items.length) $("#items-list").append(el("div", { class: "list-empty" }, "No items found. Try another search or project."));
 }
 function navigate(itemId, revisionId) {
@@ -251,12 +263,12 @@ function renderDetail() {
     el("div", { class: "item-kicker" }, `${item.kind} / Item details`),
     el("div", { class: "detail-title-line" }, el("h2", {}, item.number),
       el("div", { class: "revision-picker" }, el("label", { for: "revision-picker" }, "Viewing"), picker)),
-    el("p", { class: "detail-name" }, item.name));
+    el("p", { class: "detail-name" }, revision.description_record?.description || item.name));
   const notice = revision.id !== item.current_revision_id ? el("div", { class: "revision-note" },
     `Viewing recorded revision ${revision.label}. Current revision ${item.current_revision.label} is available. `,
     button(`View ${item.current_revision.label} →`, () => navigate(item.id, item.current_revision_id), { class: "text-button" })) : null;
   const tabs = el("div", { class: "tabs", role: "tablist", "aria-label": "Item information" });
-  for (const [key, label] of [["overview", "Overview"], ["bom", "Bill of materials"], ["drawings", "Drawings"], ["datasets", "Files & datasets"], ["where-used", "Where used"]]) {
+  for (const [key, label] of [["overview", "Overview"], ["materials", "Description"], ["bom", "Bill of materials"], ["drawings", "Drawings"], ["datasets", "Files & datasets"], ["where-used", "Where used"]]) {
     tabs.append(button(label, () => { state.tab = key; renderDetail(); }, {
       class: `tab${state.tab === key ? " active" : ""}`, role: "tab", id: `tab-${key}`,
       "aria-selected": String(state.tab === key), "aria-controls": "tab-content", tabindex: state.tab === key ? "0" : "-1",
@@ -277,6 +289,7 @@ async function loadTab(content) {
   const version = ++tabVersion;
   const revision = state.revision;
   const tab = state.tab;
+  if (tab === "materials") return materialUI.render(content, state.item, revision);
   if (tab === "overview") { renderOverview(content); return; }
   if (Object.hasOwn(state.cache, tab)) { renderTabData(content, tab, state.cache[tab]); return; }
   content.replaceChildren(loading("Loading revision data…"));

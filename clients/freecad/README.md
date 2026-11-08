@@ -17,7 +17,7 @@ uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.
 uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.py build
 ```
 
-The output is `clients/freecad/dist/ForgePDM-0.5.1.zip`. Create a `ForgePDM`
+The output is `clients/freecad/dist/ForgePDM-0.10.0.zip`. Create a `ForgePDM`
 directory inside your FreeCAD user `Mod` directory and extract the archive there.
 The resulting layout must be `Mod/ForgePDM/package.xml` and
 `Mod/ForgePDM/freecad/forgepdm/init_gui.py`. Do not extract into an extra nested
@@ -150,17 +150,19 @@ After upgrading from 0.4.2, retrieve/reopen assemblies through ForgePDM once to
 replace modification flags left in previously opened documents. Re-uploading an
 unchanged downloaded component is not required to clear this old loader issue.
 
-Upload, manifest attachment and check-in remain separate HTTP operations. A
-failed or timed-out operation may leave an uploaded dataset; inspect server state
-before retrying. Atomic native check-in is now implemented in Phase 5; other
-mutation idempotency work remains. Only
+Native Check In publishes CAD bytes, pinned manifests and checkout release in
+one fenced, replayable operation. Separate Upload/manifest operations still exist;
+inspect server state after interrupted legacy writes. Further mutation idempotency
+work remains. Only
 native CAD files are transferred automatically, and the verified-cache download
 publication requires filesystem hard-link support. Local read-only protection
 is advisory. Third-party proxies, external textures and other CAD adapters are
 not certified. Windows, macOS and network shares remain unverified.
 
-Version 0.5.1 requires the Phase 3 manifest endpoints and Phase 4 BOM snapshot/
-synchronization endpoints. SQLite schema remains at migration 6.
+Current addon **0.10.0** requires the updated backend through **migration 16**,
+including descriptions (14), physical material/mass evidence (15), and supplier
+reference mass (16). Earlier manifests, BOM snapshot and check-in APIs remain
+required. Physical material/mass behavior has been validated on FreeCAD 1.1.4.
 Back up the database and immutable files before updating/restarting
 the server. The backend still runs separately from FreeCAD. Restart FreeCAD after
 updating the addon. See [Phase 4 validation](../../docs/freecad-addon-phase4.md).
@@ -302,3 +304,39 @@ If a pending attempt's checkout was renewed or replaced, the command offers to
 keep its snapshot or explicitly start a new operation from the current document.
 The old uncommitted snapshot is archived for review. No passwords/tokens are
 written into recovery journals. See [Phase 5 details](../../docs/phase5-reliable-checkin.md).
+
+## Material descriptions (0.8.1)
+
+Use **Assign Material / Set Description…** with an owned Working P/A document.
+Parts select M catalog entries; assemblies accept free text. No geometry selection,
+quantities or density are required. The Description tree column shows both.
+Save/upload remains explicit. Backend migration 14 is required. See
+[usage and revision behavior](../../docs/material-management.md).
+
+## Physical materials and mass (0.9.0)
+
+Use **Register Raw Material…** for a description plus a native material selection,
+or **Link Physical Material…** for an existing M record. Density is automatic.
+Selecting that M record with **Assign Material / Set Description…** applies the
+native density snapshot and calculates part mass. Read **PDMPartMassKg** in the
+managed metadata properties or the source-published mass in the web Description
+tab. Existing entries without a link continue working without mass. Backend
+migration 15 is required; [details and limitations](../../docs/material-management.md).
+
+## Supplier reference mass (0.10.0)
+
+Structured S registration attempts verified Fabory lookup automatically; explicit
+catalog association/reassociation reuses saved reference mass or attempts lookup
+under an owned Working checkout. Unsupported specifications and supplier outages
+do not block registration. Released references remain unchanged. The web
+Description tab displays mass/provenance and supports administrator CSV import.
+See [coverage, workflow and API](../../docs/supplier-reference-mass.md).
+
+## Upgrade and verification
+
+Use the [upgrade checklist](../../docs/upgrade-and-validation.md). Existing
+matching description-only CAD metadata is upgraded during upload/check-in
+preparation, including reconstruction of native mass evidence. Conflicting local
+material edits still need reconciliation. Selecting an updated M physical link
+for an existing P revision remains explicit. Assembly mass totals and TechDraw
+BOM tables are not implemented.

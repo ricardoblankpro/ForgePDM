@@ -1,0 +1,75 @@
+// Description-only acceptance against tests/web/serve.py disposable data.
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import path from "node:path";
+const directory=process.argv[2];
+const {chromium}=await import(process.env.FORGEPDM_PLAYWRIGHT||"/tmp/forgepdm-material-web-qa/node_modules/playwright-core/index.mjs");
+const config=JSON.parse(await fs.readFile(path.join(directory,"connection.json"),"utf8"));
+const browser=await chromium.launch({executablePath:"/usr/bin/google-chrome",headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
+const page=await browser.newPage({viewport:{width:1440,height:1050}});
+const errors=[],checks=[];page.on("pageerror",e=>errors.push(e.message));
+try {
+ await page.goto(config.url+"/app/");
+ await page.locator("#username").fill("web-admin");await page.locator("#password").fill(config.password);
+ const login=page.waitForResponse(r=>r.url().endsWith("/auth/login")&&r.status()===200);
+ await page.locator("#login-button").click();const token=(await(await login).json()).access_token;
+ const call=async(method,url,data)=>{const r=await page.request.fetch(config.url+"/api/v1"+url,{method,headers:{Authorization:`Bearer ${token}`},data});assert.ok(r.ok(),await r.text());return r.status()===204?null:r.json();};
+ await page.locator("#new-material").click();
+ assert.equal(await page.locator(".material-panel input").count(),1);
+ await page.getByLabel("Material description",{exact:true}).fill("STEEL PLATE S235, 6 MM");
+ await page.getByRole("button",{name:"Register material",exact:true}).click();
+ await page.getByRole("tab",{name:"Description",exact:true}).click();
+ await page.getByLabel("Material description",{exact:true}).waitFor();
+ const materialNumber=await page.locator(".detail-title-line h2").innerText();
+ const params=new URLSearchParams(new URL(page.url()).hash.slice(1));
+ const materialId=params.get("item"),materialRevision=params.get("revision");
+ checks.push("register M material with description only and no specification form");
+ assert.equal(await page.getByRole("tab",{name:"Requirements",exact:true}).count(),0);
+ checks.push("advanced material requirements and readiness controls are absent");
+ const open=async item=>{
+   await page.evaluate(({id,revision})=>{location.hash=new URLSearchParams({item:id,revision}).toString();},{id:item.id,revision:item.current_revision_id});
+   await page.waitForFunction(number=>document.querySelector(".detail-title-line h2")?.textContent===number,item.number);
+   await page.getByRole("tab",{name:"Description",exact:true}).click();
+ };
+ const part=await call("POST","/items",{kind:"part",name:"Description-only part"});await open(part);
+ await page.getByLabel("Find raw material").fill("STEEL PLATE S235");
+ await page.getByRole("button",{name:"Search materials",exact:true}).click();
+ const saved=page.waitForResponse(r=>r.request().method()==="PUT"&&r.url().endsWith("/description"));
+ await page.getByRole("button",{name:`${materialNumber} — STEEL PLATE S235, 6 MM`,exact:true}).click();assert.equal((await saved).status(),200);
+ await page.locator("#tab-content").getByText("STEEL PLATE S235, 6 MM",{exact:true}).waitFor();
+ const assigned=await call("GET",`/revisions/${part.current_revision_id}/description`);
+ assert.equal(assigned.material_revision_id,materialRevision);
+ checks.push("part selection lists M items and stores the exact material revision with its description");
+ await page.waitForFunction(()=>document.querySelector(".detail-name")?.textContent==="STEEL PLATE S235, 6 MM");
+ await page.locator("#search").fill(part.number);
+ await page.locator("#search-form").evaluate(form=>form.requestSubmit());
+ await page.getByRole("button",{name:new RegExp("^"+part.number+",")}).locator(".item-row-title").filter({hasText:"STEEL PLATE S235, 6 MM"}).waitFor();
+ checks.push("catalog and detail subtitle show saved description instead of CAD name");
+ await page.getByRole("button",{name:"Clear material",exact:true}).click();
+ await page.getByText("No description assigned.",{exact:true}).waitFor();
+ checks.push("part material can be cleared without entering quantities");
+ const assembly=await call("POST","/items",{kind:"assembly",name:"Description-only assembly"});await open(assembly);
+ await page.getByLabel("Assembly description").fill("General mounting");
+ const changed=page.waitForResponse(r=>r.request().method()==="PUT"&&r.url().endsWith("/description"));
+ await page.getByRole("button",{name:"Save description",exact:true}).click();assert.equal((await changed).status(),200);
+ assert.equal((await call("GET",`/revisions/${assembly.current_revision_id}/description`)).description,"General mounting");
+ checks.push("assembly description is free text with no material selection");
+ await page.screenshot({path:path.join(directory,"simple-description-desktop.png"),fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({path:path.join(directory,"simple-description-mobile.png"),fullPage:true});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1));
+ checks.push("simple description form fits mobile viewport");
+ try {
+   const physical=JSON.parse(await fs.readFile(path.join(directory,"physical-freecad-report.json"),"utf8"));
+   const r=await call("GET",`/revisions/${physical.revision_id}`);
+   await page.setViewportSize({width:1440,height:1050});
+   await open({id:physical.part_id,number:r.item_number,current_revision_id:physical.revision_id});
+   await page.getByText(/Uploaded mass: 15\.6/).waitFor();
+   await page.getByText(/Physical material: Steel-C15/).waitFor();
+   await page.screenshot({path:path.join(directory,"physical-mass-desktop.png"),fullPage:true});
+   checks.push("web shows pinned physical material, density and source-published part mass");
+ }catch(e){if(e.code!=="ENOENT")throw e;}
+ assert.deepEqual(errors,[]);
+ await fs.writeFile(path.join(directory,"materials-browser-report.json"),JSON.stringify({checks,pageErrors:errors,materialId,materialRevision,part,assembly},null,2));
+ console.log(JSON.stringify({checks,pageErrors:errors}));
+}finally{await browser.close();}

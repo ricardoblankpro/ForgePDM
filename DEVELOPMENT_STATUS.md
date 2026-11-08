@@ -1,5 +1,250 @@
 # Development status
 
+## 2026-11-07 — Documentation audit and GitHub publication preparation
+
+- Review the pending implementation against current guides. Update root/addon
+  READMEs, installation artifact/version/schema, architecture, domain extensions,
+  roadmap, web editing boundaries, Standard Parts and tree-description guidance.
+  Mark the earlier advanced material-input/catalog plans as historical/superseded
+  where applicable; retain dated evidence and legacy references unchanged.
+- Add docs/README.md as the current documentation index and
+  docs/upgrade-and-validation.md for backups, coordinated backend/addon upgrades,
+  configuration, rollback boundaries and automated/browser/native validation.
+  Document the 0.9.1 older-copy repair, exact supplier coverage, CSV source units,
+  immutable Released references and remaining assembly/TechDraw/ERP limitations.
+  Refresh next-session guidance to stop treating the delivered catalog as pending.
+- Run final CI-equivalent checks: 199 backend tests and 356 addon tests pass;
+  all-addon Ruff lint/format, manifest, ZIP build, web model and JS syntax checks
+  pass. Correct formatting/imports in pending addon code/native harnesses without
+  changing workflow semantics. Check changed Markdown local links and diff
+  whitespace. No changes to legacy reference files or local engineering data.
+- The publication includes the previously uncommitted material/description/mass
+  implementation, tests, decisions and validation reports together with these
+  documentation updates. Generated packages, local database/storage, credentials
+  and CAD workspaces remain outside version control. Current runtime remains
+  addon 0.10.0/schema 16; user-facing behavior is unchanged by this audit.
+
+## 2026-11-07 — Supplier reference mass installed (0.10.0)
+
+- Add optional exact-specification Fabory mass enrichment after structured S API
+  registration and on explicit FreeCAD catalog association/reassociation. Reuse
+  saved revision references without network access. Missing/unsupported data and
+  provider failures do not block registration/association. Generic S items remain
+  supported. Saving requires library edit permission and an owned Working checkout;
+  Released references are immutable and new revisions copy saved mass.
+- Add administrator CSV reference-feed import with full specification hashes,
+  explicit original quantity/unit, kg-per-piece Decimal conversion, source URL,
+  supplier/article and retrieval date. Validate complete feeds atomically and
+  preserve saved references when feeds change. Show S mass and provenance on the
+  existing web Description tab, with optional lookup and admin import controls.
+- Migration 16 adds three reference/feed/attempt tables. Live network I/O is
+  outside transactions, ownership/specification are rechecked before save, and
+  failed attempts have a one-hour cooldown. The Fabory adapter respects robots,
+  reads bounded explicit product URLs without redirects/search crawling, and
+  checks returned standards, size, material, grade, finish and article identity.
+  Initial coverage is seven supplier families; unknowns remain unavailable.
+  No whole supplier catalog, purchasing/inventory or assembly mass calculation.
+- Validation: 199 backend tests, 356 addon tests; 38 real browser checks (5 new,
+  26 existing and 7 simple-material); three real FreeCAD 1.1.4 checks cover the
+  controlled registration dialog with live 16 g lookup, reuse and Released reuse.
+  Six of seven live family samples returned verified values; one timed out and
+  stayed unavailable. Focused lint, JS syntax, diff, manifest/ZIP and backend build
+  checks pass. Tests use isolated fixtures and original native cards are untouched.
+- Deployment: verified pre-16 backup under
+  var/backups/before-supplier-reference-mass-20261108T014119Z. All 34 previous data
+  tables and 177 stored-file hashes preserved, integrity/foreign keys pass. Backend
+  runs schema 16 with live lookup enabled; both profiles have verified 0.10.0.
+  Commands/API updated in the running FreeCAD, preserving login, all three open
+  documents, saved hashes and current dirty state. No production test records or
+  supplier masses created. Existing five S specs do not meet live exact matching
+  (unknown fields/unsupported types/custom geometry); no substitutions inferred.
+- Usage/coverage: docs/supplier-reference-mass.md and example CSV; design: ADR-015.
+  Evidence: docs/validation/supplier-reference-mass-2026-11-07.json and installed
+  report. To add reference mass to a Released S, create its next revision; earlier
+  assembly revision pins stay unchanged. Broader supplier coverage and assembly
+  mass rollup remain separate increments.
+
+## 2026-11-07 — Existing working-copy upload compatibility fixed (0.9.1)
+
+- Reproduce the reported upload rejection when an open v1 description-only CAD
+  copy has the same M pin/text as the server but the server now has a physical
+  assignment. Preparation previously kept the old local record and produced no
+  native mass evidence. Upgrade matching v1 metadata to the saved physical
+  snapshot; also reconstruct missing mass metadata on matching v2 copies.
+  Conflicting local descriptions/material pins retain their pending edits and
+  concurrency token. Backend validation remains unchanged.
+- Validation: 353 addon tests, focused lint/manifest/ZIP/diff checks, eight live
+  FreeCAD 1.1.4 checks including an old-copy upload after web material assignment,
+  mass publication, recompute, check-in, cache recovery and clear. Tests use
+  disposable backend/data/documents. Evidence:
+  docs/validation/legacy-mass-upload-fix-2026-11-07.json.
+- Installed verified 0.9.1 in both profiles, retaining originals under
+  var/backups/before-legacy-mass-fix-*; hot-reloaded description preparation.
+  Login, all three open documents, saved file hashes and existing unsaved edits
+  preserved. No backend/schema changes and no production upload performed by
+  the repair. Retry Upload on P000007; no material reselection is required.
+
+## 2026-11-07 — Native material links and part mass installed (0.9.0)
+
+- Add simple FreeCAD **Register Raw Material…** (description + native physical
+  material, density read-only) and **Link Physical Material…** for existing M
+  entries. Reuse shared-library permissions, owned Working checkouts, revision
+  creation and concurrency tokens. Web registration remains description-only;
+  assemblies keep free text. Existing M links are never guessed or backfilled.
+- Selecting a linked M entry freezes its physical snapshot on the P revision,
+  applies a native density card to final local solids and computes kg from final
+  CAD volume. Exclude intermediate Body features, links and construction objects;
+  invalid/overlapping geometry reports unavailable. Owned geometry recompute
+  updates local mass; publication refresh rejects changed UUID or density.
+- Preserve portable UUID-only FreeCAD material references with deterministic,
+  immutable density cache cards under the native User library / ForgePDM.
+  Download reconstructs missing cards before opening the FCStd. Original material
+  cards remain untouched. This is density/mass support, not full FEM, thermal or
+  appearance synchronization; assembly totals and TechDraw BOMs remain deferred.
+- Add migration 15 for M physical links, frozen P assignments and immutable
+  dataset mass evidence. Native description v2 and mass publish atomically with
+  upload/check-in and exact source hashes; v1 remains compatible for unlinked
+  records. Backend validates native UUIDs, pinned snapshots and mass arithmetic;
+  CAD supplies geometry volumes. Web shows physical name/density and uploaded
+  mass, marking changed assignments unavailable until updated CAD is published.
+- Validation: 182 backend tests, 351 addon tests, 34 real Chrome checks (8 material
+  checks + 26 existing checks), seven real FreeCAD 1.1.4 checks. Native coverage
+  includes both dialogs, final-Body counting, 7.8→15.6 kg recompute, upload/check-in,
+  deleted-cache download/reopen and clear. Focused lint, JS syntax, diff checks,
+  addon manifest/ZIP and backend distribution builds pass.
+- Deployment: consistent pre-15 backup under
+  var/backups/before-physical-materials-20261107T230922Z. All 31 existing data
+  tables and 168 stored file hashes preserved; SQLite integrity/foreign keys pass.
+  Backend runs schema 15; both installed profiles contain verified addon 0.9.0.
+  Live commands and observer updated while preserving login, three open documents
+  and the one pre-existing unsaved document. No production test records created.
+- Usage: docs/material-management.md; design: ADR-014. Evidence:
+  docs/validation/physical-materials-2026-11-07.json and installed report.
+  To adopt a new link on an existing P, explicitly select the M entry again with
+  **Assign Material / Set Description…**, then Upload or Check In.
+
+## 2026-11-07 — Web catalog uses saved revision descriptions
+
+- Fix catalog row subtitles and item detail subtitles to prefer the saved
+  engineering revision description over the original CAD document name. Catalog
+  rows use the current revision; detail views use the selected exact revision.
+  Description edits/clear update both visible labels immediately. Catalog search
+  now also matches saved revision descriptions without changing item names.
+- Validation: 12 catalog/description tests, seven real Chrome acceptance checks
+  including both corrected labels and mobile layout; web model/syntax and diff
+  checks pass. Restarted the local backend; no schema or engineering data change.
+- Physical FreeCAD material linkage and automatic part mass are discussed as a
+  possible next increment, not implemented by this display fix. Native material
+  assignment supports a physical material; density must be available for mass.
+
+## 2026-11-07 — Simple material/assembly descriptions installed (0.8.1)
+
+- At user request, replace the normal advanced material workflow with one-field
+  M registration, M-only material selection on P revisions and free-text A
+  descriptions. Hide manufacturing inputs/allowances/readiness/requirements from
+  the normal UI; preserve their previous data and API contracts. Physical FreeCAD
+  material cards remain optional; TechDraw BOM tables remain future work.
+- Add migration 14 revision descriptions and dataset evidence. Existing M text is
+  seeded from prior specifications/descriptions/names; no P/A assignments are
+  inferred. Parts freeze selected M revision/text; assemblies store free text.
+  Changes require owned Working checkouts and concurrency tokens. New revisions
+  copy descriptions/pins; Released revisions remain immutable. Native publication
+  is atomic/replayable and rejects conflicting web edits. Retrieval projects the
+  saved engineering description into isolated configuration copies.
+- Add one visible read-only Description tree column alongside PDM status, resolving
+  linked component source revisions. Preserve labels and native Label2 data; the
+  native Description column's visibility is restored when the PDM column clears.
+  Local pending descriptions display without changing CAD through tree rendering.
+- Validation: 171 backend tests, 347 addon tests, six simple browser checks plus
+  26 existing browser checks; four disposable real FreeCAD 1.1.4 checks cover
+  description-only publication/replay, assembly text, linked tree display and
+  download/reopen with exact material pins. Focused lint, web syntax/model checks,
+  addon manifest/layout and 0.8.1 ZIP build pass; backend distributions rebuilt.
+- Deployment: consistent pre-14 backup under
+  var/backups/before-simple-descriptions-20261107T210434Z, including DB, storage
+  and both installed addon profiles. All 29 existing data tables and 163 storage
+  hashes are unchanged; one existing M description was seeded. SQLite integrity
+  and foreign-key checks pass. Backend is running at schema 14; both addon
+  profiles contain verified 0.8.1. Running command instances and tree display were
+  refreshed while preserving login, three open documents and one already-unsaved
+  document. No engineering record, checkout or BOM was changed during setup.
+- Evidence: docs/validation/simple-descriptions-2026-11-07.json and installed report.
+  Usage: docs/material-management.md; decision: ADR-013. Existing Phase 5 debt
+  remains separate. No TechDraw table or ERP synchronization implemented.
+
+
+## 2026-11-07 — Material management installed for user testing
+
+- At user request, stop the previous local backend and make a consistent pre-13
+  SQLite backup plus verified copies of all 163 stored files and both installed
+  addon profiles under var/backups/before-material-management-20261107T202610Z.
+- Apply migration 13 and verify all 23 pre-existing data tables retain their
+  counts/hashes, allowing only the intended shared-library display-name change.
+  SQLite integrity/foreign-key checks pass; all 163 storage hashes are unchanged.
+- Install verified addon 0.8.0 in both FreeCAD profiles (52 archive files each),
+  preserve originals in the backup and start the upgraded loopback backend.
+  Health, material routes and existing-account curator access are verified.
+- Refresh the running FreeCAD client without replacing its login or touching its
+  three open documents. Update all 18 registered command instances and verify
+  Assign Materials, Upload and Check In dispatch to the current implementations.
+  The ForgePDM Materials toolbar/menu is visible; all three documents remain clean.
+- Open the web interface for testing. No sample material, engineering revision,
+  checkout or BOM was created/changed as part of setup. Start by registering a
+  material in the catalog, then assigning it to an owned Working P/A revision.
+- Installed evidence: docs/validation/material-management-installed-2026-11-07.json.
+  A normal future FreeCAD restart loads 0.8.0 directly from the installed addon.
+
+
+## 2026-11-07 — Item Master and material management (addon 0.8.0)
+
+- Migration 13 extends permanent numbering to M without replacing P/A/S IDs,
+  counters, BOM pins or shared-library membership. S/M share library curators.
+  Raw material identity includes normalized grade/standard/form/section/base UOM;
+  density, descriptions, purchase sizes and explicit conversions are revisioned.
+- Add revision-bound P/A manufacturing inputs, indexed material where-used,
+  checkout/token guards, additional S duplicate protection and explicit readiness.
+  Existing P/A release rules remain; new M releases require specifications.
+  New revisions copy inputs/properties and reset review. CAD publication,
+  engineering-property changes and EBOM edits invalidate material readiness.
+- Calculate nested, repeated and multi-project gross requirements from explicit
+  revision roots using Decimal arithmetic. Persist immutable versioned snapshots
+  with source paths, exact revisions, CAD hashes, issues and revision subtotals;
+  approved reports require Released, reviewed sources without mixed input revisions.
+  JSON/CSV exports remain authenticated and recheck every recorded source.
+- Extend existing catalog with M registration/filtering and Materials/Requirements
+  views. Addon Assign Materials selects M/S revisions and optional separate final
+  solids, calculates density-based mass, projects technical metadata and embeds
+  evidence in FCStd. Upload/check-in publishes inputs/evidence atomically and
+  rejects conflicting web edits; file-hash replay remains intact.
+- Validation: 165 backend tests and 343 addon tests; web model/syntax checks;
+  26 existing browser checks plus six new material/mobile checks, no page errors;
+  five disposable real FreeCAD 1.1.4 checks (mass, geometry update, atomic native
+  publication/replay, source-pinned evidence API, save/reopen). Focused lint and diff checks pass. Addon 0.8.0
+  manifest/layout and ZIP build pass; backend distributions rebuilt.
+- Evidence: docs/validation/material-management-2026-11-07.json. Usage/API and
+  deployment: docs/material-management.md; design: ADR-012. No live database
+  migration or installed-addon upgrade performed. Back up before upgraded app
+  startup, which applies migration 13; test collection remains isolated.
+- Deliberate limits: explicit consumption, selected-solid mass only, small UOM
+  vocabulary, no stock/cost/supplier management, cutting optimization or ERPNext
+  connection. Versioned neutral JSON supports a future idempotent ERP adapter.
+  Existing Phase 5 legacy-write/revision-retry debt remains.
+
+
+## 2026-11-07 — Material requirement arithmetic foundation (partial)
+
+- Started the Item Master/material management implementation with CAD-independent
+  Decimal arithmetic for length, area, mass and count normalization, percentage
+  allowances, and finished mass from mm³ and kg/m³.
+- Validation: eight isolated domain tests passed with a disposable uv cache.
+- This is only the arithmetic foundation: M numbering, migrations, catalog,
+  revision-bound material inputs, readiness, consolidation/provenance, APIs,
+  web editing and FreeCAD assignment/check-in integration are not implemented.
+- No live database migration or installed addon change. Next increment must add
+  migration-preserving M identities and revision specifications, then material
+  inputs and requirements services, before exposing client commands.
+
+
 ## 2026-11-05 — Remove dedicated web library navigation
 
 - At user request, undo the dedicated Standard Parts Library sidebar/view and
@@ -641,24 +886,24 @@ Evidence:
 
 ## Next session
 
-1. Read root and applicable nested `AGENTS.md`, inspect Git status and recent
-   commits, and confirm the user's requested scope. The next feature priority is
-   the personal component catalog: start with docs/component-catalog-plan.md and
-   its domain/schema design increment. Phase 5 is authorized and
-   started; the first two bounded increments are complete. The user subsequently
-   prioritized functional web management and independent thorough testing; use
-   docs/web-management.md for the implemented GUI and suggested test sequence.
-2. For CAD issues, confirm installed addon/runtime versions and reproduce with
-   the actual document structure. Distinguish mocked tests from live validation.
-   Preserve existing edits, immutable snapshots and exact revision pins.
-3. After the catalog priority, or when explicitly requested, continue Phase 5 from ADR-008 and
-   docs/phase5-reliable-checkin.md when requested. Next,
-   fence remaining legacy writes and address revision-creation retries. Propose the
-   next design increment before major architectural changes.
-4. Track later operational work separately: crash-orphan reconciliation,
-   backup/restore, production security, clean-start/platform acceptance and
-   distribution gates. Refer to the roadmap rather than treating this prototype
-   as production-ready.
+1. Read root/nested `AGENTS.md`, this handoff and Git status before changes.
+   Current delivery is addon 0.10.0/backend schema 16. Standard Parts/shared
+   catalog, simple P/A/M descriptions, physical P mass and bounded S supplier
+   reference mass are implemented. Use docs/material-management.md,
+   docs/supplier-reference-mass.md and docs/upgrade-and-validation.md. The older
+   component-catalog implementation plan is historical, not pending work.
+2. Follow the user's next priority. Assembly mass rollup, TechDraw BOM tables,
+   broader supplier coverage and ERPNext synchronization remain unimplemented;
+   do not infer a new priority or silently replace existing revision pins.
+3. For CAD issues, verify installed/runtime versions and reproduce against the
+   actual object structure. Preserve open documents, edits, checkouts, immutable
+   source bytes and exact revisions. Distinguish mocked tests, disposable native
+   acceptance and local installation evidence.
+4. Remaining Phase 5 work is separate: legacy-write fencing, revision-creation
+   retries, crash/orphan diagnostics and broader failure/multiuser evidence. Start
+   with ADR-008 and docs/phase5-reliable-checkin.md when requested; propose major
+   architecture changes first. Production security, automated backup/restore,
+   clean-start/platform acceptance and distribution gates remain outstanding.
 
 ## Verification commands
 

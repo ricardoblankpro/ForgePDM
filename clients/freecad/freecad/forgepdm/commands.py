@@ -262,6 +262,7 @@ def _upload_native(client, document, path, references):
         )
     metadata = _require_metadata(document)
     yield from _authorize_tree_labels(client, document)
+    yield from _prepare_description(client, document, metadata)
     tree_labels.refresh(document)
     _save_document(document)
     result = yield Request(
@@ -399,7 +400,17 @@ class RegisterStandardPartCommand(Command):
                     (item["current_revision_id"], "released"),
                     mutates=True,
                 )
-            information("ForgePDM", "Registered " + item["number"])
+            mass = item.get("reference_mass") or {}
+            suffix = (
+                "\nSupplier reference mass: {} kg each ({}).".format(
+                    mass["mass_kg"], mass["supplier"]
+                )
+                if mass.get("mass_kg") is not None
+                else "\nSupplier reference mass unavailable."
+                if item.get("reference_mass")
+                else ""
+            )
+            information("ForgePDM", "Registered " + item["number"] + suffix)
 
 
 def _standard_library_access(client):
@@ -590,6 +601,24 @@ def _associate_fasteners(client, document, selected_names=None):
             )
         else:
             item = matches["items"][choices.index(selected)]
+        # Reference mass is optional enrichment; catalog association must work
+        # offline and against older servers as well. Never alter Released items.
+        if hasattr(client, "lookup_reference_mass"):
+            try:
+                mass = yield Request(
+                    "Looking up supplier reference mass…",
+                    client.lookup_reference_mass,
+                    (item["current_revision_id"],),
+                    mutates=True,
+                )
+                if mass.get("mass_kg") is not None:
+                    FreeCAD.Console.PrintMessage(
+                        "ForgePDM {}: {} kg each (supplier reference).\n".format(
+                            item["number"], mass["mass_kg"]
+                        )
+                    )
+            except ForgePDMError:
+                pass
         resolved.extend(
             (obj_name, item["current_revision_id"], identities.get(obj_name)) for obj_name in names
         )
@@ -808,6 +837,7 @@ class CheckInCommand(Command):
             )
         yield from _authorize_tree_labels(client, document)
         tree_labels.refresh(document)
+        yield from _prepare_description(client, document, metadata)
         _save_document(document)
         result = yield Request(
             "Checking in verified CAD snapshot…",
@@ -1792,3 +1822,210 @@ def _format_bom(lines, depth=0, updates=None):
         if children:
             formatted.append(children)
     return "\n".join(formatted)
+
+
+def _prepare_description(client, document, metadata):
+    if not getattr(metadata, "ItemNumber", "").startswith(("P", "A")):
+        return
+    from . import descriptions
+
+    name, revision_id = document.Name, metadata.RevisionId
+    current = yield Request("Reading revision description…", client.get_description, (revision_id,))
+    document = _guard_document(name, revision_id)
+    metadata = _require_metadata(document)
+    descriptions.prepare(document, metadata, current)
+    if getattr(metadata, "ItemNumber", "").startswith("P"):
+        from . import physical_materials
+
+        document.recompute()
+        physical_materials.refresh(document, metadata)
+
+
+class AssignMaterialsCommand(Command):
+    menu_text = "Assign Material / Set Description…"
+    tooltip = "Select an M material for a part or enter an assembly description"
+    needs_document = True
+
+    def action(self):
+        from . import descriptions, tree_status
+
+        client = Session.require_client()
+        document = _require_document()
+        metadata = _require_metadata(document)
+        yield from _editable(client, metadata)
+        yield from _authorize_tree_labels(client, document)
+        name, revision_id = document.Name, metadata.RevisionId
+        series = metadata.ItemNumber[:1]
+        if series not in ("P", "A"):
+            raise ValueError("Select a managed P part or A assembly")
+        current = yield Request("Reading description…", client.get_description, (revision_id,))
+        description, material_id = current["description"], current["material_revision_id"]
+        physical = None
+        if series == "A":
+            description = ask_text("Assembly description", "Description", description)
+            if description is None:
+                return
+            material_id = None
+        else:
+            choice = ask_choice(
+                "Part material",
+                "Action",
+                ["Select material", "Clear material", "Cancel"],
+                "Select material",
+            )
+            if not choice or choice == "Cancel":
+                return
+            if choice == "Clear material":
+                description, material_id = "", None
+            else:
+                record = yield from _select_record(
+                    "Materials",
+                    "Choose raw material",
+                    client.search_items,
+                    lambda r: r["number"] + " — " + r["name"],
+                    kwargs={"number_series": "M"},
+                )
+                if not record:
+                    return
+                selected = yield Request(
+                    "Checking selected material…",
+                    client.get_revision,
+                    (record["current_revision_id"],),
+                )
+                material = yield Request(
+                    "Reading material description…", client.get_description, (selected["id"],)
+                )
+                description, material_id = material["description"], selected["id"]
+                physical = material.get("physical_material")
+                if not description or selected["lifecycle_state"] == "obsolete":
+                    raise ValueError("Select a usable material with a description")
+        document = _guard_document(name, revision_id)
+        yield from _editable(client, _require_metadata(document))
+        yield from _authorize_tree_labels(client, document)
+        descriptions.apply(
+            document,
+            _require_metadata(document),
+            current,
+            description.strip(),
+            material_id,
+            physical,
+        )
+        tree_status.enable().request()
+        information("ForgePDM", "Description applied. Upload or Check In to publish it.")
+
+
+def _physical_capability(client):
+    value = yield Request("Checking physical-material support…", client.physical_capabilities)
+    if value.get("physical_material_version") != 1:
+        raise ValueError(
+            "Update/restart the backend before registering or linking physical materials"
+        )
+
+
+class RegisterRawMaterialCommand(Command):
+    menu_text = "Register Raw Material…"
+    tooltip = "Register an M description linked to a FreeCAD physical material"
+
+    def action(self):
+        from . import physical_materials
+
+        client = Session.require_client()
+        yield from _standard_library_access(client)
+        yield from _physical_capability(client)
+        result = physical_materials.registration_dialog()
+        if result is None:
+            return
+        description, physical = result
+        item = yield Request(
+            "Registering raw material…",
+            client.create_item,
+            ("part", description[:200]),
+            kwargs={
+                "description": description,
+                "number_series": "M",
+                "physical_material": physical,
+            },
+            mutates=True,
+            cancellable=False,
+        )
+        information(
+            "ForgePDM",
+            "Registered " + item["number"] + ". The physical material and density are linked.",
+        )
+
+
+class LinkPhysicalMaterialCommand(Command):
+    menu_text = "Link Physical Material…"
+    tooltip = "Link an existing M catalog entry to a FreeCAD physical material"
+
+    def action(self):
+        from . import physical_materials
+
+        client = Session.require_client()
+        yield from _standard_library_access(client)
+        yield from _physical_capability(client)
+        item = yield from _select_record(
+            "Raw materials",
+            "Choose M entry",
+            client.search_items,
+            lambda r: r["number"] + " — " + r["name"],
+            kwargs={"number_series": "M"},
+        )
+        if item is None:
+            return
+        revision = yield Request(
+            "Reading material revision…", client.get_revision, (item["current_revision_id"],)
+        )
+        if revision["lifecycle_state"] == "obsolete":
+            raise ValueError("Choose a usable M revision")
+        description = yield Request(
+            "Reading material description…", client.get_description, (revision["id"],)
+        )
+        existing = yield Request(
+            "Reading physical link…", client.get_physical_link, (revision["id"],)
+        )
+        choice = physical_materials.registration_dialog(description["description"])
+        if choice is None:
+            return
+        if revision["lifecycle_state"] == "released":
+            if (
+                ask_choice(
+                    "New material revision",
+                    "Create a new revision to link this Released material?",
+                    ["Create revision", "Cancel"],
+                    "Cancel",
+                )
+                != "Create revision"
+            ):
+                return
+            revision = yield Request(
+                "Creating material revision…",
+                client.create_next_revision,
+                (item["id"], "Link physical material"),
+                mutates=True,
+                cancellable=False,
+            )
+            existing = yield Request(
+                "Reading copied physical link…", client.get_physical_link, (revision["id"],)
+            )
+        lease = yield Request("Checking material checkout…", client.get_checkout, (revision["id"],))
+        if lease and lease["user_id"] != (Session.user or {}).get("id"):
+            raise ValueError("The material is checked out by another user")
+        if not lease:
+            yield Request(
+                "Acquiring material checkout…",
+                client.acquire_checkout,
+                (revision["id"],),
+                mutates=True,
+            )
+        yield Request(
+            "Linking physical material…",
+            client.link_physical_material,
+            (revision["id"], choice[1], existing["token"]),
+            mutates=True,
+            cancellable=False,
+        )
+        information(
+            "ForgePDM",
+            "Physical material linked. Existing part revisions keep their previous assignment; select this material again to adopt the link.",
+        )

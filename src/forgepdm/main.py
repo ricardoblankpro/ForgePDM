@@ -6,7 +6,9 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from forgepdm.api.v1 import drawings, management, routes, tree_status
+from forgepdm.api.v1 import descriptions, drawings, management, materials, physical_materials, reference_mass, routes, tree_status
+from forgepdm.application.reference_mass import ReferenceMassService
+from forgepdm.infrastructure.fabory import FaboryProvider
 from forgepdm.application.auth import AuthService
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.application.bom import BOMService
@@ -35,6 +37,8 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     authorization = AuthorizationService(database)
     revisions = RevisionService(database, authorization)
     app = FastAPI(title="ForgePDM API", version="0.1.0")
+    app.state.reference_mass_service = ReferenceMassService(database, authorization, revisions,
+        FaboryProvider() if os.environ.get("FORGEPDM_SUPPLIER_LOOKUP", "1") == "1" else None)
     app.state.database = database
     app.state.management_service = ManagementService(database)
     app.state.auth_service = AuthService(database)
@@ -50,6 +54,10 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     app.state.drawing_service = DrawingService(database, storage, authorization, revisions)
     app.state.file_storage = storage
     app.include_router(routes.router)
+    app.include_router(materials.router)
+    app.include_router(descriptions.router)
+    app.include_router(physical_materials.router)
+    app.include_router(reference_mass.router)
     app.include_router(management.router)
     app.include_router(tree_status.router)
     app.include_router(drawings.router)
