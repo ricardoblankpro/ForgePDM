@@ -52,6 +52,14 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
         const mass=await api.request(`/revisions/${revision.id}/mass`);
         host.append(el("p",{},mass.mass_kg!=null?`Uploaded mass: ${Number(mass.mass_kg).toPrecision(8)} kg`:`Mass unavailable: ${mass.reason}`));
       }
+      if(series==="A") {
+        const mass=await api.request(`/revisions/${revision.id}/assembly-mass`);
+        if(!host.isConnected)return;
+        host.append(el("h3",{},"Assembly mass"),el("p",{},mass.mass_kg!=null?`Total: ${mass.mass_kg} kg`:`Total unavailable. Known subtotal: ${mass.known_mass_kg} kg`),el("p",{},"Calculated from the stored engineering BOM and published component masses. Local CAD edits are not included."));
+        if(mass.contains_cad_estimates)host.append(el("p",{},"Includes estimated fastener mass from CAD."));
+        for(const issue of mass.issues)host.append(el("p",{},`${issue.item_number}-${issue.revision_label} × ${issue.quantity}: ${issue.reason}`));
+        host.append(button("Refresh mass",()=>render(host,item,revision)));
+      }
       if(series==="M"&&!current.physical_material)host.append(el("p",{},"For automatic part mass, use Link Physical Material in FreeCAD."));
       if(!["P","A","M"].includes(series))return;
       if(!editable) {

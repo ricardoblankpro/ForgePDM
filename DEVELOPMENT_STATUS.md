@@ -1,5 +1,61 @@
 # Development status
 
+## 2026-11-09 — Assembly mass 0.12.0 installed
+
+- Install the built 0.12.0 archive into both FreeCAD profiles with full prior
+  profile, SQLite and blob backups under
+  var/backups/before-assembly-mass-20261110T022530Z. Restart the backend with
+  unchanged default database/storage configuration; schema remains 16. All
+  38 table contents and 187 stored-file hashes preserved; integrity/FKs pass.
+- Refresh the running package/API/cad/commands and all 21 command instances.
+  Preserve the client/login, three open documents, file hashes, dirty states
+  and active document. Runtime reports 0.12.0 and the assembly-mass API works.
+- A000003 currently has known subtotal 1.4580623990476929862 kg, including
+  CAD estimates. Total remains unavailable because P000008 lacks published mass
+  evidence and S000001–S000005 have no saved masses. No mass values, engineering
+  records or checkouts were changed by installation. Refresh the web page.
+- User directs future implementations to include installing/verifying the latest
+  local backend/addon, rather than stopping at source/package delivery.
+- Evidence: docs/validation/assembly-mass-installed-2026-11-09.json.
+
+## 2026-11-09 — SheetMetal retrieval active-document fix
+
+- Reproduce P000007-A retrieval failure: SheetMetal SMUnfold resolves the stored
+  Bend.Face19 through App.ActiveDocument. Recomputing the component while its
+  assembly is active resolves the wrong object and leaves an invalid unfold.
+- Activate each owned component before relinking/recomputing in configuration
+  reconstruction. Keep all dirty-state and save-success guards. No face remapping
+  or geometry/reference edits.
+- 365 addon tests pass, including activation-before-recompute regression. Real
+  FreeCAD 1.1.4 full reconstruction of a disposable copy passes for P000008,
+  P000007 and A000003, all clean; original open documents/dirty states preserved.
+- Install only the targeted cad.py fix into both existing profiles and reload
+  the running module, with originals backed up under
+  var/backups/before-sheetmetal-retrieval-fix-20261110T021807Z. No server data,
+  production CAD files or existing unsaved documents changed. Assembly-mass
+  0.12.0 installation remains separate. Retry Download for a fresh configuration.
+
+## 2026-11-09 — Assembly mass totals (0.12.0)
+
+- Add read-only `/api/v1/revisions/{id}/assembly-mass` using a single read
+  snapshot, exact EBOM revision pins, nested Decimal quantities, published P mass
+  and saved S supplier/manual/CAD mass. No schema change beyond 16.
+- Web Description and native Show BOM show complete kg totals or a known subtotal
+  with per-path missing reasons; CAD estimates retain their warning and provenance.
+  Empty assemblies are unavailable. Read authorization applies to every child;
+  cycles and excessive traversal/numeric inputs fail explicitly.
+- Reports reflect current published content of pinned revisions, not unsaved CAD
+  or immutable historical certificates. Working child changes can alter later
+  reports. Manufacturing inputs and TechDraw tables remain separate.
+- Real FreeCAD 1.1.4 acceptance verified the actual HTTP client and Show BOM
+  dialog against a disposable backend (0.08075 kg nested total). No production
+  engineering data changed. Source validation does not install addon 0.12.0.
+- Validation: 228 backend tests and 364 addon tests pass, plus web presentation/
+  model checks, focused Ruff lint, JS syntax and addon manifest/ZIP build. No real
+  browser acceptance was run for this increment; web presentation uses a DOM stub.
+- Usage/API: docs/assembly-mass.md; design ADR-017; native evidence:
+  docs/validation/assembly-mass-freecad-2026-11-09.json.
+
 ## 2026-11-07 — S fastener CAD/manual mass fallbacks installed (0.11.0)
 
 - Extend the existing S revision mass record with explicit cad_estimate/manual
@@ -929,12 +985,12 @@ Evidence:
 ## Next session
 
 1. Read root/nested `AGENTS.md`, this handoff and Git status before changes.
-   Current delivery is addon 0.11.0/backend schema 16. Standard Parts/shared
+   Current source and installed delivery are addon 0.12.0/backend schema 16. Standard Parts/shared
    catalog, simple P/A/M descriptions, physical P mass and bounded S supplier
    reference mass plus CAD/manual fallbacks are implemented. Use docs/material-management.md,
    docs/supplier-reference-mass.md and docs/upgrade-and-validation.md. The older
    component-catalog implementation plan is historical, not pending work.
-2. Follow the user's next priority. Assembly mass rollup, TechDraw BOM tables,
+2. Follow the user's next priority. TechDraw BOM tables,
    broader supplier coverage and ERPNext synchronization remain unimplemented;
    do not infer a new priority or silently replace existing revision pins.
 3. For CAD issues, verify installed/runtime versions and reproduce against the

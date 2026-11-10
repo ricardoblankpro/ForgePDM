@@ -1427,10 +1427,21 @@ class ShowBOMCommand(Command):
         updates = yield Request(
             "Checking newer component revisions…", client.bom_revision_updates, (lines,)
         )
+        mass = None
+        if number.startswith("A"):
+            mass = yield Request(
+                "Calculating assembly mass…", client.get_assembly_mass, (revision_id,)
+            )
         dialog = QtWidgets.QDialog(_main_window())
         dialog.setWindowTitle("ForgePDM BOM — " + number)
         dialog.resize(640, 480)
         layout = QtWidgets.QVBoxLayout(dialog)
+        from .assembly_mass import summary
+
+        if mass is not None:
+            mass_label = QtWidgets.QLabel(summary(mass), dialog)
+            mass_label.setWordWrap(True)
+            layout.addWidget(mass_label)
         output = QtWidgets.QPlainTextEdit(dialog)
         output.setReadOnly(True)
         output.setPlainText(

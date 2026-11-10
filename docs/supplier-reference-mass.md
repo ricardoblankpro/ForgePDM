@@ -22,8 +22,8 @@ Released S mass records of every source are immutable. To add mass to an older R
 reference, create its next revision, then use **Find reference mass** in the web
 Description tab while holding its checkout. Existing assemblies retain their
 original exact S revision pins. Do not silently replace them with the new revision.
-New S revisions copy saved reference mass. Assemblies do not yet calculate total
-mass; this increment supplies the revision-bound S data for that future feature.
+New S revisions copy saved reference mass. Saved S data contributes to
+[assembly mass totals](assembly-mass.md), including explicit CAD estimate warnings.
 
 ## CAD and manual fallbacks (0.11.0)
 
@@ -72,7 +72,7 @@ otherwise it preserves the estimate. An explicit manual value stays in place.
 Unchanged/retained fastener associations are considered during Upload/Check In,
 so existing Working S revisions can gain missing estimates without reassociation,
 provided you own their checkout. Released S items need a new revision for edits;
-no new revision is created automatically. Assembly mass totals remain future work.
+no new revision is created automatically. Assembly mass totals are now available; see [usage](assembly-mass.md).
 
 ## Initial live lookup coverage
 

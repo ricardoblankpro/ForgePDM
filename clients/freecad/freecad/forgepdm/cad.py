@@ -426,6 +426,9 @@ def open_configuration(configuration, set_metadata):
                     )
         for key in ledger["order"]:
             document = documents[key]
+            # Some native workbench proxies (including SheetMetal unfolds)
+            # resolve subobject names through App.ActiveDocument on recompute.
+            App.setActiveDocument(document.Name)
             for reference in entries[key]["references"]:
                 link = document.getObject(reference["object_name"])
                 target_document = documents[reference["target_file_id"]]

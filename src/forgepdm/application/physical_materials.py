@@ -52,44 +52,48 @@ class PhysicalMaterialService:
     def mass(self, user, revision_id):
         with self.database.connection() as c:
             self.authorization.require_read_revision(user, revision_id, c)
-            row = c.execute(
-                "SELECT d.id AS dataset_id,f.content_hash,e.payload_json FROM datasets d JOIN dataset_files df ON df.dataset_id=d.id JOIN files f ON f.id=df.file_id LEFT JOIN dataset_part_mass e ON e.dataset_id=d.id WHERE d.revision_id=? AND d.dataset_type='native_cad' ORDER BY d.created_at DESC,d.id DESC LIMIT 1",
-                (revision_id,),
-            ).fetchone()
-            if not row:
-                return {"mass_kg": None, "reason": "No uploaded native geometry"}
-            value = (
-                json.loads(row["payload_json"])
-                if row["payload_json"]
-                else {"mass_kg": None, "reason": "No physical material mass evidence"}
-            )
-            current = c.execute(
-                "SELECT snapshot_json FROM part_physical_assignments WHERE revision_id=?",
-                (revision_id,),
-            ).fetchone()
-            saved_description = c.execute(
-                "SELECT payload_json FROM dataset_descriptions WHERE dataset_id=?",
-                (row["dataset_id"],),
-            ).fetchone()
-            active_description = c.execute(
-                "SELECT material_revision_id FROM revision_descriptions WHERE revision_id=?",
-                (revision_id,),
-            ).fetchone()
-            saved_material = (
-                json.loads(saved_description[0]).get("material_revision_id")
-                if saved_description
-                else None
-            )
-            active_material = active_description[0] if active_description else None
-            if saved_material != active_material or value.get("physical_material") != (
-                json.loads(current[0]) if current else None
-            ):
-                return {
-                    "mass_kg": None,
-                    "reason": "Material assignment changed; upload updated CAD",
-                    "dataset_id": row["dataset_id"],
-                }
-            return {**value, "dataset_id": row["dataset_id"], "content_hash": row["content_hash"]}
+            return self.mass_in(c, revision_id)
+
+    @staticmethod
+    def mass_in(c, revision_id):
+        row = c.execute(
+            "SELECT d.id AS dataset_id,f.content_hash,e.payload_json FROM datasets d JOIN dataset_files df ON df.dataset_id=d.id JOIN files f ON f.id=df.file_id LEFT JOIN dataset_part_mass e ON e.dataset_id=d.id WHERE d.revision_id=? AND d.dataset_type='native_cad' ORDER BY d.created_at DESC,d.id DESC LIMIT 1",
+            (revision_id,),
+        ).fetchone()
+        if not row:
+            return {"mass_kg": None, "reason": "No uploaded native geometry"}
+        value = (
+            json.loads(row["payload_json"])
+            if row["payload_json"]
+            else {"mass_kg": None, "reason": "No physical material mass evidence"}
+        )
+        current = c.execute(
+            "SELECT snapshot_json FROM part_physical_assignments WHERE revision_id=?",
+            (revision_id,),
+        ).fetchone()
+        saved_description = c.execute(
+            "SELECT payload_json FROM dataset_descriptions WHERE dataset_id=?",
+            (row["dataset_id"],),
+        ).fetchone()
+        active_description = c.execute(
+            "SELECT material_revision_id FROM revision_descriptions WHERE revision_id=?",
+            (revision_id,),
+        ).fetchone()
+        saved_material = (
+            json.loads(saved_description[0]).get("material_revision_id")
+            if saved_description
+            else None
+        )
+        active_material = active_description[0] if active_description else None
+        if saved_material != active_material or value.get("physical_material") != (
+            json.loads(current[0]) if current else None
+        ):
+            return {
+                "mass_kg": None,
+                "reason": "Material assignment changed; upload updated CAD",
+                "dataset_id": row["dataset_id"],
+            }
+        return {**value, "dataset_id": row["dataset_id"], "content_hash": row["content_hash"]}
 
 
 def persist_mass(c, revision_id, dataset_id, evidence):

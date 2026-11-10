@@ -35,7 +35,8 @@ def configuration_gui(tmp_path, monkeypatch):
     app.listDocuments = lambda: opened
     app.openDocument = lambda filename: opened.setdefault(document.Name, document)
     app.getDocument = lambda name: opened.get(name)
-    app.setActiveDocument = lambda name: None
+    activations = []
+    app.setActiveDocument = lambda name: activations.append(name)
     app.closeDocument = lambda name: closed.append(name)
     gui = ModuleType("FreeCADGui")
     gui.getDocument = lambda name: gui_document
@@ -73,6 +74,7 @@ def configuration_gui(tmp_path, monkeypatch):
         opened=opened,
         closed=closed,
         saves=saves,
+        activations=activations,
     )
 
 
@@ -150,3 +152,13 @@ def test_failed_save_does_not_publish_clean_state_or_close_dirty_document(
         cad.open_configuration(case.configuration, case.metadata)
     assert case.gui.Modified
     assert not case.closed
+
+
+def test_component_is_active_before_recompute(configuration_gui):
+    case = configuration_gui
+
+    def recompute():
+        assert case.activations[-1] == case.document.Name
+
+    case.document.recompute = recompute
+    cad.open_configuration(case.configuration, case.metadata)

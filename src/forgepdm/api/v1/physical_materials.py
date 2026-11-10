@@ -55,3 +55,18 @@ def mass(
     svc: Annotated[PhysicalMaterialService, Depends(service)],
 ):
     return invoke(lambda: svc.mass(user, str(revision_id)))
+
+
+@router.get("/revisions/{revision_id}/assembly-mass")
+def assembly_mass(
+    revision_id: UUID,
+    request: Request,
+    user: Annotated[User, Depends(current_user)],
+):
+    from forgepdm.application.assembly_mass import AssemblyMassService
+
+    return invoke(
+        lambda: AssemblyMassService(
+            request.app.state.database, request.app.state.authorization_service
+        ).read(user, str(revision_id))
+    )

@@ -150,6 +150,6 @@ revision copying and atomic native replay. The real acceptance harnesses are
 fixtures and preserve the user's existing documents.
 
 S purchased fasteners use [supplier reference mass](supplier-reference-mass.md),
-separate from P geometry-derived mass. Neither path currently calculates assembly
-totals. The original advanced material-input design is retained as historical
+separate from P geometry-derived mass. Both paths now feed
+[assembly mass totals](assembly-mass.md). The original advanced material-input design is retained as historical
 compatibility scope in ADR-012; ADR-013 defines the current simple workflow.

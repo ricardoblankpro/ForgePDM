@@ -15,13 +15,14 @@ fencing and operational hardening remain in progress. TechDraw pages can be
 explicitly published as source-pinned PDFs and viewed/downloaded in the web GUI;
 see [drawing publication](docs/drawing-pdfs.md).
 
-Current client: **0.11.0**; backend schema: **16**. The shared Item catalog uses
+Current client: **0.12.0**; backend schema: **16**. The shared Item catalog uses
 permanent `P000001`, `A000001`, `S000001` and `M000001` codes. Parts select a
 raw-material description; assemblies use free text in the same tree Description
 column. Optional native material links calculate finished part mass; supported S
 fasteners can obtain supplier reference mass, CAD estimates or optional manual
-mass when supplier data is unavailable. Assembly mass totals, TechDraw BOM
-tables and ERPNext synchronization remain future work.
+mass when supplier data is unavailable. Assembly totals use the stored engineering
+BOM and those published masses. TechDraw BOM tables and ERPNext synchronization
+remain future work.
 
 - [Material and assembly descriptions, physical materials and part mass](docs/material-management.md)
 - [Standard Parts and Fasteners workflows](docs/standard-parts.md)
@@ -141,3 +142,5 @@ Standard/purchased parts and Fasteners integration: [usage and supported cases](
 Material descriptions, native physical links and finished part mass: [usage and API](docs/material-management.md). Advanced material-input/requirements APIs remain available for compatibility, but are hidden from the normal workflow.
 
 Supplier reference mass: [workflow and coverage](docs/supplier-reference-mass.md).
+
+Assembly mass: [totals and missing-component handling](docs/assembly-mass.md).

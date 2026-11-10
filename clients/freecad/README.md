@@ -17,7 +17,7 @@ uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.
 uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.py build
 ```
 
-The output is `clients/freecad/dist/ForgePDM-0.11.0.zip`. Create a `ForgePDM`
+The output is `clients/freecad/dist/ForgePDM-0.12.0.zip`. Create a `ForgePDM`
 directory inside your FreeCAD user `Mod` directory and extract the archive there.
 The resulting layout must be `Mod/ForgePDM/package.xml` and
 `Mod/ForgePDM/freecad/forgepdm/init_gui.py`. Do not extract into an extra nested
@@ -159,7 +159,7 @@ publication requires filesystem hard-link support. Local read-only protection
 is advisory. Third-party proxies, external textures and other CAD adapters are
 not certified. Windows, macOS and network shares remain unverified.
 
-Current addon **0.11.0** requires the updated backend through **migration 16**,
+Current addon **0.12.0** requires the updated backend through **migration 16**,
 including descriptions (14), physical material/mass evidence (15), and supplier
 reference mass (16). Earlier manifests, BOM snapshot and check-in APIs remain
 required. Physical material/mass behavior has been validated on FreeCAD 1.1.4.
@@ -338,8 +338,7 @@ Use the [upgrade checklist](../../docs/upgrade-and-validation.md). Existing
 matching description-only CAD metadata is upgraded during upload/check-in
 preparation, including reconstruction of native mass evidence. Conflicting local
 material edits still need reconciliation. Selecting an updated M physical link
-for an existing P revision remains explicit. Assembly mass totals and TechDraw
-BOM tables are not implemented.
+for an existing P revision remains explicit. TechDraw BOM tables remain future work.
 
 ## Standard-part mass fallbacks (0.11.0)
 
@@ -354,3 +353,10 @@ manually** accepts grams per piece and an optional note under an owned checkout.
 Saved supplier references are protected; manual values are not automatically
 replaced. Released records require a new revision for changes. See
 [reference densities, API and limits](../../docs/supplier-reference-mass.md).
+
+## Assembly mass (0.12.0)
+
+**Show ForgePDM BOM** shows the backend total from exact stored revision pins
+and published component masses. Unknown components leave the total unavailable,
+with a known subtotal and reasons. Local CAD edits require normal publication
+and BOM synchronization. See [assembly mass](../../docs/assembly-mass.md).

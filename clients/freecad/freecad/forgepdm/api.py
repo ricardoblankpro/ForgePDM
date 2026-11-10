@@ -158,6 +158,9 @@ class ForgePDMClient:
             {"physical_material": physical_material, "expected_token": expected_token},
         )
 
+    def get_assembly_mass(self, revision_id):
+        return self._json_request("GET", "/api/v1/revisions/{}/assembly-mass".format(revision_id))
+
     def get_part_mass(self, revision_id):
         return self._json_request("GET", "/api/v1/revisions/{}/mass".format(revision_id))
 

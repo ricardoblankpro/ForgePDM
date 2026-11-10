@@ -1,0 +1,27 @@
+{
+  "addon_version": "0.12.0",
+  "backup": "var/backups/before-assembly-mass-20261110T022530Z",
+  "tables_preserved": 38,
+  "stored_files_preserved": 187,
+  "integrity": "ok",
+  "assembly_mass_api": true,
+  "installed_profiles": [
+    "v1-1",
+    "default"
+  ],
+  "runtime_version": "0.12.0",
+  "commands_refreshed": 21,
+  "documents_preserved": 3,
+  "active_assembly": "A000003",
+  "mass_status": "incomplete",
+  "known_mass_kg": "1.4580623990476929862",
+  "missing_items": [
+    "P000008",
+    "S000003",
+    "S000004",
+    "S000001",
+    "S000005",
+    "S000002"
+  ],
+  "live_show_bom_dialog_verified": true
+}

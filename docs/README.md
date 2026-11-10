@@ -47,3 +47,5 @@ Dated reports under `validation/` distinguish isolated automated/browser/native
 checks from installation preservation checks. They are evidence of the recorded
 runtime/date, not guarantees for untested platforms or future supplier responses.
 Current limits and next-session instructions live in DEVELOPMENT_STATUS.md.
+
+- [Assembly mass totals](assembly-mass.md): exact EBOM pins, source evidence and unknowns.

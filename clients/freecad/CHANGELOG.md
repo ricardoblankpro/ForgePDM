@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.12.0 — 2026-11-09
+
+- Activate each retrieved component before recomputing, so SheetMetal unfolds
+  resolve document-local subobject references correctly in assembly downloads.
+
+- Show backend assembly mass totals in Show BOM using exact stored revision pins,
+  nested quantities and published P/S mass sources. Show missing reasons and a
+  known subtotal when incomplete; identify CAD fastener estimates.
+- Requires the assembly-mass backend API; schema remains 16.
+
 ## 0.11.0 — 2026-11-07
 
 - Estimate missing S fastener mass from a valid native solid and an explicit

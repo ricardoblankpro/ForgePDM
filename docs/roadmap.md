@@ -11,11 +11,11 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 
 ## Active development-direction roadmap
 
-**Current delivery: addon 0.11.0 / backend schema 16.** Simple P material/A assembly
+**Current source: addon 0.12.0 / backend schema 16.** Simple P material/A assembly
 descriptions, optional native density links and finished part mass, and bounded
 S supplier reference mass plus CAD/manual fallbacks are implemented. Current guides:
 [materials](material-management.md), [supplier mass](supplier-reference-mass.md)
-and [upgrade/validation](upgrade-and-validation.md). Assembly mass rollup,
+and [upgrade/validation](upgrade-and-validation.md). Assembly mass rollup is implemented (see [usage](assembly-mass.md));
 TechDraw BOM tables, stock/cutting optimization and ERPNext synchronization remain
 future increments; no new feature order is assumed without user direction.
 
