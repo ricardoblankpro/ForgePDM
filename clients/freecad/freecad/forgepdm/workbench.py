@@ -43,16 +43,53 @@ class ForgePDMWorkbench(Gui.Workbench):
             ("ForgePDM_RefreshTreeLabels", commands.RefreshTreeLabelsCommand),
             ("ForgePDM_ReplaceRevision", commands.ReplaceRevisionCommand),
             ("ForgePDM_ReplaceComponent", commands.ReplaceComponentCommand),
+            ("ForgePDM_ManageComponent", commands.ManageComponentCommand),
         )
         for name, command in entries:
             Gui.addCommand(name, command())
-        names = [name for name, _command in entries]
-        self.appendToolbar(translate("ForgePDM", "ForgePDM"), names)
-        self.appendMenu(translate("ForgePDM", "ForgePDM"), names)
+        toolbar = [
+            "Login",
+            "Download",
+            "Checkout",
+            "Upload",
+            "CheckIn",
+            "UpdateFromServer",
+            "ManageComponent",
+            "ShowBOM",
+            "AssignMaterials",
+        ]
+        self.appendToolbar(
+            translate("ForgePDM", "ForgePDM"), ["ForgePDM_" + name for name in toolbar]
+        )
+        groups = {
+            "Session": ["Login", "Logout"],
+            "Documents": ["Download", "Checkout", "Upload", "CheckIn", "UpdateFromServer"],
+            "Components": ["ManageComponent", "ChangeStandardPartAssociation"],
+            "Lifecycle": ["Release", "NewRevision"],
+            "BOM and publishing": ["ShowBOM", "PublishDrawings"],
+            "Catalog and materials": [
+                "AssignMaterials",
+                "RegisterStandardPart",
+                "RegisterRawMaterial",
+                "LinkPhysicalMaterial",
+            ],
+            "Maintenance": ["RefreshPDMStatus", "RefreshTreeLabels"],
+        }
+        for title, names in groups.items():
+            self.appendMenu(
+                [translate("ForgePDM", "ForgePDM"), translate("ForgePDM", title)],
+                ["ForgePDM_" + name for name in names],
+            )
         from . import tree_observer
 
         tree_observer.install()
         self._initialized = True
+
+    def ContextMenu(self, recipient):
+        from . import commands
+
+        if recipient == "Tree" and commands.ChangeStandardPartAssociationCommand().IsActive():
+            self.appendContextMenu("ForgePDM", ["ForgePDM_ChangeStandardPartAssociation"])
 
     def Activated(self):
         from . import tree_status

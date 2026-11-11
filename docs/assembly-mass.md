@@ -46,3 +46,7 @@ Traversal is limited to 64 levels and 10,000 visits; individual quantities allow
 The updated backend API is required for FreeCAD 0.12.0 Show BOM on assemblies.
 Part Show BOM behavior remains unchanged. Refresh the web Description tab or reopen
 Show BOM to recalculate after publishing component changes.
+
+From addon 0.14.0, **BOM / Mass… → Refresh published BOM** refreshes in place.
+Native and web mass displays use at most three decimal places; positive values
+below 0.001 kg show `<0.001 kg`. Stored/calculated/API values retain full precision.

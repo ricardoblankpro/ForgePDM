@@ -27,7 +27,9 @@ workbenches = {}
 language_paths = []
 class Workbench:
     def appendToolbar(self, title, names): self.toolbar = list(names)
-    def appendMenu(self, title, names): self.menu = list(names)
+    def appendMenu(self, title, names):
+        if not hasattr(self, "menus"): self.menus = {}
+        self.menus[title[-1]] = list(names)
 def add_command(name, command):
     command_calls.append(name)
     registered[name] = command
@@ -68,23 +70,55 @@ expected = [
     'ForgePDM_Login', 'ForgePDM_Logout', 'ForgePDM_RegisterStandardPart', 'ForgePDM_ChangeStandardPartAssociation', 'ForgePDM_Upload', 'ForgePDM_Checkout',
     'ForgePDM_CheckIn', 'ForgePDM_Release', 'ForgePDM_NewRevision',
     'ForgePDM_Download', 'ForgePDM_UpdateFromServer', 'ForgePDM_UpdateSelectedComponents', 'ForgePDM_PublishDrawings', 'ForgePDM_RefreshPDMStatus', 'ForgePDM_ShowBOM', 'ForgePDM_AssignMaterials', 'ForgePDM_RegisterRawMaterial', 'ForgePDM_LinkPhysicalMaterial',
-    'ForgePDM_RefreshTreeLabels', 'ForgePDM_ReplaceRevision', 'ForgePDM_ReplaceComponent',
+    'ForgePDM_RefreshTreeLabels', 'ForgePDM_ReplaceRevision', 'ForgePDM_ReplaceComponent', 'ForgePDM_ManageComponent',
 ]
-assert command_calls == wb.menu == wb.toolbar == expected
+assert command_calls == expected
+assert wb.toolbar == ['ForgePDM_' + name for name in [
+    'Login', 'Download', 'Checkout', 'Upload', 'CheckIn', 'UpdateFromServer',
+    'ManageComponent', 'ShowBOM', 'AssignMaterials']]
+assert set(wb.menus) == {'Session', 'Documents', 'Components', 'Lifecycle',
+                         'BOM and publishing', 'Catalog and materials', 'Maintenance'}
+visible = [name for group in wb.menus.values() for name in group]
+assert len(visible) == len(set(visible)) == 19
+assert set(visible) == set(expected) - {'ForgePDM_ReplaceRevision',
+    'ForgePDM_ReplaceComponent', 'ForgePDM_UpdateSelectedComponents'}
 assert wb.GetClassName() == 'Gui::PythonWorkbench'
 assert len(language_paths) == 1 and Path(language_paths[0]).is_dir()
 assert len(observers) == 1
-expected_icons = ['login', 'logout', 'upload', 'replace-component', 'upload', 'checkout', 'checkin', 'release',
-                  'new-revision', 'download', 'download', 'replace-revision', 'publish-drawings', 'tree-status', 'bom', 'forgepdm', 'forgepdm', 'forgepdm', 'tree-labels', 'replace-revision', 'replace-component']
-for command, icon in zip(registered.values(), expected_icons):
+icons = []
+for command in registered.values():
     resources = command.GetResources()
     assert resources['MenuText'] and resources['ToolTip']
-    assert Path(resources['Pixmap']).is_file()
-    assert Path(resources['Pixmap']).name == icon + '.svg'
+    path = Path(resources['Pixmap'])
+    assert path.is_file()
+    icons.append(path)
+assert len(set(icons)) == len(registered)
+assert len({path.read_bytes() for path in icons}) == len(registered)
 assert registered['ForgePDM_Login'].IsActive()
 assert not registered['ForgePDM_CheckIn'].IsActive()
 
 from freecad.forgepdm import commands
+# Dispatcher cancellation and all three explicit modes preserve existing workflows.
+original_choice = commands.ask_choice
+calls = []
+original_actions = {}
+for cls in (commands.UpdateSelectedComponentsCommand, commands.ReplaceRevisionCommand,
+            commands.ReplaceComponentCommand):
+    original_actions[cls] = cls.action
+    def action(self):
+        calls.append(type(self).__name__)
+        yield "dispatched"
+    cls.action = action
+options = ["Update snapshot of the same revision", "Adopt a newer revision of the same item",
+           "Replace with a different item"]
+for option in options:
+    commands.ask_choice = lambda *args, value=option: value
+    assert list(commands.ManageComponentCommand().action()) == ["dispatched"]
+assert calls == ["UpdateSelectedComponentsCommand", "ReplaceRevisionCommand", "ReplaceComponentCommand"]
+commands.ask_choice = lambda *args: None
+assert list(commands.ManageComponentCommand().action()) == []
+for cls, action in original_actions.items(): cls.action = action
+commands.ask_choice = original_choice
 class Metadata:
     def __init__(self): self.ViewObject = SimpleNamespace(Visibility=True)
     def addProperty(self, kind, name, group): setattr(self, name, '')

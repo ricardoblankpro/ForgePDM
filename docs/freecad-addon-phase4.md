@@ -5,13 +5,20 @@ Status: implemented for the bounded whole-object App::Link profile in addon
 
 ## User workflow
 
-Save/upload components and then their assembly. On a Working assembly with your
-active checkout, open **Show ForgePDM BOM → Synchronize from CAD…**. Select the
-engineering occurrences to include; nothing is selected implicitly. Review
-quantity changes, complete current/proposed lines, exact revision IDs and source
-occurrence names. Check the explicit replacement consent before submitting.
-Cancel preserves current/manual engineering lines. An approved empty proposal
-removes all lines, with an explicit empty-BOM message in the review.
+Save/upload components and then their assembly. Open **BOM / Mass…** to view the
+published nested BOM and mass without writing. On a Working assembly with your
+active checkout, choose **Update from CAD**. The same window includes supported
+engineering occurrences by default. Expand **Choose components…** for exceptions,
+review quantity changes and current/proposed direct lines, then **Apply BOM changes**.
+Removals/reductions and custom line/position replacements require confirmation;
+an empty replacement explicitly clears the BOM. Exact no-ops disable Apply.
+Closing without applying preserves the stored BOM. Successful application refreshes
+BOM and mass in place. Newer-revision notices load independently in the background.
+
+This 0.14.0 workflow supersedes the original separate selection/consent dialogs;
+see [ADR-018](decisions/ADR-018-bom-review-and-mass-display.md). The stored BOM has
+no authoritative occurrence inclusion mapping, so previous custom exclusions cannot
+be inferred or remembered reliably. Review defaults on each preparation.
 
 Every selected whole-object link contributes one unit. Repeated internal links
 resolve to the same pinned external component and add units. Plain groups/parts

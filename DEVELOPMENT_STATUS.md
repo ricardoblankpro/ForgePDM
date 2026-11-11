@@ -1,5 +1,64 @@
 # Development status
 
+## 2026-11-11 — Combined BOM review and mass presentation (0.14.0)
+
+- Display masses with at most three decimals in FreeCAD and web, omitting trailing
+  zeros and showing positive sub-threshold values as `<0.001` in the displayed
+  unit. Keep Decimal evidence/API values and manual inputs at full precision;
+  web gram conversion uses decimal-string arithmetic before rounding. Native
+  display properties update through normal recomputation; installation does not
+  rewrite existing CAD documents just to change presentation.
+- Replace the public separate selection/review/consent workflow with one
+  persistent expandable published BOM window. Load HTTP data asynchronously and
+  check newer-revision notices independently. Update from CAD includes supported
+  candidates by default, with optional Choose components; show current/proposed
+  direct lines and quantity changes together. Apply once, skip exact no-ops and
+  refresh BOM/mass in place. Confirm empty/removal/reduction and split/custom
+  position replacements. Stored exclusions/manual provenance cannot be inferred;
+  the review states this explicitly. See ADR-018 and docs/freecad-addon-phase4.md.
+- Preserve owned Working checkout, exact snapshot/revision pins, GUI document
+  revalidation, optimistic tokens and server policy. Failed proposals are
+  invalidated with no automatic retry. No automatic BOM writes on upload/check-in.
+- Validation: 379 addon tests including three real offscreen Qt tests, 228 backend
+  tests and 15 web tests pass; addon lint/format, manifest/archive and diff checks
+  pass. Chrome verifies six controlled mass-rendering cases and seven description
+  workflow checks on an isolated backend. Native FreeCAD 1.1.4/Qt 6.8.3 verifies
+  the dialog with fake-service Apply/no-op and real production read-only HTTP.
+  Actual installed toolbar action opens the new five-row published BOM and
+  0.574 kg summary. Production synchronization was not exercised.
+- Install 0.14.0 archive into both local profiles with prior addons and a consistent
+  SQLite backup under var/backups/before-bom-ux-20261111T194131Z. Integrity/FKs pass.
+  Refresh modules and all 22 cached command instances in the running FreeCAD,
+  preserving three open documents, saved hashes, dirty states, active document
+  and login. Verify both served web asset bytes against source and backend health;
+  no backend restart or schema change was needed. Refresh the browser for the UI.
+- Evidence: docs/validation/bom-ux-freecad-2026-11-11.json,
+  docs/validation/bom-ux-installed-2026-11-11.json and
+  docs/validation/mass-display-browser-2026-11-11.json.
+
+## 2026-11-10 — Workbench organization (0.13.0)
+
+- Replace the flat 21-button toolbar with nine primary actions and seven menu
+  groups. Register 22 commands including the new Manage Component dispatcher;
+  preserve every existing ID for macros/customization. Its three explicit modes
+  reuse existing snapshot, newer-revision and cross-item replacement workflows.
+- All 22 commands have distinct SVG artwork. Keep refresh/repair in Maintenance,
+  catalog/material tools in their menu, and fastener association in the Components
+  menu plus a selection-aware tree context menu. Improve managed-document and
+  P/A-series activation without network work or changing server authorization.
+- Validation: 365 addon tests pass, focused Ruff check passes, archive builds.
+  Installed archive into both local FreeCAD profiles with backups under
+  var/backups/before-workbench-ui-20261110T025948Z. Running FreeCAD reports
+  0.13.0; rebuilt its toolbar/menu and registered commands while preserving all
+  three open documents, file paths, modified states, active document and client.
+- Native UI verification confirms one nine-action toolbar, ordered labels and
+  non-null icons after refreshing FreeCAD cached actions.
+- No backend/schema or engineering-data changes. Native action mutations were
+  not exercised against production CAD. Material/description command resources
+  derive their text from the document when queried; FreeCAD may cache text until
+  UI reconstruction. Existing translated strings remain; new English source
+  strings are present in the translation catalog.
+
 ## 2026-11-09 — Assembly mass 0.12.0 installed
 
 - Install the built 0.12.0 archive into both FreeCAD profiles with full prior
@@ -985,7 +1044,7 @@ Evidence:
 ## Next session
 
 1. Read root/nested `AGENTS.md`, this handoff and Git status before changes.
-   Current source and installed delivery are addon 0.12.0/backend schema 16. Standard Parts/shared
+   Current source and installed delivery are addon 0.14.0/backend schema 16. Standard Parts/shared
    catalog, simple P/A/M descriptions, physical P mass and bounded S supplier
    reference mass plus CAD/manual fallbacks are implemented. Use docs/material-management.md,
    docs/supplier-reference-mass.md and docs/upgrade-and-validation.md. The older

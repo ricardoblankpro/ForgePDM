@@ -220,7 +220,9 @@ def apply(document, metadata, binding, assign=True):
         "reason": reason,
     }
     _set(metadata, "PDMPartPhysicalData", canonical(value))
-    _set(metadata, "PDMPartMassKg", format(float(mass), ".8g") if mass else "")
+    from .mass_display import format_mass
+
+    _set(metadata, "PDMPartMassKg", format_mass(mass) if mass else "")
     _set(metadata, "PDMPartMassStatus", reason or "Calculated from final solids")
     return value
 

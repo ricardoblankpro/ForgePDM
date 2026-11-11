@@ -11,6 +11,7 @@ from . import bom, cad, tree_labels, tree_observer, workspace
 from .api import ForgePDMClient, ForgePDMError
 from .i18n import translate
 from .jobs import Request
+from .mass_display import format_mass
 from .resources import icon_path
 from .session import Session
 from .ui import (
@@ -297,6 +298,8 @@ class Command:
     menu_text = ""
     tooltip = ""
     needs_document = False
+    managed_document = True
+    number_series = ()
 
     def GetResources(self):
         return {
@@ -306,10 +309,24 @@ class Command:
         }
 
     def IsActive(self):
-        return (
-            not Session.busy
-            and Session.client is not None
-            and (not self.needs_document or FreeCAD.ActiveDocument is not None)
+        if Session.busy or Session.client is None:
+            return False
+        if not self.needs_document:
+            return True
+        document = FreeCAD.ActiveDocument
+        if document is None:
+            return False
+        if not self.managed_document:
+            return True
+        metadata = _metadata(document)
+        return bool(
+            metadata
+            and getattr(metadata, "ItemId", "")
+            and getattr(metadata, "RevisionId", "")
+            and (
+                not self.number_series
+                or getattr(metadata, "ItemNumber", "").startswith(self.number_series)
+            )
         )
 
     def Activated(self):
@@ -372,7 +389,7 @@ class LogoutCommand(Command):
 
 
 class RegisterStandardPartCommand(Command):
-    icon_name = "upload"
+    icon_name = "standard-part"
     menu_text = "Register Standard / Purchased Part…"
     tooltip = "Create an S item without requiring a CAD document"
 
@@ -404,7 +421,7 @@ class RegisterStandardPartCommand(Command):
 
             mass = item.get("reference_mass") or {}
             suffix = (
-                "\n{}: {} kg each.".format(label(mass), mass["mass_kg"])
+                "\n{}: {} kg each.".format(label(mass), format_mass(mass["mass_kg"]))
                 if mass.get("mass_kg") is not None
                 else "\nSupplier reference mass unavailable."
                 if item.get("reference_mass")
@@ -517,10 +534,22 @@ def _enrich_standard_mass(client, revision_id, obj=None, manual=None):
 
 
 class ChangeStandardPartAssociationCommand(Command):
-    icon_name = "replace-component"
+    number_series = ("A",)
+    icon_name = "associate-fastener"
     menu_text = "Change Standard Part Association…"
     tooltip = "Choose another S specification for selected fasteners without moving them"
     needs_document = True
+
+    def IsActive(self):
+        if not super().IsActive():
+            return False
+        from . import fasteners
+
+        selection = FreeCADGui.Selection.getSelection()
+        return bool(selection) and all(
+            obj.Document is FreeCAD.ActiveDocument and fasteners.recognized(obj)
+            for obj in selection
+        )
 
     def action(self):
         from . import fasteners
@@ -675,7 +704,7 @@ def _associate_fasteners(client, document, selected_names=None):
             from .standard_mass import label
 
             FreeCAD.Console.PrintMessage(
-                "ForgePDM: {} kg each ({}).\n".format(mass["mass_kg"], label(mass))
+                "ForgePDM: {} kg each ({}).\n".format(format_mass(mass["mass_kg"]), label(mass))
             )
     document = (
         _guard_document(name, revision_id) if selected_names is not None else _guard_document(name)
@@ -709,8 +738,9 @@ def _associate_fasteners(client, document, selected_names=None):
 
 
 class UploadCommand(Command):
+    managed_document = False
     icon_name = "upload"
-    menu_text = "Create / Upload Current Document"
+    menu_text = "Create / Upload…"
     tooltip = "Save a managed working copy and upload a verified snapshot"
     needs_document = True
 
@@ -789,7 +819,7 @@ class UploadCommand(Command):
 
 class CheckoutCommand(Command):
     icon_name = "checkout"
-    menu_text = "Acquire / Renew Checkout"
+    menu_text = "Check Out / Renew"
     tooltip = "Acquire or extend the active revision checkout"
     needs_document = True
 
@@ -1011,6 +1041,7 @@ class NewRevisionCommand(Command):
 
 
 class RefreshTreeLabelsCommand(Command):
+    number_series = ("A",)
     icon_name = "tree-labels"
     menu_text = "Refresh ForgePDM Tree Labels"
     tooltip = "Show item, revision and stable occurrence numbers on managed assembly links"
@@ -1039,6 +1070,7 @@ class RefreshTreeLabelsCommand(Command):
 
 
 class ReplaceRevisionCommand(Command):
+    number_series = ("A",)
     replace_any_item = False
     update_snapshot = False
     icon_name = "replace-revision"
@@ -1349,9 +1381,25 @@ class ReplaceComponentCommand(ReplaceRevisionCommand):
 
 class UpdateSelectedComponentsCommand(ReplaceRevisionCommand):
     update_snapshot = True
-    icon_name = "replace-revision"
+    icon_name = "update-components"
     menu_text = "Update Selected Components from Server…"
     tooltip = "Review and adopt the latest uploaded snapshot of selected component occurrences"
+
+
+class ManageComponentCommand(ReplaceRevisionCommand):
+    icon_name = "manage-component"
+    menu_text = "Manage Component…"
+    tooltip = "Update a snapshot, adopt a newer revision, or replace a component"
+
+    def action(self):
+        choices = {
+            "Update snapshot of the same revision": UpdateSelectedComponentsCommand,
+            "Adopt a newer revision of the same item": ReplaceRevisionCommand,
+            "Replace with a different item": ReplaceComponentCommand,
+        }
+        choice = ask_choice("Manage Component", "Operation", list(choices))
+        if choice is not None:
+            yield from choices[choice]().action()
 
 
 def _map_replacement_objects(document, references, names, target_document):
@@ -1414,51 +1462,71 @@ def _choose_native_snapshot(client, revision_id):
 
 
 class ShowBOMCommand(Command):
+    number_series = ("A",)
     icon_name = "bom"
-    menu_text = "Show ForgePDM BOM"
+    menu_text = "BOM / Mass…"
     tooltip = "Display the nested BOM or review and synchronize CAD occurrences"
     needs_document = True
 
     def action(self):
+        from .bom_ui import BOMDialog
+
         client = Session.require_client()
-        metadata = _require_metadata(_require_document())
-        number, revision_id = metadata.ItemNumber, metadata.RevisionId
-        lines = yield Request("Loading BOM…", client.get_bom, (revision_id,), {"recursive": True})
-        updates = yield Request(
-            "Checking newer component revisions…", client.bom_revision_updates, (lines,)
-        )
-        mass = None
-        if number.startswith("A"):
+        document = _require_document()
+        metadata = _require_metadata(document)
+        revision_id, name = metadata.RevisionId, document.Name
+
+        def load():
+            lines = yield Request(
+                "Loading published BOM…", client.get_bom, (revision_id,), {"recursive": True}
+            )
             mass = yield Request(
                 "Calculating assembly mass…", client.get_assembly_mass, (revision_id,)
             )
-        dialog = QtWidgets.QDialog(_main_window())
-        dialog.setWindowTitle("ForgePDM BOM — " + number)
-        dialog.resize(640, 480)
-        layout = QtWidgets.QVBoxLayout(dialog)
-        from .assembly_mass import summary
+            return lines, mass
 
-        if mass is not None:
-            mass_label = QtWidgets.QLabel(summary(mass), dialog)
-            mass_label.setWordWrap(True)
-            layout.addWidget(mass_label)
-        output = QtWidgets.QPlainTextEdit(dialog)
-        output.setReadOnly(True)
-        output.setPlainText(
-            _format_bom(lines, updates=updates) or "This revision has no BOM lines."
-        )
-        layout.addWidget(output)
-        buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok, parent=dialog)
-        buttons.accepted.connect(dialog.accept)
-        synchronize = QtWidgets.QPushButton("Synchronize from CAD…")
-        synchronize.clicked.connect(dialog.accept)
-        requested = []
-        synchronize.clicked.connect(lambda: requested.append(True))
-        layout.addWidget(synchronize)
-        layout.addWidget(buttons)
+        def prepare():
+            current = _guard_document(name, revision_id)
+            if cad.document_modified(current):
+                raise RuntimeError("Save/upload the assembly before updating its BOM")
+            references, path = cad.capture_bom(current), current.FileName
+            prepared = yield Request(
+                "Verifying uploaded CAD occurrences…",
+                client.prepare_cad_bom,
+                (path, revision_id, references),
+            )
+            snapshot = yield Request(
+                "Loading editable BOM snapshot…", client.bom_snapshot, (revision_id,)
+            )
+            return dict(path=path, references=references, prepared=prepared, snapshot=snapshot)
+
+        def apply(plan, proposal):
+            current = _guard_document(name, revision_id)
+            if (
+                cad.document_modified(current)
+                or current.FileName != plan["path"]
+                or cad.capture_bom(current) != plan["references"]
+            ):
+                raise RuntimeError("CAD occurrences changed during review. Update from CAD again.")
+            yield Request(
+                "Applying BOM changes…",
+                client.synchronize_cad_bom,
+                (
+                    plan["path"],
+                    revision_id,
+                    plan["references"],
+                    plan["prepared"]["source_hash"],
+                    [line.as_payload() for line in proposal],
+                    plan["snapshot"],
+                ),
+                mutates=True,
+                cancellable=False,
+            )
+
+        dialog = BOMDialog(_main_window(), metadata.ItemNumber, client, load, prepare, apply)
         execute_dialog(dialog)
-        if requested:
-            yield from _synchronize_bom(client, revision_id)
+        # Keep the command a workflow without blocking any HTTP calls on the GUI thread.
+        yield from ()
 
 
 def _synchronize_bom(client, revision_id):
@@ -1649,7 +1717,7 @@ class RefreshPDMStatusCommand(Command):
 
 
 class UpdateFromServerCommand(Command):
-    icon_name = "download"
+    icon_name = "update-document"
     menu_text = "Update from Server…"
     tooltip = "Check for uploaded changes and open a verified copy of this revision"
     needs_document = True
@@ -1754,7 +1822,7 @@ class UpdateFromServerCommand(Command):
 
 class DownloadCommand(Command):
     icon_name = "download"
-    menu_text = "Download Item / Assembly"
+    menu_text = "Open from ForgePDM…"
     tooltip = "Search items and retrieve a selected revision"
 
     def action(self):
@@ -1908,9 +1976,22 @@ def _prepare_description(client, document, metadata):
 
 
 class AssignMaterialsCommand(Command):
+    number_series = ("P", "A")
+    icon_name = "assign-material"
     menu_text = "Assign Material / Set Description…"
     tooltip = "Select an M material for a part or enter an assembly description"
     needs_document = True
+
+    def GetResources(self):
+        resources = super().GetResources()
+        document = FreeCAD.ActiveDocument
+        metadata = _metadata(document) if document else None
+        series = getattr(metadata, "ItemNumber", "")[:1]
+        if series in ("P", "A"):
+            resources["MenuText"] = translate(
+                "ForgePDM", "Assign Material…" if series == "P" else "Set Description…"
+            )
+        return resources
 
     def action(self):
         from . import descriptions, tree_status
@@ -1989,6 +2070,7 @@ def _physical_capability(client):
 
 
 class RegisterRawMaterialCommand(Command):
+    icon_name = "register-material"
     menu_text = "Register Raw Material…"
     tooltip = "Register an M description linked to a FreeCAD physical material"
 
@@ -2021,6 +2103,7 @@ class RegisterRawMaterialCommand(Command):
 
 
 class LinkPhysicalMaterialCommand(Command):
+    icon_name = "link-material"
     menu_text = "Link Physical Material…"
     tooltip = "Link an existing M catalog entry to a FreeCAD physical material"
 

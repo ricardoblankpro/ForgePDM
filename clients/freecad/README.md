@@ -45,12 +45,13 @@ Select **View → Workbench → ForgePDM**. The backend must be running and reac
 3. **Acquire / Renew Checkout**, **Check In Current Revision**, and **Release Current Revision** manage the current revision. Check-in uploads the saved native file first and then releases the checkout without prompting for a change note. The intended workflow is check-in before release; release prerequisites remain enforced by the existing backend.
 4. **Create Next Revision** creates the next Working revision in a separate managed file, updates the local metadata and uploads its native snapshot, preserving the previous revision file.
 5. **Download Item / Assembly** searches by item number, name or description (blank to browse), offers pages of matching items, then lets you select a revision, including historical revisions. Select an exact native snapshot if several exist. It retrieves the pinned CAD reference graph into a new configuration and verifies external links before completion. Missing/inaccessible components stop retrieval before opening the assembly.
-6. **Show ForgePDM BOM** displays the current revision's recursive BOM. Choose
-   **Synchronize from CAD…** on a saved/uploaded Working assembly with your active
-   checkout. Select engineering occurrences, review exact revisions, quantities,
-   source occurrences and quantity changes, then explicitly approve replacement.
-   This replaces all current lines, including manual lines. An empty proposal
-   explicitly clears the BOM. Canceling either dialog preserves the BOM.
+6. **BOM / Mass…** opens an expandable published BOM with exact recorded revisions
+   and mass. **Update from CAD** prepares a replacement on a saved/uploaded Working
+   assembly with your checkout. Supported engineering components are included by
+   default; **Choose components…** lets you exclude occurrences. Review current
+   and proposed lines, then **Apply BOM changes**. Removals and custom-line/position
+   replacements require confirmation. Exact no-ops disable Apply. The same window
+   refreshes after applying; closing without applying preserves the stored BOM.
 7. **Refresh ForgePDM Tree Labels** updates an owned Working assembly to show
    `P000001-B|1` on its managed component links. Save/upload persists the changes.
    The command also verifies the checkout used for subsequent automatic insertion
@@ -204,7 +205,7 @@ it does not replace components or synchronize the engineering BOM automatically.
 3. Check the occurrences to replace, choose the newer revision and its uploaded
    native snapshot, then approve the replacement preview.
 4. Inspect geometry and joints. Save/upload the assembly, then use Show BOM →
-   Synchronize from CAD to review and persist its engineering BOM change.
+   Update from CAD to review and persist its engineering BOM change.
 
 The command keeps the existing occurrence objects, placements and UUIDs. Only
 selected occurrences change; other instances can retain their earlier revision.
@@ -220,7 +221,7 @@ saving. No assembly solver or automatic face/joint remapping is added.
 
 ### Replace with a different part or assembly
 
-Use **ForgePDM → Replace Component…** to search by item number or name, choose
+Use **ForgePDM → Components → Manage Component… → Replace with a different item** to search by item number or name, choose
 an exact revision and uploaded native snapshot, and map the source object to a
 replacement Body, Part, Assembly or shape. Select the direct occurrences first,
 or choose the source component in the dialog. Repeated occurrences of the same
@@ -360,3 +361,36 @@ replaced. Released records require a new revision for changes. See
 and published component masses. Unknown components leave the total unavailable,
 with a known subtotal and reasons. Local CAD edits require normal publication
 and BOM synchronization. See [assembly mass](../../docs/assembly-mass.md).
+
+## Workbench layout (0.13.0)
+
+The main toolbar contains nine actions: Log In, Open from ForgePDM, Check Out /
+Renew, Create / Upload, Check In, Update from Server, Manage Component, BOM /
+Mass, and Material / Description. Every registered command uses distinct SVG
+artwork, including compatibility commands available through customization.
+
+The ForgePDM menu groups Session, Documents, Components, Lifecycle, BOM and
+publishing, Catalog and materials, and Maintenance. Manage Component offers
+three explicit operations: update the snapshot of the same revision, adopt a
+newer revision of the same item, or replace with a different item. Each retains
+its existing review, checkout, revision-pin and rollback checks. Existing command
+IDs remain registered for shortcuts and macros.
+
+Standard part reassociation is also available in the tree context menu when
+supported direct Fasteners objects are selected in a managed assembly. Manual
+status refresh and tree-label repair remain in Maintenance. Material catalog
+registration and physical linking remain in Catalog and materials. Managed
+commands require managed document metadata; assembly operations require an A
+item, and material/description editing requires P or A. Server authorization and
+lifecycle checks remain authoritative when actions run.
+
+## BOM review and mass display (0.14.0)
+
+Mass displays use at most three decimal places and omit trailing zeros in both
+FreeCAD and web. Positive values below 0.001 in the displayed unit show `<0.001`.
+P/A values remain in kg; the web S panel uses grams per piece. Calculations,
+publication evidence and editable inputs retain their original precision.
+Native mass properties refresh when their normal assignment/recompute runs;
+installation does not rewrite existing CAD documents. Newer-revision notices load
+in the background and never replace pinned revisions. Previous custom exclusions
+cannot be inferred from the stored BOM; review each CAD replacement.

@@ -1,3 +1,4 @@
+import {formatMass} from "./mass-display.mjs";
 // Simple catalog descriptions and revision-bound material selection.
 export function materialsUI({api, el, button: makeButton, state, descriptionSaved}) {
   const button=(label,action)=>makeButton(label,action,{class:"secondary"});
@@ -14,7 +15,7 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
         const [mass,checkout]=await Promise.all([api.request(path),api.request(`/revisions/${revision.id}/checkout`)]);
         if(!host.isConnected)return;
         const label={supplier_reference:"Supplier reference",cad_estimate:"Estimated from CAD",manual:"Manual entry"}[mass.status];
-        host.replaceChildren(el("h3",{},"Standard part mass"),el("p",{},mass.mass_kg!=null?`${Number((Number(mass.mass_kg)*1000).toPrecision(8))} g per piece`:`Mass unavailable: ${mass.reason}`));
+        host.replaceChildren(el("h3",{},"Standard part mass"),el("p",{},mass.mass_kg!=null?`${formatMass(mass.mass_kg, 3)} g per piece`:`Mass unavailable: ${mass.reason}`));
         if(label)host.append(el("p",{},label));
         if(mass.status==="supplier_reference")host.append(el("p",{},`${mass.supplier} · ${mass.source_article} · retrieved ${mass.retrieved_at.slice(0,10)}`),el("a",{href:mass.source_url,target:"_blank",rel:"noopener noreferrer"},"Supplier source"));
         if(mass.status==="cad_estimate")host.append(el("p",{},`Reference density: ${mass.density_reference.density_kg_m3} kg/m³ (${mass.density_reference.name}); ${mass.thread_mode} threads. Actual fastener mass may differ.`));
@@ -50,12 +51,12 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
       if(current.physical_material)host.append(el("p",{},`Physical material: ${current.physical_material.name} · ${current.physical_material.density_kg_m3} kg/m³`));
       if(series==="P"){
         const mass=await api.request(`/revisions/${revision.id}/mass`);
-        host.append(el("p",{},mass.mass_kg!=null?`Uploaded mass: ${Number(mass.mass_kg).toPrecision(8)} kg`:`Mass unavailable: ${mass.reason}`));
+        host.append(el("p",{},mass.mass_kg!=null?`Uploaded mass: ${formatMass(mass.mass_kg)} kg`:`Mass unavailable: ${mass.reason}`));
       }
       if(series==="A") {
         const mass=await api.request(`/revisions/${revision.id}/assembly-mass`);
         if(!host.isConnected)return;
-        host.append(el("h3",{},"Assembly mass"),el("p",{},mass.mass_kg!=null?`Total: ${mass.mass_kg} kg`:`Total unavailable. Known subtotal: ${mass.known_mass_kg} kg`),el("p",{},"Calculated from the stored engineering BOM and published component masses. Local CAD edits are not included."));
+        host.append(el("h3",{},"Assembly mass"),el("p",{},mass.mass_kg!=null?`Total: ${formatMass(mass.mass_kg)} kg`:`Total unavailable. Known subtotal: ${formatMass(mass.known_mass_kg)} kg`),el("p",{},"Calculated from the stored engineering BOM and published component masses. Local CAD edits are not included."));
         if(mass.contains_cad_estimates)host.append(el("p",{},"Includes estimated fastener mass from CAD."));
         for(const issue of mass.issues)host.append(el("p",{},`${issue.item_number}-${issue.revision_label} × ${issue.quantity}: ${issue.reason}`));
         host.append(button("Refresh mass",()=>render(host,item,revision)));

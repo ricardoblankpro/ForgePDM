@@ -1,3 +1,22 @@
+## 0.14.0 — BOM review and mass presentation
+
+- Display mass with at most three decimals in FreeCAD and web, preserving full
+  calculation/publication precision. Positive sub-threshold values show <0.001.
+- Open a persistent expandable published BOM viewer with asynchronous loading
+  and newer-revision notices. Prepare CAD changes in the same window with all
+  supported components included by default and optional occurrence selection.
+- Apply a combined review in one action; confirm removals/custom-line replacement,
+  skip exact no-ops and refresh published BOM/mass in place. Preserve snapshot,
+  checkout, exact revision and concurrency guards. No automatic upload/BOM writes.
+
+## 0.13.0 — Workbench organization
+
+- Reduce the main toolbar to nine actions and group the menu by workflow.
+- Add Manage Component with explicit snapshot/revision/item choices; preserve
+  all previous command IDs and replacement safety checks.
+- Give every command distinct vector artwork. Add fastener tree context access
+  and document/series/selection activation guards.
+
 # Changelog
 
 ## 0.12.0 — 2026-11-09

@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture
 def physical(addon_root, monkeypatch):
     spec = importlib.util.spec_from_file_location(
-        "local_physical", addon_root / "freecad/forgepdm/physical_materials.py"
+        "freecad.forgepdm.local_physical", addon_root / "freecad/forgepdm/physical_materials.py"
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

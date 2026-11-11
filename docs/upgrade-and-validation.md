@@ -1,4 +1,4 @@
-# Upgrade and validation — addon 0.12.0 / schema 16
+# Upgrade and validation — addon 0.14.0 / schema 16
 
 The backend runs separately from FreeCAD. Use Python 3.11+ and `uv`; the native
 material workflow is validated on Linux with FreeCAD 1.1.4. Other FreeCAD/platform
@@ -20,7 +20,7 @@ combinations have not received the same acceptance coverage.
    uv run --project clients/freecad --extra dev --locked python clients/freecad/tools/addon.py build
    ```
 
-   The archive is `clients/freecad/dist/ForgePDM-0.12.0.zip`. Replace the previous
+   The archive is `clients/freecad/dist/ForgePDM-0.14.0.zip`. Replace the previous
    `Mod/ForgePDM` installation with the archive contents; do not overlay old files.
    Restart FreeCAD after a normal installation. Do not install the backend package
    or another Qt binding into FreeCAD.

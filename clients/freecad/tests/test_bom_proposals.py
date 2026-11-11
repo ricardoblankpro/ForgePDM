@@ -93,3 +93,18 @@ def test_invalid_manifest_is_rejected(fault):
         source["references"][0]["property_name"] = "Unsupported"
     with pytest.raises(ValueError):
         propose_lines(source, select(0))
+
+
+def test_replacement_status_noop_reductions_custom_positions_and_split_lines():
+    from freecad.forgepdm.bom import ProposedLine, replacement_status
+
+    key = str(uuid4())
+    proposal = (ProposedLine(key, 1, (("one", "LinkedObject"), ("two", "LinkedObject"))),)
+    current = [{"component_revision_id": key, "position": 1, "quantity": "2.0"}]
+    assert replacement_status(current, proposal) == (True, False)
+    assert replacement_status([], proposal) == (False, False)
+    assert replacement_status(current, ()) == (False, True)
+    assert replacement_status([{**current[0], "quantity": 3}], proposal) == (False, True)
+    assert replacement_status([{**current[0], "position": 5}], proposal) == (False, True)
+    split = [{**current[0], "quantity": 1}, {**current[0], "quantity": 1, "position": 2}]
+    assert replacement_status(split, proposal) == (False, True)

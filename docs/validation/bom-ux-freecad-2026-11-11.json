@@ -1,0 +1,27 @@
+{
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "qt": "6.8.3",
+  "checks": [
+    "Actual native Qt window includes components by default and rounds mass to 0.081 kg",
+    "One Apply action refreshes the same window without a success dialog (fake service mutation)",
+    "Exact no-op disables Apply; optional occurrence exclusion remains available",
+    "Actual ShowBOM command loads live stored BOM and mass via worker HTTP; no synchronization performed",
+    "Open documents, saved hashes, dirty states, active document and login preserved"
+  ],
+  "live_read": [
+    {
+      "rows": 5,
+      "mass": "Assembly mass: 0.574 kg\nStored engineering BOM and published masses; local CAD edits excluded.\nIncludes estimated fastener mass from CAD."
+    }
+  ],
+  "production_writes": 0
+}

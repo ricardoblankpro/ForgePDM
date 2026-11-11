@@ -78,3 +78,24 @@ def propose_lines(manifest, selected_occurrences):
         ProposedLine(revision_id, position, tuple(keys), labels[revision_id])
         for position, (revision_id, keys) in enumerate(grouped.items(), 1)
     )
+
+
+def replacement_status(current, proposed):
+    """Identify exact no-ops and potentially destructive/custom replacements."""
+    before = [
+        (line["component_revision_id"], int(line["position"]), Decimal(str(line["quantity"])))
+        for line in current
+    ]
+    after = [
+        (line.component_revision_id, line.position, Decimal(line.quantity)) for line in proposed
+    ]
+    unchanged = sorted(before) == sorted(after)
+    reductions = any(new < old for _, old, new in quantity_changes(current, proposed))
+    split_lines = len({line[0] for line in before}) != len(before)
+    positions = {line.component_revision_id: line.position for line in proposed}
+    custom_positions = any(
+        key in positions and position != positions[key] for key, position, _ in before
+    )
+    return unchanged, bool(
+        current and (not proposed or reductions or split_lines or custom_positions)
+    )

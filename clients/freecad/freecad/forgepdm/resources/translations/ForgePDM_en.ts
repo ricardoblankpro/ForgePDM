@@ -2,16 +2,46 @@
 <TS version="2.1" language="en" sourcelanguage="en">
   <context>
     <name>ForgePDM</name>
-    <message><source>Register Raw Material…</source><translation type="unfinished" /></message>
-    <message><source>Register an M description linked to a FreeCAD physical material</source><translation type="unfinished" /></message>
-    <message><source>Link Physical Material…</source><translation type="unfinished" /></message>
-    <message><source>Link an existing M catalog entry to a FreeCAD physical material</source><translation type="unfinished" /></message>
-    <message><source>Assign Material / Set Description…</source><translation type="unfinished" /></message>
-    <message><source>Select an M material for a part or enter an assembly description</source><translation type="unfinished" /></message>
-    <message><source>Change Standard Part Association…</source><translation type="unfinished" /></message>
-    <message><source>Choose another S specification for selected fasteners without moving them</source><translation type="unfinished" /></message>
-    <message><source>Register Standard / Purchased Part…</source><translation type="unfinished" /></message>
-    <message><source>Create an S item without requiring a CAD document</source><translation type="unfinished" /></message>
+    <message>
+      <source>Register Raw Material…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Register an M description linked to a FreeCAD physical material</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Link Physical Material…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Link an existing M catalog entry to a FreeCAD physical material</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Assign Material / Set Description…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Select an M material for a part or enter an assembly description</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Change Standard Part Association…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Choose another S specification for selected fasteners without moving them</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Register Standard / Purchased Part…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Create an S item without requiring a CAD document</source>
+      <translation type="unfinished" />
+    </message>
     <message>
       <source>Refresh ForgePDM Tree Labels</source>
       <translation>Refresh ForgePDM Tree Labels</translation>
@@ -143,6 +173,66 @@
     <message>
       <source>Publish reviewed TechDraw PDFs from this exact uploaded CAD snapshot</source>
       <translation>Publish reviewed TechDraw PDFs from this exact uploaded CAD snapshot</translation>
+    </message>
+    <message>
+      <source>Assign Material…</source>
+      <translation>Assign Material…</translation>
+    </message>
+    <message>
+      <source>BOM / Mass…</source>
+      <translation>BOM / Mass…</translation>
+    </message>
+    <message>
+      <source>BOM and publishing</source>
+      <translation>BOM and publishing</translation>
+    </message>
+    <message>
+      <source>Catalog and materials</source>
+      <translation>Catalog and materials</translation>
+    </message>
+    <message>
+      <source>Check Out / Renew</source>
+      <translation>Check Out / Renew</translation>
+    </message>
+    <message>
+      <source>Components</source>
+      <translation>Components</translation>
+    </message>
+    <message>
+      <source>Create / Upload…</source>
+      <translation>Create / Upload…</translation>
+    </message>
+    <message>
+      <source>Documents</source>
+      <translation>Documents</translation>
+    </message>
+    <message>
+      <source>Lifecycle</source>
+      <translation>Lifecycle</translation>
+    </message>
+    <message>
+      <source>Maintenance</source>
+      <translation>Maintenance</translation>
+    </message>
+    <message>
+      <source>Manage Component…</source>
+      <translation>Manage Component…</translation>
+    </message>
+    <message>
+      <source>Open from ForgePDM…</source>
+      <translation>Open from ForgePDM…</translation>
+    </message>
+    <message>
+      <source>Session</source>
+      <translation>Session</translation>
+    </message>
+    <message>
+      <source>Set Description…</source>
+      <translation>Set Description…</translation>
+    </message>
+    <message>
+      <source>Update a snapshot, adopt a newer revision, or replace a component</source>
+      <translation>Update a snapshot, adopt a newer revision, or replace a component</translation>
     </message>
   </context>
 </TS>

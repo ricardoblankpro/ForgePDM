@@ -4,6 +4,8 @@ import json
 import math
 from decimal import Decimal
 
+from .mass_display import format_mass
+
 
 def assign(document, metadata, revision_id, current, lines, mappings, engineering_properties=None):
     """Apply one undoable local proposal to explicitly selected final solids."""
@@ -64,7 +66,7 @@ def assign(document, metadata, revision_id, current, lines, mappings, engineerin
                     metadata.addProperty("App::PropertyString", name, "ForgePDM")
                 setattr(metadata, name, str(engineering_properties.get(key, "")))
         metadata.PDMMaterialInputs = json.dumps(payload, sort_keys=True)
-        metadata.PDMFinishedMassKg = str(total) if evidence else ""
+        metadata.PDMFinishedMassKg = format_mass(total) if evidence else ""
         document.recompute()
         document.commitTransaction()
     except BaseException:

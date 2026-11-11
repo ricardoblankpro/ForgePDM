@@ -11,7 +11,7 @@ import pytest
 @pytest.fixture
 def materials(addon_root):
     spec = importlib.util.spec_from_file_location(
-        "local_materials", addon_root / "freecad/forgepdm/materials.py"
+        "freecad.forgepdm.local_materials", addon_root / "freecad/forgepdm/materials.py"
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

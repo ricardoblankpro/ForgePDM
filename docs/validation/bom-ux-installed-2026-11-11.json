@@ -1,0 +1,35 @@
+{
+  "version": "0.14.0",
+  "backup": "/home/ricardoblank/Development/ForgePDM/var/backups/before-bom-ux-20261111T194131Z",
+  "profiles": [
+    {
+      "path": "/home/ricardoblank/.local/share/FreeCAD/Mod/ForgePDM",
+      "files_verified": 66
+    },
+    {
+      "path": "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM",
+      "files_verified": 66
+    }
+  ],
+  "schema_change": false,
+  "archive_sha256": "05454249390182b37c88b44b7068f562324281b2751eedafee00f9e3e1e9b821",
+  "runtime_version": "0.14.0",
+  "commands_refreshed": 22,
+  "cached_command_instances_refreshed": 22,
+  "registered_toolbar_action": [
+    {
+      "rows": 5,
+      "mass": "Assembly mass: 0.574 kg\nStored engineering BOM and published masses; local CAD edits excluded.\nIncludes estimated fastener mass from CAD."
+    }
+  ],
+  "assets_verified": {
+    "mass-display.mjs": "1489f1ad7354983a88c10500cf860c0e368d4decebcbc4d45d57f0b695aa8fa0",
+    "materials.mjs": "b8d2fa66619cffb60284d31b6b798636e28f356743d14755ab6ae2964fd8eeaa",
+    "health": {
+      "status": "ok",
+      "service": "forgepdm"
+    }
+  },
+  "open_documents_preserved": true,
+  "login_preserved": true
+}
