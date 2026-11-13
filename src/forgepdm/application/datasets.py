@@ -77,6 +77,8 @@ class DatasetService:
         filename: str | None,
         media_type: str | None,
         source,
+        expected_checkout_id=None,
+        expected_checkout_version=None,
     ) -> tuple[Dataset, File]:
         safe_filename = _safe_filename(filename)
         dataset_name = dataset_name.strip()
@@ -84,7 +86,10 @@ class DatasetService:
             raise ValueError("dataset name must contain 1 to 200 characters")
         safe_media_type = _media_type(media_type)
         self.authorization.require_edit_revision(user, revision_id)
-        self.revisions.require_checkout_owner(user, revision_id)
+        checkout = self.revisions.require_checkout_owner(user, revision_id)
+        if expected_checkout_id is None:
+            expected_checkout_id, expected_checkout_version = checkout.id, checkout.version
+        self.revisions.require_checkout_token(user, revision_id, expected_checkout_id, expected_checkout_version)
 
         staged = self.storage.stage(source)
         # Blob promotion precedes the DB commit; a failed commit can leave an orphan blob.
@@ -108,7 +113,7 @@ class DatasetService:
             if actor is None:
                 raise NotFound("enabled user not found")
             self.authorization.require_edit_revision(user, revision_id, connection)
-            self.revisions.require_checkout_owner(user, revision_id, connection)
+            self.revisions.require_checkout_token(user, revision_id, expected_checkout_id, expected_checkout_version, connection)
             connection.execute(
                 "INSERT INTO files(id, content_hash, byte_size, media_type, original_filename, storage_key, created_by, created_at) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",

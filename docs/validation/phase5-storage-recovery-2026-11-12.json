@@ -1,0 +1,18 @@
+{
+  "mode": "read_only",
+  "requires_offline_review": true,
+  "database_integrity": [
+    "ok"
+  ],
+  "foreign_key_errors": [],
+  "referenced_file_errors": [],
+  "unreferenced_candidates": [],
+  "unsafe_links": [],
+  "native_datasets_without_manifest": [
+    "17d7a3be-515c-4d7a-bc80-8950e864a716"
+  ],
+  "completed_operations": {
+    "checkin_operations": 6,
+    "revision_operations": 1
+  }
+}

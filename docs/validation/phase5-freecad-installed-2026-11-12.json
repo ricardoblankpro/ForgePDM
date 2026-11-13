@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "version": "0.15.0",
+  "installed_package": "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm",
+  "runtime_module_files": [
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/api.py",
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/revision_creation.py",
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/commands.py"
+  ],
+  "cached_command_instances_refreshed": 28,
+  "session_client_preserved": true,
+  "session_user_preserved": true,
+  "open_documents_preserved": true,
+  "open_document_count": 0,
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ]
+}

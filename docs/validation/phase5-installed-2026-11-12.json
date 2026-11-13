@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "addon": "0.15.0",
+  "schema": 17,
+  "previous_tables_preserved": 38,
+  "stored_file_hashes_preserved": 202,
+  "integrity": "ok",
+  "foreign_key_errors": 0,
+  "new_protocol_routes_verified": 5,
+  "both_installed_profiles_match_archive": true,
+  "served_web_assets_match_source": true,
+  "backup": "/home/ricardoblank/Development/ForgePDM/var/backups/before-phase5-20261113T003223Z"
+}

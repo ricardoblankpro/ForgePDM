@@ -977,48 +977,74 @@ class NewRevisionCommand(Command):
                 "Save the source revision before creating a new revision"
             )
         source_path = document.FileName
-        note = ask_text("ForgePDM New Revision", "Describe the change")
-        if not note:
-            return
-        item = yield Request("Checking revision source…", client.get_item, (metadata.ItemId,))
-        if (
-            item["current_revision_id"] != revision_id
-            or item["current_revision"]["lifecycle_state"] != "released"
-        ):
-            raise workspace.WorkspaceError(
-                "Create the next revision from the latest Released revision"
-            )
-        references = cad.capture(document)
-        yield Request(
-            "Checking linked component snapshots…", client.validate_references, (references,)
-        )
-        root = _choose_workspace(client, document)
-        if root is None:
-            return
-        path = yield Request(
-            "Preparing next-revision working copy…", client.prepare_working, (root,)
-        )
-        document = _guard_document(name, revision_id)
-        if cad.document_modified(document) or document.FileName != source_path:
-            raise workspace.WorkspaceError("Source revision changed while preparing its copy")
-        yield Request(
-            "Copying the saved revision without changing assembly references…",
-            client.copy_revision_source,
-            (source_path, path, references),
-        )
         result = yield Request(
-            "Creating next revision…",
-            client.create_next_revision,
-            (metadata.ItemId, note),
+            "Checking pending revision creation…",
+            client.resume_revision_creation,
+            (metadata.ItemId, revision_id),
             mutates=True,
             cancellable=False,
         )
+        references = cad.capture(document)
+        if result is not None:
+            path = result.get("working_copy_path")
+            if not path or not os.path.isfile(path) or os.path.islink(path):
+                raise workspace.WorkspaceError(
+                    "Revision recovered, but its local copy is missing; retrieve the revision or restore the copy"
+                )
+        else:
+            note = ask_text("ForgePDM New Revision", "Describe the change")
+            if not note:
+                return
+            item = yield Request("Checking revision source…", client.get_item, (metadata.ItemId,))
+            if (
+                item["current_revision_id"] != revision_id
+                or item["current_revision"]["lifecycle_state"] != "released"
+            ):
+                raise workspace.WorkspaceError(
+                    "Create the next revision from the latest Released revision"
+                )
+            references = cad.capture(document)
+            yield Request(
+                "Checking linked component snapshots…", client.validate_references, (references,)
+            )
+            root = _choose_workspace(client, document)
+            if root is None:
+                return
+            path = yield Request(
+                "Preparing next-revision working copy…", client.prepare_working, (root,)
+            )
+            document = _guard_document(name, revision_id)
+            if cad.document_modified(document) or document.FileName != source_path:
+                raise workspace.WorkspaceError("Source revision changed while preparing its copy")
+            yield Request(
+                "Copying the saved revision without changing assembly references…",
+                client.copy_revision_source,
+                (source_path, path, references),
+            )
+            result = yield Request(
+                "Creating next revision…",
+                client.create_next_revision,
+                (metadata.ItemId, note, revision_id, path),
+                mutates=True,
+                cancellable=False,
+            )
+        if os.path.realpath(path) == os.path.realpath(source_path):
+            raise workspace.WorkspaceError(
+                "The revision copy points to its source; both identities were preserved"
+            )
         source = _guard_document(name, revision_id)
         if cad.document_modified(source) or source.FileName != source_path:
             raise workspace.WorkspaceError(
                 "Source revision changed; the new revision copy was preserved"
             )
         # Existing assembly links retain the source document and its old identity.
+        if any(
+            d.FileName == path and cad.document_modified(d)
+            for d in FreeCAD.listDocuments().values()
+        ):
+            raise workspace.WorkspaceError(
+                "The recovered revision is already open with edits; its copy was preserved"
+            )
         document = FreeCAD.openDocument(path)
         FreeCAD.setActiveDocument(document.Name)
         _set_metadata(
@@ -2150,7 +2176,7 @@ class LinkPhysicalMaterialCommand(Command):
             revision = yield Request(
                 "Creating material revision…",
                 client.create_next_revision,
-                (item["id"], "Link physical material"),
+                (item["id"], "Link physical material", revision["id"]),
                 mutates=True,
                 cancellable=False,
             )

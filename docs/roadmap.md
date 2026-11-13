@@ -11,7 +11,7 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 
 ## Active development-direction roadmap
 
-**Current source: addon 0.12.0 / backend schema 16.** Simple P material/A assembly
+**Current source: addon 0.15.0 / backend schema 17.** Simple P material/A assembly
 descriptions, optional native density links and finished part mass, and bounded
 S supplier reference mass plus CAD/manual fallbacks are implemented. Current guides:
 [materials](material-management.md), [supplier mass](supplier-reference-mass.md)
@@ -38,13 +38,13 @@ tracked below; this feature does not mark Phase 5 complete.
 | 2 | Initialization, connectivity and catalog browsing | Implemented; [scope and validation](freecad-addon-phase2.md) |
 | 3 | Local workspace, CAD files and reference integrity | Implemented for supported whole-object App::Link and native AssemblyLink; [scope and validation](freecad-addon-phase3.md) |
 | 4 | BOM extraction and revision-aware assembly synchronization | Implemented for direct parts/native subassemblies and reviewed replacement; [scope and validation](freecad-addon-phase4.md) |
-| 5 | Robust checkout/check-in, lifecycle, revisions and datasets | Started: atomic part/assembly check-in with pinned manifests, fenced leases and durable replay implemented; legacy-write fencing and revision retries next |
+| 5 | Robust checkout/check-in, lifecycle, revisions and datasets | Implemented: atomic part/assembly check-in, legacy-write fencing, recoverable revision creation and read-only recovery diagnostics; operational gates remain in Phase 6 |
 | 6 | Security, testing, backup/recovery and operational hardening | Consolidate production-readiness evidence |
 | 7 | Addon Manager distribution and stable deployment | Requires licensing, distribution approval and operational gates |
 | 8 | Web interface, ERPNext and future integrations | Browsing plus user/password/project administration, my checkouts and scoped activity implemented locally; P/A/M descriptions/material assignment and S mass enrichment delivered; general CAD/BOM editing and ERP integration deferred |
 
-The user approved bringing basic web browsing forward. Phase 5 remains the
-backend reliability workstream; the component catalog above is delivered for
+The user approved bringing basic web browsing forward. Phase 5 reliability
+implementation is delivered; Phase 6 retains operational hardening. The component catalog above is delivered for
 user pilot testing. The first web increment is served at `/app/`
 and provides authorized project/item browsing, exact revision history, datasets,
 where-used and direct/multilevel BOM views. User-approved account/project management, my checkouts and activity history

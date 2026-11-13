@@ -106,7 +106,12 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=1024)
 
 
-class CheckInRequest(BaseModel):
+class CheckoutTokenRequest(BaseModel):
+    expected_checkout_id: UUID
+    expected_checkout_version: int = Field(ge=1)
+
+
+class CheckInRequest(CheckoutTokenRequest):
     change_note: str = Field(default="", max_length=2000)
 
 
@@ -115,6 +120,8 @@ class LifecycleTransitionRequest(BaseModel):
 
 
 class NewRevisionRequest(BaseModel):
+    operation_id: UUID
+    expected_source_revision_id: UUID
     change_note: str = Field(min_length=1, max_length=2000)
 
 
@@ -144,7 +151,7 @@ class CADReferenceRequest(BaseModel):
     target_object_name: str = Field(min_length=1, max_length=200)
 
 
-class DatasetManifestRequest(BaseModel):
+class DatasetManifestRequest(CheckoutTokenRequest):
     model_config = {"extra": "forbid"}
     source_file_id: UUID
     profile: str = "freecad-app-link-v1"
@@ -512,6 +519,7 @@ def part_checkin_status(
         raise HTTPException(status_code=404, detail="check-in operation not found") from error
 
 
+@router.post("/revisions/{revision_id}/checkin/fenced", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 @router.post(
     "/revisions/{revision_id}/checkin",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -519,12 +527,12 @@ def part_checkin_status(
 )
 def check_in(
     revision_id: UUID,
-    payload: CheckInRequest | None = None,
+    payload: CheckInRequest,
     user: User = Depends(current_user),
     revisions: RevisionService = Depends(get_revision_service),
 ):
     try:
-        revisions.check_in(user, str(revision_id), payload.change_note if payload else "")
+        revisions.check_in(user, str(revision_id), payload.change_note, expected_checkout_id=str(payload.expected_checkout_id), expected_checkout_version=payload.expected_checkout_version)
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Forbidden as error:
@@ -558,6 +566,7 @@ def transition_lifecycle(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@router.post("/items/{item_id}/revisions/recoverable", status_code=status.HTTP_201_CREATED)
 @router.post("/items/{item_id}/revisions", status_code=status.HTTP_201_CREATED)
 def create_next_revision(
     item_id: UUID,
@@ -566,7 +575,7 @@ def create_next_revision(
     revisions: RevisionService = Depends(get_revision_service),
 ):
     try:
-        revision, checkout = revisions.create_next_revision(user, str(item_id), payload.change_note)
+        revision, checkout = revisions.create_next_revision(user, str(item_id), payload.change_note, operation_id=str(payload.operation_id), expected_source_revision_id=str(payload.expected_source_revision_id))
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Forbidden as error:
@@ -575,6 +584,21 @@ def create_next_revision(
         raise HTTPException(status_code=409, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+    return _revision_creation_response(revision, checkout)
+
+
+@router.get("/items/{item_id}/revision-operations/{operation_id}")
+def revision_operation(item_id: UUID, operation_id: UUID, user: User = Depends(current_user), revisions: RevisionService = Depends(get_revision_service)):
+    try:
+        revision, checkout = revisions.revision_operation(user, str(item_id), str(operation_id))
+    except NotFound as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except Forbidden as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    return _revision_creation_response(revision, checkout)
+
+
+def _revision_creation_response(revision, checkout):
     return {
         "id": revision.id,
         "item_id": revision.item_id,
@@ -697,12 +721,15 @@ def where_used(
         raise HTTPException(status_code=404, detail="item not found") from error
 
 
+@router.post("/revisions/{revision_id}/datasets/fenced", status_code=status.HTTP_201_CREATED)
 @router.post("/revisions/{revision_id}/datasets", status_code=status.HTTP_201_CREATED)
 def attach_dataset_file(
     revision_id: UUID,
     file: UploadFile = MultipartFile(...),
     dataset_type: DatasetType = Form(...),
     name: str | None = Form(default=None, max_length=200),
+    expected_checkout_id: UUID = Form(...),
+    expected_checkout_version: int = Form(..., ge=1),
     user: User = Depends(current_user),
     authorization: AuthorizationService = Depends(get_authorization_service),
     revisions: RevisionService = Depends(get_revision_service),
@@ -720,6 +747,8 @@ def attach_dataset_file(
             filename=file.filename,
             media_type=file.content_type,
             source=file.file,
+            expected_checkout_id=str(expected_checkout_id),
+            expected_checkout_version=expected_checkout_version,
         )
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
@@ -809,6 +838,7 @@ def get_dataset_manifest(
         ) from error
 
 
+@router.post("/datasets/{dataset_id}/manifest/fenced", status_code=status.HTTP_201_CREATED)
 @router.post("/datasets/{dataset_id}/manifest", status_code=status.HTTP_201_CREATED)
 def attach_dataset_manifest(
     dataset_id: UUID,
@@ -826,6 +856,8 @@ def attach_dataset_manifest(
                 for reference in payload.references
             ],
             payload.profile,
+            expected_checkout_id=str(payload.expected_checkout_id),
+            expected_checkout_version=payload.expected_checkout_version,
         )
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error

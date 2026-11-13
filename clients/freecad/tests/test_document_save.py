@@ -380,6 +380,7 @@ def test_new_revision_opens_distinct_document_and_preserves_live_parent_targets(
         validate_references=lambda refs: None,
         prepare_working=lambda root: clone.FileName,
         copy_revision_source=lambda *args: events.append(("copy", args)),
+        resume_revision_creation=lambda *args: None,
         create_next_revision=lambda *args: {"id": "B", "label": "B"},
     )
     monkeypatch.setattr(commands.Session, "require_client", lambda: client)
@@ -409,6 +410,7 @@ def test_new_revision_opens_distinct_document_and_preserves_live_parent_targets(
 
     monkeypatch.setattr(commands, "_upload_native", upload)
     monkeypatch.setattr(commands, "information", lambda *args: None)
+    monkeypatch.setattr(commands.FreeCAD, "listDocuments", lambda: {}, raising=False)
     commands.NewRevisionCommand().Activated()
     assert not commands._test_errors
     assert source_metadata.RevisionId == "A"

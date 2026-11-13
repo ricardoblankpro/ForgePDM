@@ -1,4 +1,4 @@
-# Upgrade and validation — addon 0.14.0 / schema 16
+# Upgrade and validation — addon 0.15.0 / schema 17
 
 The backend runs separately from FreeCAD. Use Python 3.11+ and `uv`; the native
 material workflow is validated on Linux with FreeCAD 1.1.4. Other FreeCAD/platform
@@ -20,7 +20,7 @@ combinations have not received the same acceptance coverage.
    uv run --project clients/freecad --extra dev --locked python clients/freecad/tools/addon.py build
    ```
 
-   The archive is `clients/freecad/dist/ForgePDM-0.14.0.zip`. Replace the previous
+   The archive is `clients/freecad/dist/ForgePDM-0.15.0.zip`. Replace the previous
    `Mod/ForgePDM` installation with the archive contents; do not overlay old files.
    Restart FreeCAD after a normal installation. Do not install the backend package
    or another Qt binding into FreeCAD.
@@ -31,7 +31,7 @@ combinations have not received the same acceptance coverage.
    ```
 
    Startup applies unapplied SQLite migrations transactionally. The current schema
-   is 16. Migration 13 extends the shared catalog to M; 14 adds simple descriptions;
+   is 17. Migration 17 adds revision-operation replay records. Migration 13 extends the shared catalog to M; 14 adds simple descriptions;
    15 adds physical links and native mass evidence; 16 adds S mass references.
    Addon 0.11.0 added fallback statuses/optimistic tokens using that existing table;
    upgrade backend code as well even though the schema version stays 16.
@@ -134,3 +134,17 @@ Current evidence and limitations are linked from [DEVELOPMENT_STATUS.md](../DEVE
 
 Addon 0.12.0 requires the updated assembly-mass API despite unchanged schema 16.
 See [assembly mass](assembly-mass.md) for published-BOM scope and limitations.
+
+## Phase 5 upgrade (0.15.0)
+
+Upgrade backend and addon together: protected upload/manifest/check-in routes
+require exact checkout tokens. Old clients receive validation errors; new clients
+use explicit routes which older servers cannot silently accept without fencing.
+Schema 17 adds revision replay records. Preserve the local revision journals under
+`$XDG_STATE_HOME/forgepdm/revision-operations` (default `~/.local/state`) alongside
+CAD workspaces. No passwords/tokens are stored there.
+
+With the backend stopped, run `uv run forgepdm recovery-report` to inspect database,
+blob integrity, incomplete native uploads and unreferenced/staging candidates.
+The report never deletes files. Review candidates against an offline backup before
+manual cleanup. See ADR-019 for replay and recovery boundaries.

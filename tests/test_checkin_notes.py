@@ -54,10 +54,11 @@ def test_api_accepts_missing_or_optional_checkin_note(backend, monkeypatch, tmp_
     original = backend.items.get_item(item.id)[1].change_note
     token, _, _ = backend.auth.login("editor", TEST_PASSWORD)
     with TestClient(create_app(backend.database.path)) as client:
+        checkout = backend.revisions.current_checkout(backend.users["editor"], item.current_revision_id)
         response = client.post(
             f"/api/v1/revisions/{item.current_revision_id}/checkin",
             headers={"Authorization": "Bearer " + token},
-            **({"json": payload} if payload is not None else {}),
+            json={**(payload or {}), "expected_checkout_id": checkout.id, "expected_checkout_version": checkout.version},
         )
     assert response.status_code == 204
     assert (

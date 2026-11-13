@@ -1,0 +1,66 @@
+// Isolated real Chrome acceptance for protected description check-in and revision replay.
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+const directory=process.argv[2];
+const {chromium}=await import(process.env.FORGEPDM_PLAYWRIGHT);
+const config=JSON.parse(await fs.readFile(path.join(directory,'connection.json'),'utf8'));
+const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+const page=await browser.newPage();
+const checks=[],errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+const check=(label,condition)=>{assert.ok(condition,label);checks.push(label);};
+try {
+  await page.goto(config.url+'/app/');
+  await page.locator('#username').fill('web-admin');
+  await page.locator('#password').fill(config.password);
+  const login=page.waitForResponse(r=>r.url().endsWith('/auth/login')&&r.ok());
+  await page.locator('#login-button').click();
+  const token=(await(await login).json()).access_token;
+  const call=async(method,url,data)=>{const r=await page.request.fetch(config.url+'/api/v1'+url,{method,headers:{Authorization:`Bearer ${token}`},data});assert.ok(r.ok(),await r.text());return r.status()===204?null:r.json();};
+  const item=await call('POST','/items',{kind:'part',number_series:'M',name:'Phase 5 browser material',description:'Recovery fixture'});
+  await page.evaluate(item=>{location.hash=new URLSearchParams({item:item.id,revision:item.current_revision_id}).toString();},item);
+  await page.getByRole('tab',{name:'Description',exact:true}).click();
+  const checkin=page.getByRole('button',{name:'Check in',exact:true});
+  await checkin.waitFor();
+  await call('POST',`/revisions/${item.current_revision_id}/checkout/renew`);
+  const stale=page.waitForResponse(r=>r.url().endsWith('/checkin/fenced'));
+  await checkin.click();
+  check('description check-in rejects a token renewed after rendering',(await stale).status()===409);
+  check('stale check-in preserves the checkout',!!await call('GET',`/revisions/${item.current_revision_id}/checkout`));
+  await page.getByRole('tab',{name:'Description',exact:true}).click();
+  const committed=page.waitForResponse(r=>r.url().endsWith('/checkin/fenced'));
+  await checkin.click();
+  check('refreshed checkout token checks in successfully',(await committed).status()===204);
+  await call('POST',`/revisions/${item.current_revision_id}/lifecycle`,{target:'released'});
+  // Load fresh revision metadata after release.
+  await page.evaluate(()=>{location.hash='';});
+  await page.locator('#detail').waitFor({state:'hidden'}).catch(()=>{});
+  await page.evaluate(item=>{location.hash=new URLSearchParams({item:item.id,revision:item.current_revision_id}).toString();},item);
+  await page.getByRole('tab',{name:'Description',exact:true}).click();
+  const create=page.getByRole('button',{name:'Create new revision',exact:true});
+  await create.waitFor();
+  let operation;
+  await page.route('**/revisions/recoverable',async route=>{
+    operation=route.request().postDataJSON().operation_id;
+    const result=await route.fetch();
+    assert.equal(result.status(),201);
+    await route.abort('failed');
+  });
+  page.once('dialog',dialog=>dialog.accept('Browser retry fixture'));
+  await create.click();
+  await page.getByRole('alert').filter({hasText:'fetch'}).waitFor();
+  check('server commits one next revision despite response loss',(await call('GET',`/items/${item.id}/revisions`)).items.length===2);
+  const journal=await page.evaluate(()=>Object.entries(localStorage).find(([key])=>key.startsWith('forgepdm.revision.v1:'))?.[1]);
+  check('browser retains original operation without credentials',JSON.parse(journal).operation_id===operation&&!journal.includes('access_token'));
+  await page.unroute('**/revisions/recoverable');
+  let prompts=0;
+  page.on('dialog',dialog=>{prompts++;dialog.dismiss();});
+  await create.click();
+  await page.waitForFunction(source=>new URLSearchParams(location.hash.slice(1)).get('revision')!==source,item.current_revision_id);
+  check('retry recovers original revision without another note',prompts===0&&(await call('GET',`/items/${item.id}/revisions`)).items.length===2);
+  check('no unhandled browser exceptions',errors.length===0);
+  await page.screenshot({path:path.join(directory,'phase5-browser.png'),fullPage:true});
+  await fs.writeFile(path.join(directory,'phase5-browser-report.json'),JSON.stringify({status:'passed',checks,pageErrors:errors},null,2));
+  console.log(JSON.stringify({checks:checks.length,pageErrors:errors.length}));
+} finally {await browser.close();}

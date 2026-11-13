@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "checks": [
+    "description check-in rejects a token renewed after rendering",
+    "stale check-in preserves the checkout",
+    "refreshed checkout token checks in successfully",
+    "server commits one next revision despite response loss",
+    "browser retains original operation without credentials",
+    "retry recovers original revision without another note",
+    "no unhandled browser exceptions"
+  ],
+  "pageErrors": []
+}

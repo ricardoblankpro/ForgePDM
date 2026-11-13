@@ -1,8 +1,9 @@
 """Checkout leases, check-in, lifecycle transitions, and revision creation."""
 
 import json
+from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.domain.entities import (
@@ -163,6 +164,12 @@ class RevisionService:
             raise Conflict("an active checkout owned by this user is required")
         return _checkout(row)
 
+    def require_checkout_token(self, user, revision_id, checkout_id, version, connection=None):
+        checkout = self.require_checkout_owner(user, revision_id, connection)
+        if checkout.id != checkout_id or checkout.version != version:
+            raise Conflict("checkout changed; refresh and review the operation before retrying")
+        return checkout
+
     def current_checkout(self, user: User, revision_id: str) -> Checkout | None:
         with self.database.connection() as connection:
             self.authorization.require_read_revision(user, revision_id, connection)
@@ -172,7 +179,7 @@ class RevisionService:
             ).fetchone()
         return _checkout(row) if row is not None else None
 
-    def check_in(self, user: User, revision_id: str, change_note: str = "") -> None:
+    def check_in(self, user: User, revision_id: str, change_note: str = "", *, expected_checkout_id=None, expected_checkout_version=None) -> None:
         change_note = change_note.strip()
         if len(change_note) > 2000:
             raise ValueError("check-in note must contain at most 2000 characters")
@@ -180,6 +187,8 @@ class RevisionService:
         with self.database.transaction() as connection:
             self.authorization.require_edit_revision(user, revision_id, connection)
             checkout = self.require_checkout_owner(user, revision_id, connection)
+            if expected_checkout_id is not None:
+                self.require_checkout_token(user, revision_id, expected_checkout_id, expected_checkout_version, connection)
             connection.execute(
                 "UPDATE item_revisions SET change_note = CASE WHEN ? = '' THEN change_note ELSE ? END, "
                 "modified_at = ? WHERE id = ?",
@@ -261,20 +270,36 @@ class RevisionService:
             )
 
     def create_next_revision(
-        self, user: User, item_id: str, change_note: str
+        self, user: User, item_id: str, change_note: str, *, operation_id=None, expected_source_revision_id=None
     ) -> tuple[ItemRevision, Checkout]:
         change_note = change_note.strip()
         if not change_note or len(change_note) > 2000:
             raise ValueError("revision change note must contain 1 to 2000 characters")
+        if operation_id is not None:
+            operation_id = str(UUID(operation_id))
+            if expected_source_revision_id is None:
+                raise ValueError("expected source revision is required")
+            expected_source_revision_id = str(UUID(expected_source_revision_id))
         now = _now()
         expires = now + CHECKOUT_DURATION
         with self.database.transaction() as connection:
+            if operation_id is not None:
+                existing = connection.execute("SELECT * FROM revision_operations WHERE actor_id=? AND operation_id=?", (user.id, operation_id)).fetchone()
+                if existing is not None:
+                    self.authorization.require_read_revision(user, existing["source_revision_id"], connection)
+                    if (existing["item_id"], existing["source_revision_id"], existing["change_note"]) != (item_id, expected_source_revision_id, change_note):
+                        raise Conflict("revision operation key was already used for different intent")
+                    result = self._creation_result(existing["result_json"])
+                    self.authorization.require_read_revision(user, result[0].id, connection)
+                    return result
             item = connection.execute(
                 "SELECT current_revision_id FROM items WHERE id = ?", (item_id,)
             ).fetchone()
             if item is None:
                 raise NotFound("item not found")
             previous_id = item["current_revision_id"]
+            if expected_source_revision_id is not None and previous_id != expected_source_revision_id:
+                raise Conflict("source revision changed; review the current revision before retrying")
             self.authorization.require_manage_revision(user, previous_id, connection)
             previous = connection.execute(
                 "SELECT lifecycle_state FROM item_revisions WHERE id = ?", (previous_id,)
@@ -400,7 +425,29 @@ class RevisionService:
             checkout_row = connection.execute(
                 "SELECT * FROM checkouts WHERE id = ?", (checkout_id,)
             ).fetchone()
-            return revision, _checkout(checkout_row)
+            checkout = _checkout(checkout_row)
+            if operation_id is not None:
+                result = json.dumps({"revision": asdict(revision), "checkout": asdict(checkout)}, default=lambda value: value.isoformat())
+                connection.execute("INSERT INTO revision_operations VALUES (?,?,?,?,?,?)", (user.id, operation_id, item_id, expected_source_revision_id, change_note, result))
+            return revision, checkout
+
+    @staticmethod
+    def _creation_result(payload):
+        data = json.loads(payload)
+        revision = data["revision"]
+        revision["created_at"] = datetime.fromisoformat(revision["created_at"])
+        revision["lifecycle_state"] = LifecycleState(revision["lifecycle_state"])
+        return ItemRevision(**revision), _checkout(data["checkout"])
+
+    def revision_operation(self, user, item_id, operation_id):
+        with self.database.connection() as connection:
+            row = connection.execute("SELECT * FROM revision_operations WHERE actor_id=? AND operation_id=? AND item_id=?", (user.id, str(UUID(operation_id)), item_id)).fetchone()
+            if row is None:
+                raise NotFound("revision operation not found")
+            revision, checkout = self._creation_result(row["result_json"])
+            self.authorization.require_read_revision(user, revision.id, connection)
+            self.authorization.require_read_revision(user, row["source_revision_id"], connection)
+            return revision, checkout
 
     @staticmethod
     def _audit(connection, actor_id, event_type, entity_type, entity_id, occurred_at, details):

@@ -69,6 +69,7 @@ class ForgePDMClient:
         self.token = None
         self.expires_at = None
         self._local = local()
+        self._dataset_checkouts = {}
 
     @contextmanager
     def operation(self, context):
@@ -261,10 +262,14 @@ class ForgePDMClient:
             raise
 
     def attach_manifest(self, dataset_id, source_file_id, references):
+        token = self._dataset_checkouts.get(dataset_id)
+        if token is None:
+            raise ForgePDMError("Upload the dataset in this session before attaching its manifest")
         return self._json_request(
             "POST",
-            "/api/v1/datasets/" + self._quote(dataset_id) + "/manifest",
+            "/api/v1/datasets/" + self._quote(dataset_id) + "/manifest/fenced",
             {
+                **token,
                 "source_file_id": source_file_id,
                 "profile": "freecad-fasteners-v1"
                 if any(r["property_name"] == "BaseObject" for r in references)
@@ -510,11 +515,14 @@ class ForgePDMClient:
         if not self.token:
             raise ForgePDMError("Log in to ForgePDM before uploading")
         file_path = os.path.abspath(file_path)
-        fields = [("dataset_type", dataset_type)]
+        token = self._checkout_token(revision_id)
+        fields = [("dataset_type", dataset_type), *token.items()]
         if name:
             fields.append(("name", name))
-        endpoint = "/api/v1/revisions/{}/datasets".format(self._quote(revision_id))
-        return self._multipart_file(endpoint, file_path, fields)
+        endpoint = "/api/v1/revisions/{}/datasets/fenced".format(self._quote(revision_id))
+        dataset = self._multipart_file(endpoint, file_path, fields)
+        self._dataset_checkouts[dataset["id"]] = token
+        return dataset
 
     def _multipart_file(self, endpoint, file_path, fields):
         if not self.token:
@@ -699,11 +707,20 @@ class ForgePDMClient:
             if os.path.exists(temporary):
                 os.remove(temporary)
 
+    def _checkout_token(self, revision_id):
+        checkout = self.get_checkout(revision_id)
+        if not checkout:
+            raise ForgePDMError("Acquire a checkout before publishing")
+        return {
+            "expected_checkout_id": checkout["id"],
+            "expected_checkout_version": checkout["version"],
+        }
+
     def checkin(self, revision_id, change_note=""):
         return self._json_request(
             "POST",
-            "/api/v1/revisions/{}/checkin".format(self._quote(revision_id)),
-            {"change_note": change_note},
+            "/api/v1/revisions/{}/checkin/fenced".format(self._quote(revision_id)),
+            {"change_note": change_note, **self._checkout_token(revision_id)},
         )
 
     def transition(self, revision_id, target):
@@ -713,12 +730,17 @@ class ForgePDMClient:
             {"target": target},
         )
 
-    def create_next_revision(self, item_id, change_note):
-        return self._json_request(
-            "POST",
-            "/api/v1/items/{}/revisions".format(self._quote(item_id)),
-            {"change_note": change_note},
-        )
+    def create_next_revision(
+        self, item_id, change_note, source_revision_id, working_copy_path=None
+    ):
+        from .revision_creation import create
+
+        return create(self, item_id, change_note, source_revision_id, working_copy_path)
+
+    def resume_revision_creation(self, item_id, source_revision_id):
+        from .revision_creation import resume
+
+        return resume(self, item_id, source_revision_id)
 
     def acquire_checkout(self, revision_id):
         return self._json_request(

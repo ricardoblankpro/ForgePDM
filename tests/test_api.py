@@ -46,11 +46,12 @@ def test_authenticated_item_file_lifecycle_api(tmp_path, monkeypatch):
         assert item["number"] == "P000001"
         assert item["current_checkout"]["user_id"] == user_id
 
+        checkout_token = {"expected_checkout_id": item["current_checkout"]["id"], "expected_checkout_version": item["current_checkout"]["version"]}
         content = b"CAD bytes uploaded through API"
         uploaded = client.post(
             f"/api/v1/revisions/{item['current_revision_id']}/datasets",
             headers=headers,
-            data={"dataset_type": "native_cad", "name": "Native model"},
+            data={"dataset_type": "native_cad", "name": "Native model", **checkout_token},
             files={"file": ("part.FCStd", content, "application/octet-stream")},
         )
         assert uploaded.status_code == 201
@@ -69,7 +70,7 @@ def test_authenticated_item_file_lifecycle_api(tmp_path, monkeypatch):
         checkin = client.post(
             f"/api/v1/revisions/{item['current_revision_id']}/checkin",
             headers=headers,
-            json={"change_note": "First API check-in"},
+            json={"change_note": "First API check-in", **checkout_token},
         )
         assert checkin.status_code == 204
         release = client.post(
@@ -82,7 +83,7 @@ def test_authenticated_item_file_lifecycle_api(tmp_path, monkeypatch):
         next_revision = client.post(
             f"/api/v1/items/{item['id']}/revisions",
             headers=headers,
-            json={"change_note": "Second API revision"},
+            json={"change_note": "Second API revision", "operation_id":str(uuid4()), "expected_source_revision_id": item["current_revision_id"]},
         )
         assert next_revision.status_code == 201
         assert next_revision.json()["label"] == "B"

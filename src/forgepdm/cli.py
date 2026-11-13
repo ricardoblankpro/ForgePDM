@@ -33,9 +33,18 @@ def main() -> None:
     grant.add_argument("project_id")
     grant.add_argument("user_id")
     grant.add_argument("--role", choices=("owner", "editor", "viewer"), default="editor")
+    commands.add_parser("recovery-report", help="read-only database/blob integrity and orphan diagnostics; stop uploads first")
     args = parser.parse_args()
     path = Path(os.environ.get("FORGEPDM_DATABASE", "var/forgepdm.sqlite3"))
     database = Database(path)
+    if args.command == "recovery-report":
+        import json
+        from forgepdm.application.recovery import recovery_report
+        from forgepdm.infrastructure.storage import FileStorage
+        if not path.is_file():
+            parser.error("database does not exist")
+        print(json.dumps(recovery_report(database, FileStorage(Path(os.environ.get("FORGEPDM_FILE_ROOT", "var/files")))), indent=2))
+        return
     database.initialize()
     if args.command == "create-user":
         args.username = args.username.strip()

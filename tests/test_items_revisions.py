@@ -12,7 +12,7 @@ def test_migrations_are_repeatable_and_item_creation_is_atomic(backend):
             row["version"]
             for row in connection.execute("SELECT version FROM schema_version ORDER BY version")
         ]
-    assert versions == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    assert versions == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
 
     first = create_item(backend, kind="part")
     second = create_item(backend, kind="assembly", name="Test Assembly")

@@ -167,6 +167,8 @@ def test_manifest_http_validation_auth_and_immutable_conflict(backend):
         token = client.post("/api/v1/auth/login", json={"username": "editor", "password": TEST_PASSWORD}).json()["access_token"]
         headers = {"Authorization": "Bearer " + token}
         assert client.get(path, headers=headers).status_code == 404
+        checkout = backend.revisions.current_checkout(backend.users["editor"], _parent.current_revision_id)
+        payload.update(expected_checkout_id=checkout.id, expected_checkout_version=checkout.version)
         assert client.post(path, headers=headers, json={**payload, "source_file_id": "invalid"}).status_code == 422
         assert client.post(path, headers=headers, json={**payload, "surprise": True}).status_code == 422
         assert client.post(path, headers=headers, json=payload).status_code == 201

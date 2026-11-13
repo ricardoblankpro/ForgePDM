@@ -1,3 +1,4 @@
+import {createRevision} from "./reliability.mjs";
 import {formatMass} from "./mass-display.mjs";
 // Simple catalog descriptions and revision-bound material selection.
 export function materialsUI({api, el, button: makeButton, state, descriptionSaved}) {
@@ -66,7 +67,7 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
       if(!editable) {
         host.append(el("p",{},revision.lifecycle_state==="working"?"Acquire a checkout to edit.":"Create a new revision to change this description."));
         if(revision.lifecycle_state==="working")host.append(button("Acquire checkout",async()=>{try{await api.request(`/revisions/${revision.id}/checkout`,{method:"POST"});await render(host,item,revision);}catch(e){error(host,e);}}));
-        if(revision.lifecycle_state==="released")host.append(button("Create new revision",async()=>{const note=window.prompt("Revision change note");if(!note)return;try{const r=await api.request(`/items/${item.id}/revisions`,{method:"POST",body:{change_note:note}});location.hash=new URLSearchParams({item:item.id,revision:r.id}).toString();}catch(e){error(host,e);}}));
+        if(revision.lifecycle_state==="released")host.append(button("Create new revision",async()=>{try{const r=await createRevision(api,item.id,revision.id,()=>window.prompt("Revision change note"));if(!r)return;location.hash=new URLSearchParams({item:item.id,revision:r.id}).toString();}catch(e){error(host,e);}}));
         return;
       }
       async function save(description,material_revision_id=null) {
@@ -89,7 +90,7 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
         const description=field(series==="A"?"Assembly description":"Material description",current.description);
         host.append(description.node,button("Save description",()=>save(description.input.value)));
       }
-      host.append(button("Check in",async()=>{try{await api.request(`/revisions/${revision.id}/checkin`,{method:"POST",body:{}});await render(host,item,revision);}catch(e){error(host,e);}}));
+      host.append(button("Check in",async()=>{try{await api.request(`/revisions/${revision.id}/checkin/fenced`,{method:"POST",body:{expected_checkout_id:checkout.id,expected_checkout_version:checkout.version}});await render(host,item,revision);}catch(e){error(host,e);}}));
     }catch(e){error(host,e);}
   }
   function create(host,navigate) {

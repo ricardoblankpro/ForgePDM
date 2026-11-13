@@ -90,7 +90,7 @@ The harness is `clients/freecad/tests/freecad_atomic_checkin_integration.py`, us
 `freecad_phase4_smoke.py --serve CASE_DIR` for disposable authenticated backend
 setup. Credentials stay in that private temporary fixture, never in this report.
 
-## Remaining Phase 5 work
+## Follow-ups recorded after increment 1 (delivered by increments 2–3)
 
 1. Assembly manifests and exact reference validation are implemented in increment 2 below.
 2. Fence remaining legacy dataset/manifest/check-in writes and review compatibility.
@@ -127,3 +127,16 @@ recovers the original pins without duplicate publication, and retains unsaved
 assembly edits. No user engineering data is used or changed.
 
 Evidence: [assembly live report](validation/phase5-atomic-assembly-checkin-2026-11-02.json).
+
+## Increment 3 — fenced legacy writes and revision recovery (0.15.0)
+
+The remaining implementation is delivered in [ADR-019](decisions/ADR-019-phase5-write-fencing-and-revision-recovery.md).
+Ordinary upload/manifest/check-in require exact checkout tokens; the addon uses
+explicit protected routes. Revision creation has atomic actor-scoped replay and
+a durable local journal, with native command recovery of the original CAD copy.
+Schema 17 adds only revision-operation records. Read-only `forgepdm recovery-report`
+provides integrity and incomplete-upload/orphan diagnostics. No automatic deletion.
+
+The first-increment statements above about assemblies using the legacy check-in
+path are historical; increment 2 superseded them. Phase 6 retains production
+security, backup/restore automation, cross-platform acceptance and automated GC.

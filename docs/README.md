@@ -1,6 +1,6 @@
 # ForgePDM documentation
 
-Current delivery: **FreeCAD addon 0.11.0**, **backend SQLite schema 16**.
+Current delivery: **FreeCAD addon 0.15.0**, **backend SQLite schema 17**.
 Start with [the project README](../README.md) and
 [development handoff](../DEVELOPMENT_STATUS.md).
 
@@ -21,7 +21,7 @@ Start with [the project README](../README.md) and
 ## Architecture and delivery boundaries
 
 - [Architecture](architecture.md), [domain model](domain-model.md) and [roadmap](roadmap.md)
-- [Phase 5 reliability work and remaining debt](phase5-reliable-checkin.md)
+- [Phase 5 reliability and recovery](phase5-reliable-checkin.md)
 - [ADR-013: current simple descriptions](decisions/ADR-013-simple-material-and-assembly-descriptions.md)
 - [ADR-014: native physical materials and part mass](decisions/ADR-014-physical-material-links-and-part-mass.md)
 - [ADR-015: supplier reference mass](decisions/ADR-015-supplier-reference-mass.md)

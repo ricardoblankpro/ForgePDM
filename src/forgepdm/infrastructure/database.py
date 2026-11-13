@@ -353,6 +353,17 @@ CREATE TABLE revision_reference_mass (revision_id TEXT PRIMARY KEY REFERENCES it
 CREATE TABLE supplier_mass_feed (specification_key TEXT PRIMARY KEY, payload_json TEXT NOT NULL);
 CREATE TABLE supplier_mass_attempts (revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id), attempted_at TEXT NOT NULL);
 """),
+    (17, """
+CREATE TABLE revision_operations (
+    actor_id TEXT NOT NULL REFERENCES users(id),
+    operation_id TEXT NOT NULL,
+    item_id TEXT NOT NULL REFERENCES items(id),
+    source_revision_id TEXT NOT NULL REFERENCES item_revisions(id),
+    change_note TEXT NOT NULL,
+    result_json TEXT NOT NULL,
+    PRIMARY KEY(actor_id, operation_id)
+);
+"""),
 )
 
 

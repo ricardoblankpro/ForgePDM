@@ -394,3 +394,18 @@ Native mass properties refresh when their normal assignment/recompute runs;
 installation does not rewrite existing CAD documents. Newer-revision notices load
 in the background and never replace pinned revisions. Previous custom exclusions
 cannot be inferred from the stored BOM; review each CAD replacement.
+
+## Checkout fencing and revision recovery (0.15.0)
+
+Upgrade the backend together with the addon (schema 17). Ordinary uploads,
+manifest attachment and check-in require an exact checkout token. Renewing or
+reacquiring the checkout while a write is in flight rejects that write; review
+before retrying. Checkouts still last eight hours.
+
+Create Next Revision retains its original operation and prepared working copy.
+After a timeout, invoke it again from the same source revision: it recovers before
+asking for another note or making another copy. Existing dirty target documents
+are preserved. Credential-free revision journals live under
+`$XDG_STATE_HOME/forgepdm/revision-operations` (default `~/.local/state`); retain them
+with workspace backups. Missing copies or corrupt journals need explicit recovery,
+not a new operation against an uncertain server result. See ADR-019.

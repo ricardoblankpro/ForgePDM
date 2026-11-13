@@ -86,3 +86,10 @@ manifest matches. Nonempty manifests use a new explicit HTTP route to avoid old
 servers silently ignoring an unknown multipart field. CAD capture remains the
 adapter's responsibility; BOM synchronization stays separate. Legacy write fencing
 and revision-creation retries remain subsequent increments.
+
+## Increment 3 — 2026-11-12
+
+Legacy-write fencing, recoverable revision creation and read-only recovery
+diagnostics are implemented in [ADR-019](ADR-019-phase5-write-fencing-and-revision-recovery.md).
+Its explicit protected routes and coordinated backend/addon upgrade supersede
+the initial legacy-client compatibility allowance above.

@@ -58,12 +58,12 @@ curl -X POST http://127.0.0.1:8000/api/v1/auth/login \
 
 Use the returned `access_token` as `Authorization: Bearer TOKEN` on `/api/v1/items`. Use `forgepdm set-password USERNAME` to reset a local account's password; this revokes its active sessions. Passwords require at least 4 characters; numeric passwords are allowed. Existing passwords remain valid. `forgepdm set-role USERNAME admin` assigns the global administrator role. The database defaults to `var/forgepdm.sqlite3`; set `FORGEPDM_DATABASE` to use another path. `/health` reports service availability. API details are exposed by FastAPI's local `/docs` page.
 
-New items are automatically checked out to their creator for eight hours. Older Working revisions without a checkout can acquire one with `POST /api/v1/revisions/{revision_id}/checkout`. To attach a file to a checked out Working revision, use `POST /api/v1/revisions/{revision_id}/datasets` with multipart fields `file`, `dataset_type` (`native_cad`, `drawing`, `neutral`, `document`, or `other`), and optional `name`. List attachments with `GET /api/v1/revisions/{revision_id}/datasets` and download a file from the returned `download_url`. Check in with `POST /api/v1/revisions/{revision_id}/checkin` and body `{"change_note":"Initial design complete"}`, then release it with `POST /api/v1/revisions/{revision_id}/lifecycle` and body `{"target":"released"}`. A released item can get its next revision through `POST /api/v1/items/{item_id}/revisions` with a change note; the new revision is automatically checked out to its creator. Checkouts can also be renewed, inspected, or released through the `/api/v1/revisions/{revision_id}/checkout` routes. Admin override releases require a reason.
+New items are automatically checked out to their creator for eight hours. Older Working revisions without a checkout can acquire one with `POST /api/v1/revisions/{revision_id}/checkout`. To attach a file to a checked out Working revision, use `POST /api/v1/revisions/{revision_id}/datasets` with multipart fields `file`, `dataset_type` (`native_cad`, `drawing`, `neutral`, `document`, or `other`), optional `name`, and required `expected_checkout_id` / `expected_checkout_version` from the checkout response. List attachments with `GET /api/v1/revisions/{revision_id}/datasets` and download a file from the returned `download_url`. Check in with `POST /api/v1/revisions/{revision_id}/checkin` and body `{"change_note":"Initial design complete","expected_checkout_id":"CHECKOUT_UUID","expected_checkout_version":1}`, then release it with `POST /api/v1/revisions/{revision_id}/lifecycle` and body `{"target":"released"}`. A released item can get its next revision through `POST /api/v1/items/{item_id}/revisions` with `operation_id` (a fresh UUID), `expected_source_revision_id` and a change note; retry with the same intent after a timeout. The new revision is automatically checked out to its creator. Checkouts can also be renewed, inspected, or released through the `/api/v1/revisions/{revision_id}/checkout` routes. Admin override releases require a reason.
 
 For an assembly, replace its Working revision BOM using `PUT /api/v1/revisions/{revision_id}/bom` with `{"lines":[{"component_revision_id":"UUID","quantity":2,"position":1}]}`. Every line points to a specific component revision. `GET /api/v1/revisions/{revision_id}/bom?recursive=true` returns its nested structure, and `GET /api/v1/items/{item_id}/where-used` finds assemblies that use an item. Cycles are rejected, and an assembly can be released only after its direct component revisions are Released. A new assembly revision copies its previous BOM lines.
 
-Check-in notes are optional: `POST /api/v1/revisions/{revision_id}/checkin` accepts
-no body, `{}`, or an optional `change_note` of up to 2000 characters. Omitting or
+Check-in notes are optional: `POST /api/v1/revisions/{revision_id}/checkin` requires checkout ID/version and accepts
+an optional `change_note` of up to 2000 characters. Omitting or
 leaving the note blank preserves the existing revision note; the check-in is still
 audited and releases the owned checkout. The FreeCAD check-in command does not
 prompt for a note. Creating a new revision continues to require a change note.
@@ -81,9 +81,11 @@ responses without duplicate datasets or substitution of newer local edits.
 Nonempty manifests use the explicit `checkin-native-with-references` route;
 update/restart the backend together with the addon.
 
-Phase 5 remains in progress: separate legacy upload/manifest writes and revision
-creation still need further reliability work. See [transaction boundaries, API
-fields and remaining work](docs/phase5-reliable-checkin.md).
+Addon 0.15.0/backend schema 17 also fence ordinary upload/manifest/check-in writes
+and recover revision creation through durable actor-scoped operations. Upgrade
+backend/addon together. `uv run forgepdm recovery-report` provides read-only
+integrity and orphan diagnostics; stop writers before reviewing cleanup candidates.
+See [transaction boundaries, API fields and recovery limits](docs/phase5-reliable-checkin.md).
 
 ## Web GUI
 

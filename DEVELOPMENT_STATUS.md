@@ -1,5 +1,52 @@
 # Development status
 
+## 2026-11-12 — Phase 5 reliability completion (0.15.0 / schema 17)
+
+- Fence ordinary dataset uploads, immutable manifest attachment and legacy
+  check-in with exact checkout UUID/version, including final-transaction checks
+  after staging. Required public tokens reject older clients; explicit protected
+  addon routes reject older servers rather than silently weakening guarantees.
+  Native Check In remains the existing atomic snapshot/manifest operation.
+- Add actor-scoped revision-operation records in additive migration 17. Create,
+  copy-forward, checkout, audit and original replay result commit together.
+  Exact-source pins prevent unintended successive revisions; retries never alter
+  later leases. Status/replay require current access. Preserve eight-hour leases,
+  required revision notes and all established lifecycle/BOM rules.
+- Add durable credential-free revision journals and locking in the addon. Recover
+  the original result/prepared CAD copy before latest-source guards or another
+  note/copy; preserve an already open dirty target. Web description controls use
+  fenced check-in and durable browser revision intent with Web Locks where
+  available. Backend/addon must be upgraded together; refresh the browser.
+- Add read-only `uv run forgepdm recovery-report`: DB/FK checks, file hash/size
+  verification, incomplete native uploads, staging/unreferenced candidates and
+  completed operation counts. Stop writers for authoritative orphan review.
+  Never automatically delete files or substitute revision pins. See ADR-019 for
+  local-copy loss/corrupt-journal recovery boundaries and offline cleanup policy.
+- Validation: 240 backend tests, 379 addon tests (one optional Qt test skipped),
+  four Node test files; addon Ruff lint/format, manifest/archive, backend build and
+  web syntax checks pass. Backend regression includes independent-process
+  same/different-key revision races, rollback, migration preservation and lease
+  changes during upload. Full backend lint retains existing repository findings.
+- FreeCAD 1.1.4/Qt 6.8.3 acceptance: 28 atomic part/native-assembly checks plus
+  13 new checks for revision-response loss, fresh-client recovery, source/dirty
+  target preservation and stale legacy upload/manifest rejection. Source modules
+  were exercised in the pre-upgrade package; installed runtime verified afterward.
+  Chrome: seven new protected-control/revision-recovery checks plus 26 existing
+  browser checks, with no unhandled page exceptions. All mutation tests use
+  disposable backend/storage/CAD fixtures, never production engineering data.
+- Install 0.15.0 into both FreeCAD profiles; restart backend with original default
+  DB/storage and loopback configuration, applying schema 17. Backup under
+  var/backups/before-phase5-20261113T003223Z. All 38 previous tables and 202 stored
+  file hashes preserved; integrity/FKs pass. Both profiles match archive bytes,
+  served web assets match source and five protected/status routes are live.
+  Running FreeCAD reports 0.15.0 from installed module paths; refresh 28 retained
+  command objects while preserving session/client. No user documents were open.
+- Evidence: docs/validation/phase5-{atomic-native,recovery-native,browser,installed,
+  freecad-installed}-2026-11-12.json. Production PDM mutations were not exercised.
+- Phase 5 implementation and bounded local acceptance are delivered. Phase 6
+  retains automated backup/restore, production security, fully automated garbage
+  collection, clean-start/platform and wider multiuser operational acceptance.
+
 ## 2026-11-11 — Combined BOM review and mass presentation (0.14.0)
 
 - Display masses with at most three decimals in FreeCAD and web, omitting trailing
@@ -984,12 +1031,12 @@ before acting. Git history and the linked reports provide the detailed record.
   revision-pinned BOMs and immutable CAD dependency manifests.
 - Web GUI: browsing and controlled user/project/account management at `/app/`,
   served by the backend; see docs/web-gui.md and docs/web-management.md.
-- FreeCAD addon: **0.6.5**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.15.0**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 implements atomic part/assembly check-in, pinned manifests,
-  fenced leases and durable replay; legacy-write fencing and revision retries
-  remain pending. The original MVP roadmap has different phase numbering: use the active
+  fenced leases and durable replay; ordinary-write fencing, recoverable revision
+  creation and read-only recovery diagnostics are delivered in 0.15.0. The original MVP roadmap has different phase numbering: use the active
   development-direction table in [the roadmap](docs/roadmap.md).
 - Live validation has used Linux FreeCAD **1.1.4**, Python **3.11.14**,
   Qt **6.8.3**. Other runtime/platform combinations remain unverified.
@@ -1017,7 +1064,7 @@ before acting. Git history and the linked reports provide the detailed record.
   projection: legacy FeaturePython metadata can remain Touched after a save.
   Both clean-state guards remain enforced; unresolved edits are not discarded.
 
-## Latest validation
+## Historical validation — addon 0.5.1
 
 - **162 addon tests passed** after the 0.5.1 fix. The preceding 0.5.0 validation
   recorded **54 backend tests passed**; the latest fix did not change backend code.
@@ -1044,7 +1091,7 @@ Evidence:
 ## Next session
 
 1. Read root/nested `AGENTS.md`, this handoff and Git status before changes.
-   Current source and installed delivery are addon 0.14.0/backend schema 16. Standard Parts/shared
+   Current source and installed delivery are addon 0.15.0/backend schema 17. Standard Parts/shared
    catalog, simple P/A/M descriptions, physical P mass and bounded S supplier
    reference mass plus CAD/manual fallbacks are implemented. Use docs/material-management.md,
    docs/supplier-reference-mass.md and docs/upgrade-and-validation.md. The older
@@ -1056,11 +1103,11 @@ Evidence:
    actual object structure. Preserve open documents, edits, checkouts, immutable
    source bytes and exact revisions. Distinguish mocked tests, disposable native
    acceptance and local installation evidence.
-4. Remaining Phase 5 work is separate: legacy-write fencing, revision-creation
-   retries, crash/orphan diagnostics and broader failure/multiuser evidence. Start
-   with ADR-008 and docs/phase5-reliable-checkin.md when requested; propose major
-   architecture changes first. Production security, automated backup/restore,
-   clean-start/platform acceptance and distribution gates remain outstanding.
+4. Phase 5 write fencing, revision retries and bounded recovery diagnostics are
+   delivered. Read ADR-019 and docs/phase5-reliable-checkin.md for compatibility
+   and recovery boundaries. Phase 6 production security, automated backup/restore,
+   automated garbage collection, clean-start/platform acceptance and distribution
+   gates remain outstanding. Follow the user's next priority.
 
 ## Verification commands
 

@@ -1,0 +1,31 @@
+{
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "qt": "6.8.3",
+  "scope": "Disposable backend, CAD and local state; real native commands and worker HTTP",
+  "checks": [
+    "lost revision response is reported",
+    "one next revision exists after lost response",
+    "source file and live identity survive failed adoption",
+    "pending journal retains prepared CAD copy",
+    "fresh client recovers original revision into separate document",
+    "original revision retains identity geometry and bytes",
+    "recovered copy uploads once with exact manifest",
+    "server creates one operation and one next revision",
+    "recovery preserves an already open dirty target",
+    "native HTTP upload rejects renewed token",
+    "stale native upload creates no dataset",
+    "manifest uses original upload token and rejects renewal",
+    "all HTTP ran on worker thread"
+  ],
+  "status": "passed",
+  "existing_documents_preserved": true
+}

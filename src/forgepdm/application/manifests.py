@@ -111,7 +111,7 @@ class ManifestService:
             if cycle is not None:
                 raise Conflict("CAD dataset reference cycle is not allowed")
 
-    def attach(self, user, dataset_id, source_file_id, references, profile=PROFILE):
+    def attach(self, user, dataset_id, source_file_id, references, profile=PROFILE, *, expected_checkout_id=None, expected_checkout_version=None):
         if profile not in (PROFILE, FASTENERS_PROFILE):
             raise ValueError("unsupported reference manifest profile")
         references = self._references(references)
@@ -124,6 +124,8 @@ class ManifestService:
             source = self._dataset(connection, dataset_id)
             self.authorization.require_edit_revision(user, source["revision_id"], connection)
             self.revisions.require_checkout_owner(user, source["revision_id"], connection)
+            if expected_checkout_id is not None:
+                self.revisions.require_checkout_token(user, source["revision_id"], expected_checkout_id, expected_checkout_version, connection)
             if source["dataset_type"] != "native_cad":
                 raise Conflict("reference manifests require a native CAD dataset")
             self._dataset(connection, dataset_id, source_file_id)

@@ -1,3 +1,13 @@
+## 0.15.0 — Checkout fencing and revision recovery
+
+- Require exact checkout ID/version on ordinary upload, manifest and check-in;
+  protected routes fail explicitly against older servers.
+- Recover revision creation with durable, credential-free local intent and an
+  actor-scoped server operation result; retain the prepared working-copy path.
+- Backend schema 17 adds revision operation records. Read-only recovery diagnostics
+  report storage integrity, unreferenced candidates and incomplete native uploads.
+- Checkout duration, lifecycle rules and explicit BOM synchronization are unchanged.
+
 ## 0.14.0 — BOM review and mass presentation
 
 - Display mass with at most three decimals in FreeCAD and web, preserving full

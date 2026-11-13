@@ -43,23 +43,16 @@ def api(addon_root):
             "checkin",
             ("rev", "note"),
             "POST",
-            "/api/v1/revisions/rev/checkin",
+            "/api/v1/revisions/rev/checkin/fenced",
             {"change_note": "note"},
         ),
-        ("checkin", ("rev",), "POST", "/api/v1/revisions/rev/checkin", {"change_note": ""}),
+        ("checkin", ("rev",), "POST", "/api/v1/revisions/rev/checkin/fenced", {"change_note": ""}),
         (
             "transition",
             ("rev", "released"),
             "POST",
             "/api/v1/revisions/rev/lifecycle",
             {"target": "released"},
-        ),
-        (
-            "create_next_revision",
-            ("item", "note"),
-            "POST",
-            "/api/v1/items/item/revisions",
-            {"change_note": "note"},
         ),
         ("acquire_checkout", ("rev",), "POST", "/api/v1/revisions/rev/checkout", None),
         ("renew_checkout", ("rev",), "POST", "/api/v1/revisions/rev/checkout/renew", None),
@@ -74,6 +67,11 @@ def test_json_contract(api, monkeypatch, method, arguments, verb, path, payload)
         return {"ok": True}
 
     monkeypatch.setattr(client, "_json_request", request)
+    if method == "checkin":
+        monkeypatch.setattr(
+            client, "get_checkout", lambda revision_id: {"id": "lease", "version": 3}
+        )
+        payload = {**payload, "expected_checkout_id": "lease", "expected_checkout_version": 3}
     assert getattr(client, method)(*arguments) == {"ok": True}
     assert calls == [(verb, path, payload)]
 
@@ -128,10 +126,11 @@ def test_streamed_upload_contract(api, monkeypatch, tmp_path):
     client = api.ForgePDMClient("https://example.invalid/pdm")
     client.token = "secret"
     monkeypatch.setattr(client, "_http_connection", Connection)
+    monkeypatch.setattr(client, "get_checkout", lambda revision_id: {"id": "lease", "version": 3})
     file = tmp_path / "part.FCStd"
     file.write_bytes(b"CAD-content")
     assert client.upload_file("rev", str(file), name="Native CAD") == {"id": "dataset"}
-    assert ("POST", "/pdm/api/v1/revisions/rev/datasets") in calls
+    assert ("POST", "/pdm/api/v1/revisions/rev/datasets/fenced") in calls
     assert ("Authorization", "Bearer secret") in calls
     body = b"".join(chunks)
     assert b'name="dataset_type"\r\n\r\nnative_cad' in body
