@@ -1,5 +1,53 @@
 # Development status
 
+## 2026-11-12 — Customizable TechDraw BOM tables (0.18.0)
+
+- Add a read-only drawing-bom report endpoint: exact direct EBOM positions/pins,
+  descriptions and available direct P/S masses from one consistent DB snapshot.
+  Return evidence token/timestamp and provenance; no schema change or server
+  engineering writes. Unknown mass remains unavailable; subassembly unit mass
+  is outside this direct report. Require read access to every component.
+- Add Drawing BOM to BOM and publishing (24 commands; toolbar unchanged). Insert
+  into a selected TechDraw page or update an existing generated table. Configure
+  column fields/headings/order/widths/alignment, font size, mass units/precision
+  and custom row text. Save up to 30 reusable local layouts without engineering
+  row values. Preview/fit failures stay in the editor for correction.
+- Render self-contained native DrawViewSymbol SVG using Qt font metrics, embedded
+  with frozen report/layout/custom-text JSON (format 1). Preserve matching custom
+  text by exact component revision + stored BOM position + column key, despite
+  new server line IDs. Preserve orphaned notes instead of applying them to another
+  revision/position. Updates retain native placement/scale/rotation and layout.
+- Require a managed writable working copy, Working lifecycle, owned live lease
+  and edit access. Revalidate report token, lease ID/version, GUI target and
+  session after review. Reject active CAD edit mode and stale proposals. Native
+  undo changes only the table; no automatic save/upload/check-in/BOM sync.
+- Validation: 243 backend tests, 400 addon tests (four optional Qt modules skipped
+  in base environment), and 16 real offscreen Qt tests pass. Addon Ruff
+  lint/format, manifest/archive, backend wheel/sdist and diff checks pass.
+- FreeCAD 1.1.4/Qt 6.8.3 live command acceptance passes 11 drawing checks plus the
+  28-check atomic seed fixture: insert, update, custom text/placement retention,
+  rejection of lease renewal during review, managed upload/retrieval with exact
+  dependency pins, frozen older values after later server BOM changes, missing
+  original SVG-template path and actual PDF export. PDF raster inspected. Source
+  0.18.0 modules were tested before install; installed runtime verified separately.
+- Install 0.18.0 into both profiles with prior addon, consistent SQLite and blob
+  backups under var/backups/before-drawing-bom-20261113T023425Z. Restart backend
+  with original default DB/storage configuration for the new route; schema stays
+  17. All 39 tables and 209 file hashes preserved; integrity/FKs pass. Both addon
+  profiles match the final archive. Refresh installed API/table/UI/commands and
+  register Drawing BOM without replacing the login/session object.
+- Preserve all four open user documents, their file bytes, active document and
+  current dirty states, including one unsaved document. Production acceptance is
+  read-only: the real client reads the new five-line stored EBOM report. No
+  production drawing tables or engineering records were created by validation.
+- Guide docs/drawing-bom-tables.md; design ADR-021. Evidence:
+  docs/validation/drawing-bom-{native,installed,freecad-installed}-2026-11-12.json.
+- Limits: direct components only; one table must fit one page. No flattened or
+  indented views, sheet splitting, balloons, CAD-property mappings or automatic
+  stale-table publication/release gate. Explicitly update before publishing.
+  Header text/size/format are configurable; title/font family are fixed for now.
+  Other runtime/platform/font combinations remain unverified.
+
 ## 2026-11-12 — Persistent browser and shortcuts (0.17.0)
 
 - Remove Name from opening results without changing stored names, descriptions or
@@ -1134,7 +1182,7 @@ before acting. Git history and the linked reports provide the detailed record.
   revision-pinned BOMs and immutable CAD dependency manifests.
 - Web GUI: browsing and controlled user/project/account management at `/app/`,
   served by the backend; see docs/web-gui.md and docs/web-management.md.
-- FreeCAD addon: **0.17.0**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.18.0**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 implements atomic part/assembly check-in, pinned manifests,
@@ -1194,12 +1242,12 @@ Evidence:
 ## Next session
 
 1. Read root/nested `AGENTS.md`, this handoff and Git status before changes.
-   Current source and installed delivery are addon 0.17.0/backend schema 17. Standard Parts/shared
+   Current source and installed delivery are addon 0.18.0/backend schema 17. Standard Parts/shared
    catalog, simple P/A/M descriptions, physical P mass and bounded S supplier
    reference mass plus CAD/manual fallbacks are implemented. Use docs/material-management.md,
    docs/supplier-reference-mass.md and docs/upgrade-and-validation.md. The older
    component-catalog implementation plan is historical, not pending work.
-2. Follow the user's next priority. TechDraw BOM tables,
+2. Follow the user's next priority. Expanded TechDraw BOM views,
    broader supplier coverage and ERPNext synchronization remain unimplemented;
    do not infer a new priority or silently replace existing revision pins.
 3. For CAD issues, verify installed/runtime versions and reproduce against the

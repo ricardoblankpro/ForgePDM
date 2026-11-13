@@ -1,13 +1,12 @@
 # FreeCAD validation and manual acceptance
 
-Current client: **0.12.0**, backend schema **16**. The latest checked suites contain
-228 backend tests and 365 addon tests; live FreeCAD/browser evidence and scope are
-recorded in `DEVELOPMENT_STATUS.md` and the 2026-11-07 material/reference reports.
+Current client: **0.18.0**, backend schema **17**. The current suites contain
+243 backend tests and 400 addon tests, with 16 real offscreen Qt tests separately.
 Use [the current validation/upgrade guide](../../../docs/upgrade-and-validation.md)
-for configuration, packaging, native harnesses and browser checks. Addon lint and
-format checks match the GitHub workflow; mocked tests remain distinct from native
-GUI execution. Assembly totals have real FreeCAD 1.1.4 HTTP/dialog acceptance
-(2026-11-09); TechDraw BOM tables remain deferred.
+for configuration, packaging, native harnesses and browser checks. Native
+acceptance remains distinct from mocked/offscreen tests. Direct customizable
+TechDraw BOM tables have live save/update/managed retrieval/PDF acceptance in
+FreeCAD 1.1.4; see `drawing_bom_gui.py` and DEVELOPMENT_STATUS.md for scope.
 
 The historical checklist below covers Phase 1. For the Phase 4 assembly work,
 see `docs/freecad-addon-phase4.md` in the repository. The live harness is

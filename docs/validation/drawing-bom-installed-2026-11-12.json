@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "addon": "0.18.0",
+  "schema": 17,
+  "tables_preserved": 39,
+  "stored_hashes_preserved": 209,
+  "both_profiles_match_archive": true,
+  "integrity": "ok",
+  "foreign_key_errors": 0,
+  "report_endpoint_live": true,
+  "backup": "/home/ricardoblank/Development/ForgePDM/var/backups/before-drawing-bom-20261113T023425Z"
+}

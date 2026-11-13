@@ -54,7 +54,7 @@ configuration copies, preserving source files and historical revision pins.
 
 Physical links remain optional for existing description-only records. The
 saved `PDMDescription` and revision description API provide the information for a
-future TechDraw BOM table; drawing BOM generation is not implemented here.
+[direct TechDraw BOM table](drawing-bom-tables.md), implemented in addon 0.18.0.
 
 ## Linked physical materials and part mass (0.9.0)
 

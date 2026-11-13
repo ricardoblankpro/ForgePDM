@@ -1,0 +1,33 @@
+{
+  "checks": [
+    "native command inserts direct stored EBOM at exact positions",
+    "custom text is stored and rendered",
+    "server changes do not silently rewrite the drawing",
+    "explicit update refreshes quantities and keeps custom text",
+    "update preserves placement and column layout",
+    "checkout renewal during review rejects local mutation",
+    "managed upload accepts embedded table and exact CAD pins",
+    "retrieval retains frozen values after server changes",
+    "offline restoration keeps columns and row text without original template",
+    "restored table exports to PDF",
+    "generation never rewrites stored EBOM quantities"
+  ],
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "qt": "6.8.3",
+  "scope": "Disposable live HTTP/native CAD; actual Drawing BOM dialog and command; original documents preserved",
+  "status": "passed",
+  "original_documents_preserved": true,
+  "original_document_count": 4,
+  "addon_source": "0.18.0",
+  "validation_phase": "Source modules before install; installed runtime and live report endpoint verified separately",
+  "pdf_raster_visually_inspected": true
+}

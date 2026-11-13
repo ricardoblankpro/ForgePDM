@@ -98,8 +98,8 @@ ForgePDM owns engineering definitions, exact revisions, CAD and engineering BOMs
 Future ERPNext integration should reuse P/A/S/M codes for inventory, purchasing,
 cost and manufacturing operations. No synchronization is currently implemented;
 no ERP client or supplier credential belongs in the FreeCAD domain layer. Assembly
-mass aggregation, TechDraw BOM tables and cutting/stock optimization remain future
-work. Historical advanced material inputs remain as compatibility APIs, not the
+mass aggregation and direct customizable TechDraw BOM tables are implemented;
+cutting/stock optimization and expanded drawing BOM views remain future work. Historical advanced material inputs remain as compatibility APIs, not the
 normal UI; ADR-013 supersedes that part of ADR-012.
 
 ADR-016 extends the same S mass record with CAD estimates and explicit manual

@@ -612,6 +612,20 @@ def _revision_creation_response(revision, checkout):
     }
 
 
+@router.get("/revisions/{revision_id}/drawing-bom")
+def drawing_bom_report(revision_id: UUID, request: Request, user: User = Depends(current_user)):
+    from forgepdm.application.drawing_bom import drawing_bom
+
+    try:
+        return drawing_bom(request.app.state.database, request.app.state.authorization_service, user, str(revision_id))
+    except NotFound as error:
+        raise HTTPException(404, str(error)) from error
+    except Forbidden as error:
+        raise HTTPException(403, str(error)) from error
+    except Conflict as error:
+        raise HTTPException(409, str(error)) from error
+
+
 @router.get("/revisions/{revision_id}/bom")
 def get_bom(
     revision_id: UUID,

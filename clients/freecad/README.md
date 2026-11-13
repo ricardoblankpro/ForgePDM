@@ -430,3 +430,13 @@ follow current item metadata; My Checkouts labels expired leases. Hide and reope
 the same panel without losing the current tab. Favorites/history persist locally
 per server/account and recheck authorization when loaded. Limits are 100 favorites
 and 30 recent snapshots. Component insertion stays in native FreeCAD tools.
+
+## Drawing BOM tables (0.18.0)
+
+Use **ForgePDM → BOM and publishing → Drawing BOM…** in a checked-out assembly
+working copy with a TechDraw page. Choose columns, headings, widths/alignment,
+font size and custom text, or reuse a saved layout. Select an existing generated
+table to explicitly update it while keeping placement and matching row notes.
+Data comes from the stored direct EBOM, not unsaved CAD. Values and SVG remain
+embedded/offline in the native file. Save/upload/publish explicitly afterward.
+Requires the updated backend drawing report endpoint; schema stays 17.

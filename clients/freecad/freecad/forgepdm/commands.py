@@ -1514,6 +1514,116 @@ def _choose_native_snapshot(client, revision_id):
     return None if choice is None else choices[labels.index(choice)]
 
 
+class DrawingBOMCommand(Command):
+    icon_name = "drawing-bom"
+    menu_text = "Drawing BOM…"
+    tooltip = "Insert or update a customizable direct engineering BOM on a TechDraw page"
+    needs_document = True
+    number_series = ("A",)
+
+    def action(self):
+        from datetime import datetime, timezone
+        from . import drawing_bom
+        from .drawing_bom_ui import DrawingBOMDialog
+
+        client = Session.require_client()
+        actor = (Session.user or {}).get("id")
+        document = _require_document()
+        metadata = _require_metadata(document)
+        name, revision_id, path = document.Name, metadata.RevisionId, document.FileName
+        workspace.binding(path, client.base_url, require_uploaded=False)
+        if workspace.working_path(path, client.base_url) is None:
+            raise workspace.WorkspaceError(
+                "Use Check Out / Renew to prepare a writable working copy before editing the drawing"
+            )
+        yield from _editable(client, metadata)
+        lease = yield Request("Checking drawing checkout…", client.get_checkout, (revision_id,))
+        if not lease or lease["user_id"] != actor:
+            raise workspace.WorkspaceError(
+                "Check out this Working assembly before changing the drawing"
+            )
+        report = yield Request("Loading drawing BOM report…", client.drawing_bom, (revision_id,))
+        if not report["lines"]:
+            raise workspace.WorkspaceError(
+                "The stored BOM is empty. Review and synchronize it with BOM / Mass first"
+            )
+        document = _guard_document(name, revision_id)
+        if FreeCADGui.getDocument(document.Name).getInEdit():
+            raise workspace.WorkspaceError(
+                "Finish the active CAD edit before changing a drawing BOM"
+            )
+        pages = [
+            obj
+            for obj in document.Objects
+            if obj.isDerivedFrom("TechDraw::DrawPage") and obj.Template
+        ]
+        if not pages:
+            raise workspace.WorkspaceError("Create a TechDraw page with a template first")
+        selected = FreeCADGui.Selection.getSelection()
+        preferred = next(
+            (obj for obj in selected if obj.Document is document and hasattr(obj, "PDMTableData")),
+            None,
+        )
+        dialog = DrawingBOMDialog(_main_window(), report, pages, preferred)
+        if not execute_dialog(dialog):
+            return
+        page, target = dialog.page.currentData(), dialog.target.currentData()
+        definition, notes = dialog.definition(), dialog.notes
+        x, y = dialog.x.value(), dialog.y.value()
+        before = (
+            (
+                target.Symbol,
+                target.PDMTableData,
+                float(target.X),
+                float(target.Y),
+                float(target.Scale),
+                float(target.Rotation),
+            )
+            if target
+            else None
+        )
+        fresh = yield Request(
+            "Revalidating drawing BOM evidence…", client.drawing_bom, (revision_id,)
+        )
+        yield Request("Checking edit permission…", client.bom_snapshot, (revision_id,))
+        current = yield Request("Revalidating checkout…", client.get_checkout, (revision_id,))
+        document = _guard_document(name, revision_id)
+        if (
+            Session.client is not client
+            or (Session.user or {}).get("id") != actor
+            or document.FileName != path
+        ):
+            raise workspace.WorkspaceError("Document or session changed; reopen Drawing BOM")
+        if fresh["token"] != report["token"]:
+            raise workspace.WorkspaceError(
+                "Published BOM data changed; reopen Drawing BOM and review the new values"
+            )
+        if (
+            not current
+            or current["user_id"] != actor
+            or (current["id"], current["version"]) != (lease["id"], lease["version"])
+            or datetime.fromisoformat(current["expires_at"]) <= datetime.now(timezone.utc)
+        ):
+            raise workspace.WorkspaceError("Checkout changed or expired; reopen Drawing BOM")
+        if document.getObject(page.Name) is not page or page not in pages:
+            raise workspace.WorkspaceError("Drawing page changed")
+        if target and (
+            document.getObject(target.Name) is not target
+            or before
+            != (
+                target.Symbol,
+                target.PDMTableData,
+                float(target.X),
+                float(target.Y),
+                float(target.Scale),
+                float(target.Rotation),
+            )
+        ):
+            raise workspace.WorkspaceError("Drawing table changed while checking the server")
+        drawing_bom.apply(document, page, target, report, definition, notes, x, y)
+        _open_status("Drawing BOM updated. Save and upload the drawing when ready.")
+
+
 class ShowBOMCommand(Command):
     number_series = ("A",)
     icon_name = "bom"

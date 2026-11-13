@@ -38,6 +38,7 @@ class ForgePDMWorkbench(Gui.Workbench):
             ("ForgePDM_PublishDrawings", commands.PublishDrawingsCommand),
             ("ForgePDM_RefreshPDMStatus", commands.RefreshPDMStatusCommand),
             ("ForgePDM_ShowBOM", commands.ShowBOMCommand),
+            ("ForgePDM_DrawingBOM", commands.DrawingBOMCommand),
             ("ForgePDM_AssignMaterials", commands.AssignMaterialsCommand),
             ("ForgePDM_RegisterRawMaterial", commands.RegisterRawMaterialCommand),
             ("ForgePDM_LinkPhysicalMaterial", commands.LinkPhysicalMaterialCommand),
@@ -67,7 +68,7 @@ class ForgePDMWorkbench(Gui.Workbench):
             "Documents": ["Download", "Checkout", "Upload", "CheckIn", "UpdateFromServer"],
             "Components": ["ManageComponent", "ChangeStandardPartAssociation"],
             "Lifecycle": ["Release", "NewRevision"],
-            "BOM and publishing": ["ShowBOM", "PublishDrawings"],
+            "BOM and publishing": ["ShowBOM", "DrawingBOM", "PublishDrawings"],
             "Catalog and materials": [
                 "AssignMaterials",
                 "RegisterStandardPart",

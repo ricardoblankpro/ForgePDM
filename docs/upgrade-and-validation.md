@@ -1,4 +1,4 @@
-# Upgrade and validation — addon 0.17.0 / schema 17
+# Upgrade and validation — addon 0.18.0 / schema 17
 
 The backend runs separately from FreeCAD. Use Python 3.11+ and `uv`; the native
 material workflow is validated on Linux with FreeCAD 1.1.4. Other FreeCAD/platform
@@ -20,7 +20,7 @@ combinations have not received the same acceptance coverage.
    uv run --project clients/freecad --extra dev --locked python clients/freecad/tools/addon.py build
    ```
 
-   The archive is `clients/freecad/dist/ForgePDM-0.17.0.zip`. Replace the previous
+   The archive is `clients/freecad/dist/ForgePDM-0.18.0.zip`. Replace the previous
    `Mod/ForgePDM` installation with the archive contents; do not overlay old files.
    Restart FreeCAD after a normal installation. Do not install the backend package
    or another Qt binding into FreeCAD.
@@ -157,3 +157,9 @@ Addon 0.17.0 keeps the backend/schema unchanged and adds a persistent browser.
 Recent/favorite IDs live in the local FreeCAD preferences, scoped by server/account;
 retain preferences with workspace backups. Session changes clear the panel.
 Use Refresh to recheck metadata/access. Thumbnails remain a documented future plan.
+
+Addon 0.18.0 requires the new backend drawing-BOM report endpoint. Restart the
+backend with its existing DB/storage configuration; no migration beyond 17.
+Generated SVG/report/layout/custom row text is embedded in the FCStd drawing.
+Back up local preferences to retain named Drawing BOM layouts. See
+[drawing BOM tables](drawing-bom-tables.md).

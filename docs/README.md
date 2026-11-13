@@ -1,6 +1,6 @@
 # ForgePDM documentation
 
-Current delivery: **FreeCAD addon 0.17.0**, **backend SQLite schema 17**.
+Current delivery: **FreeCAD addon 0.18.0**, **backend SQLite schema 17**.
 Start with [the project README](../README.md) and
 [development handoff](../DEVELOPMENT_STATUS.md).
 
@@ -13,6 +13,7 @@ Start with [the project README](../README.md) and
 - [P material / A assembly descriptions, native materials and part mass](material-management.md)
 - [Supplier reference mass for S fasteners and CSV feeds](supplier-reference-mass.md)
 - [Web management](web-management.md) and [web browsing/history](web-gui.md)
+- [Customizable TechDraw engineering BOM tables](drawing-bom-tables.md)
 - [Source-pinned TechDraw PDF publication](drawing-pdfs.md)
 - [Update from Server](update-from-server.md)
 - [Component revision replacement](component-revision-replacement.md)

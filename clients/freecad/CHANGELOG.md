@@ -1,3 +1,13 @@
+## 0.18.0 — Customizable TechDraw engineering BOM tables
+
+- Add Drawing BOM in BOM and publishing: direct stored-EBOM rows, editable column
+  layouts, reusable local presets, custom row text and explicit update/placement.
+- Embed frozen values and self-contained SVG in a native TechDraw symbol. Preserve
+  exact source revision pins and drawing data through save/retrieval/PDF export.
+- Revalidate checkout, edit access, source token and GUI target before changing
+  local CAD. Do not automatically upload, check in or synchronize BOMs.
+- Add a consistent read-only drawing report endpoint; schema remains 17.
+
 ## 0.17.0 — Persistent browser and opening shortcuts
 
 - Remove Name from opening results; keep number, description, revision and lifecycle.

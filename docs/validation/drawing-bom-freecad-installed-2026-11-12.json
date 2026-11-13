@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "addon": "0.18.0",
+  "installed_modules": [
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/api.py",
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/drawing_bom.py",
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/drawing_bom_ui.py",
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/commands.py"
+  ],
+  "command_registered": true,
+  "cached_commands_refreshed": 69,
+  "session_preserved": true,
+  "documents_and_saved_hashes_preserved": true,
+  "active_document_preserved": true,
+  "document_count": 4,
+  "modified_document_count": 1
+}
