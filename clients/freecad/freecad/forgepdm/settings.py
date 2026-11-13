@@ -23,9 +23,19 @@ def save(url, username, timeout):
     parameters.SetInt("TimeoutSeconds", int(timeout))
 
 
-def workspace_root():
-    return _parameters().GetString("WorkspaceRoot", "")
+def _workspace_parameters(server_url=None, actor_id=None):
+    parameters = _parameters()
+    if server_url and actor_id:
+        import hashlib
+
+        key = hashlib.sha256((server_url.rstrip("/") + "\n" + actor_id).encode()).hexdigest()
+        return parameters.GetGroup("Workspaces").GetGroup(key)
+    return parameters
 
 
-def save_workspace(root):
-    _parameters().SetString("WorkspaceRoot", str(root))
+def workspace_root(server_url=None, actor_id=None):
+    return _workspace_parameters(server_url, actor_id).GetString("WorkspaceRoot", "")
+
+
+def save_workspace(root, server_url=None, actor_id=None):
+    _workspace_parameters(server_url, actor_id).SetString("WorkspaceRoot", str(root))

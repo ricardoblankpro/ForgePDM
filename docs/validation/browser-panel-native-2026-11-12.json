@@ -1,0 +1,38 @@
+{
+  "checks": [
+    "Name column removed from live dock",
+    "browser is modeless and leaves CAD usable",
+    "favorite saves only the item ID for this account",
+    "Favorites resolves current authorized metadata",
+    "opening from persistent panel keeps exact assembly pins",
+    "panel stays available after opening",
+    "successful open records exact revision dataset and file",
+    "Recent restores exact recorded snapshot",
+    "older snapshot opens separately and becomes newest recent",
+    "reopening Recent preserves dirty document without duplicates",
+    "opening does not create datasets or acquire checkout",
+    "toolbar action reuses hidden panel",
+    "My Checkouts comes from authenticated server leases",
+    "account switch immediately hides and clears prior panel",
+    "new account cannot see previous favorites or recent IDs",
+    "saved inaccessible IDs are resolved again and omitted",
+    "favorites survive a fresh authenticated client"
+  ],
+  "scope": "Disposable HTTP/CAD fixture; persistent Qt dock and real task workflows",
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "qt": "6.8.3",
+  "commands_module": "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/commands.py",
+  "status": "passed",
+  "original_documents_preserved": true,
+  "original_document_count": 4,
+  "addon": "0.17.0"
+}

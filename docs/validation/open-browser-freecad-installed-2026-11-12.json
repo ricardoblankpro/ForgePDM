@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "version": "0.16.0",
+  "module_files": [
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/settings.py",
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/open_model.py",
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/open_ui.py",
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/commands.py"
+  ],
+  "command_instances_refreshed": 33,
+  "set_workspace_registered": true,
+  "session_preserved": true,
+  "documents_preserved": true,
+  "open_document_count": 0
+}

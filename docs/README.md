@@ -1,12 +1,13 @@
 # ForgePDM documentation
 
-Current delivery: **FreeCAD addon 0.15.0**, **backend SQLite schema 17**.
+Current delivery: **FreeCAD addon 0.17.0**, **backend SQLite schema 17**.
 Start with [the project README](../README.md) and
 [development handoff](../DEVELOPMENT_STATUS.md).
 
 ## Current user and deployment guides
 
 - [Upgrade, backup, configuration and validation](upgrade-and-validation.md)
+- [Persistent FreeCAD browser, shortcuts and workspace setup](freecad-open-browser.md)
 - [FreeCAD installation and workflows](../clients/freecad/README.md)
 - [Standard Parts, shared library and Fasteners association](standard-parts.md)
 - [P material / A assembly descriptions, native materials and part mass](material-management.md)
@@ -49,3 +50,7 @@ runtime/date, not guarantees for untested platforms or future supplier responses
 Current limits and next-session instructions live in DEVELOPMENT_STATUS.md.
 
 - [Assembly mass totals](assembly-mass.md): exact EBOM pins, source evidence and unknowns.
+
+## Future implementation plans
+
+- [Shared native/web CAD thumbnails](thumbnail-plan.md) — recorded, not implemented.

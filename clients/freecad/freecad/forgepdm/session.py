@@ -7,6 +7,9 @@ def _notify_status():
     module = sys.modules.get(__package__ + ".tree_status")
     if module is not None:
         module.session_changed()
+    browser = sys.modules.get(__package__ + ".browser_panel")
+    if browser is not None:
+        browser.session_changed()
 
 
 class Session:

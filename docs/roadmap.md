@@ -11,7 +11,7 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 
 ## Active development-direction roadmap
 
-**Current source: addon 0.15.0 / backend schema 17.** Simple P material/A assembly
+**Current source: addon 0.17.0 / backend schema 17.** Simple P material/A assembly
 descriptions, optional native density links and finished part mass, and bounded
 S supplier reference mass plus CAD/manual fallbacks are implemented. Current guides:
 [materials](material-management.md), [supplier mass](supplier-reference-mass.md)
@@ -122,3 +122,10 @@ notifications, client verification, multi-CAD clients, and PostgreSQL production
 deployment remain deferred. A personal component catalog with basic supplier
 metadata remains separate from the delivered component identity catalog; browser administration has already
 been brought forward.
+
+## Native opening UX and shared previews
+
+The persistent FreeCAD browser, local Recent Items/Favorites and My Checkouts
+shortcuts are implemented in addon 0.17.0. Component insertion remains native.
+Shared snapshot thumbnails for FreeCAD/web are planned in
+[the thumbnail proposal](thumbnail-plan.md); their implementation is not started.

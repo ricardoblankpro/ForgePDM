@@ -1,3 +1,26 @@
+## 0.17.0 — Persistent browser and opening shortcuts
+
+- Remove Name from opening results; keep number, description, revision and lifecycle.
+- Keep one modeless dockable browser open alongside CAD, with one-click All Items,
+  Recent Items, Favorites and My Checkouts tabs and in-place history selectors.
+- Store local account/server-scoped favorites and exact recent snapshot IDs;
+  resolve current permissions on refresh and label expired checkouts.
+- Preserve dirty documents, exact component pins, explicit checkout and existing
+  command IDs. Clear protected UI on session changes; no backend/schema change.
+- Document shared FreeCAD/web thumbnails as a future implementation. Native
+  assembly insertion remains in FreeCAD's tools for this increment.
+
+## 0.16.0 — One-window search and opening
+
+- Search as you type, P/A/S filters, result paging, revision/snapshot selectors
+  and Enter/double-click opening in one asynchronous native window.
+- Reuse a configured workspace per server/account. Add Set Workspace to the
+  Session menu and Change inside Open; retain existing document workspaces.
+- Activate already-open exact snapshots without overwriting local edits. Open
+  other snapshots separately and show success in the status bar.
+- Preserve exact component pins, explicit checkout and existing command IDs.
+  No backend/schema changes. See docs/freecad-open-browser.md in the source repo.
+
 ## 0.15.0 — Checkout fencing and revision recovery
 
 - Require exact checkout ID/version on ordinary upload, manifest and check-in;

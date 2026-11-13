@@ -1,4 +1,4 @@
-# Upgrade and validation — addon 0.15.0 / schema 17
+# Upgrade and validation — addon 0.17.0 / schema 17
 
 The backend runs separately from FreeCAD. Use Python 3.11+ and `uv`; the native
 material workflow is validated on Linux with FreeCAD 1.1.4. Other FreeCAD/platform
@@ -20,7 +20,7 @@ combinations have not received the same acceptance coverage.
    uv run --project clients/freecad --extra dev --locked python clients/freecad/tools/addon.py build
    ```
 
-   The archive is `clients/freecad/dist/ForgePDM-0.15.0.zip`. Replace the previous
+   The archive is `clients/freecad/dist/ForgePDM-0.17.0.zip`. Replace the previous
    `Mod/ForgePDM` installation with the archive contents; do not overlay old files.
    Restart FreeCAD after a normal installation. Do not install the backend package
    or another Qt binding into FreeCAD.
@@ -148,3 +148,12 @@ With the backend stopped, run `uv run forgepdm recovery-report` to inspect datab
 blob integrity, incomplete native uploads and unreferenced/staging candidates.
 The report never deletes files. Review candidates against an offline backup before
 manual cleanup. See ADR-019 for replay and recovery boundaries.
+
+Addon 0.16.0 changes only the FreeCAD client. No backend restart or migration is
+required. Configure a workspace per server/account from the Session menu; see
+[the Open guide](freecad-open-browser.md). Retain existing workspace folders.
+
+Addon 0.17.0 keeps the backend/schema unchanged and adds a persistent browser.
+Recent/favorite IDs live in the local FreeCAD preferences, scoped by server/account;
+retain preferences with workspace backups. Session changes clear the panel.
+Use Refresh to recheck metadata/access. Thumbnails remain a documented future plan.

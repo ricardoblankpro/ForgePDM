@@ -234,5 +234,13 @@
       <source>Update a snapshot, adopt a newer revision, or replace a component</source>
       <translation>Update a snapshot, adopt a newer revision, or replace a component</translation>
     </message>
+    <message>
+      <source>Set Workspace…</source>
+      <translation>Set Workspace…</translation>
+    </message>
+    <message>
+      <source>Set the local workspace once for this server and account</source>
+      <translation>Set the local workspace once for this server and account</translation>
+    </message>
   </context>
 </TS>

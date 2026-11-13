@@ -1,0 +1,31 @@
+{
+  "checks": [
+    "native assembly fixture has multiple exact snapshots",
+    "one search window opens default exact newest snapshot",
+    "configured workspace reused without folder prompt",
+    "assembly reconstructs with its published reference pins",
+    "opening same exact snapshot activates existing dirty document",
+    "reactivation preserves local label and saved bytes",
+    "older snapshot opens separately without replacing dirty latest",
+    "older snapshot keeps its own exact reference manifest",
+    "opening does not acquire a checkout",
+    "opening does not create server datasets"
+  ],
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "qt": "6.8.3",
+  "scope": "Disposable HTTP/CAD data; real modal browser and native reconstruction",
+  "addon": "0.16.0",
+  "commands_module": "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/commands.py",
+  "status": "passed",
+  "original_documents_preserved": true,
+  "registered_toolbar_command_acceptance": "Gui.runCommand opened the installed browser against the disposable backend; cancel drained jobs and cleared busy state; Set Workspace registered"
+}

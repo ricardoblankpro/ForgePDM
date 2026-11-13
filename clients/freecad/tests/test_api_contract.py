@@ -27,6 +27,7 @@ def api(addon_root):
             "/api/v1/items",
             {"kind": "part", "name": "Bracket", "description": "", "project_id": "project"},
         ),
+        ("my_checkouts", (), "GET", "/api/v1/me/checkouts?limit=50&offset=0", None),
         ("get_item", ("item",), "GET", "/api/v1/items/item", None),
         ("get_checkout", ("rev",), "GET", "/api/v1/revisions/rev/checkout", None),
         ("get_bom", ("rev", True), "GET", "/api/v1/revisions/rev/bom?recursive=true", None),

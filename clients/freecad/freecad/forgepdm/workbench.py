@@ -21,6 +21,7 @@ class ForgePDMWorkbench(Gui.Workbench):
         entries = (
             ("ForgePDM_Login", commands.LoginCommand),
             ("ForgePDM_Logout", commands.LogoutCommand),
+            ("ForgePDM_ConfigureWorkspace", commands.ConfigureWorkspaceCommand),
             ("ForgePDM_RegisterStandardPart", commands.RegisterStandardPartCommand),
             (
                 "ForgePDM_ChangeStandardPartAssociation",
@@ -62,7 +63,7 @@ class ForgePDMWorkbench(Gui.Workbench):
             translate("ForgePDM", "ForgePDM"), ["ForgePDM_" + name for name in toolbar]
         )
         groups = {
-            "Session": ["Login", "Logout"],
+            "Session": ["Login", "Logout", "ConfigureWorkspace"],
             "Documents": ["Download", "Checkout", "Upload", "CheckIn", "UpdateFromServer"],
             "Components": ["ManageComponent", "ChangeStandardPartAssociation"],
             "Lifecycle": ["Release", "NewRevision"],

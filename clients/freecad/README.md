@@ -44,7 +44,7 @@ Select **View → Workbench → ForgePDM**. The backend must be running and reac
 2. **Create / Upload Current Document** lets you choose an authorized project by number/name for a new Item, creates a managed working copy, attaches hidden item/revision metadata, and uploads a verified `native_cad` snapshot with its exact component references. Only editable projects are offered; administrators may choose a projectless Item.
 3. **Acquire / Renew Checkout**, **Check In Current Revision**, and **Release Current Revision** manage the current revision. Check-in uploads the saved native file first and then releases the checkout without prompting for a change note. The intended workflow is check-in before release; release prerequisites remain enforced by the existing backend.
 4. **Create Next Revision** creates the next Working revision in a separate managed file, updates the local metadata and uploads its native snapshot, preserving the previous revision file.
-5. **Download Item / Assembly** searches by item number, name or description (blank to browse), offers pages of matching items, then lets you select a revision, including historical revisions. Select an exact native snapshot if several exist. It retrieves the pinned CAD reference graph into a new configuration and verifies external links before completion. Missing/inaccessible components stop retrieval before opening the assembly.
+5. **Open from ForgePDM** shows a persistent dockable browser with search, Recent Items, Favorites and My Checkouts. Select revision and snapshot history in the same panel. It retrieves the pinned CAD reference graph into a new configuration and verifies external links before completion. Missing/inaccessible components stop retrieval before opening the assembly.
 6. **BOM / Mass…** opens an expandable published BOM with exact recorded revisions
    and mass. **Update from CAD** prepares a replacement on a saved/uploaded Working
    assembly with your checkout. Supported engineering components are included by
@@ -409,3 +409,24 @@ are preserved. Credential-free revision journals live under
 `$XDG_STATE_HOME/forgepdm/revision-operations` (default `~/.local/state`); retain them
 with workspace backups. Missing copies or corrupt journals need explicit recovery,
 not a new operation against an uncertain server result. See ADR-019.
+
+## Search and opening (0.16.0)
+
+Set the workspace once with **ForgePDM → Session → Set Workspace…**. Open then
+reuses that folder for the same server/account; change it in the Open window.
+Search as you type and press Enter, or double-click a result. Revision and
+uploaded snapshot selectors stay in the same window, initially selecting the
+current revision and newest upload. Opening preserves component pins and does
+not check out. An already-open exact snapshot is activated with edits intact;
+other snapshots open separately. Completion appears in the status bar.
+
+## Persistent browser and shortcuts (0.17.0)
+
+Open from ForgePDM now stays alongside CAD as a dockable/floating panel. Name is
+removed from the result columns; it remains searchable. Use the one-click All
+Items, Recent Items, Favorites and My Checkouts tabs. Star an item to bookmark it;
+Recent Items preserves exact previously opened revision/snapshot pins. Favorites
+follow current item metadata; My Checkouts labels expired leases. Hide and reopen
+the same panel without losing the current tab. Favorites/history persist locally
+per server/account and recheck authorization when loaded. Limits are 100 favorites
+and 30 recent snapshots. Component insertion stays in native FreeCAD tools.

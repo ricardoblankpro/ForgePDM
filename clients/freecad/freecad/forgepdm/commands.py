@@ -186,7 +186,22 @@ def _select_record(title, prompt, fetch, label, args=(), kwargs=None, allow_proj
             return records[labels.index(selected)]
 
 
-def _choose_workspace(client, document=None):
+def _configured_workspace(client):
+    from . import settings
+
+    user = Session.user or {}
+    root = settings.workspace_root(client.base_url, user.get("id"))
+    if not root:
+        # Adopt the previous global folder only for the account it was saved with.
+        preferences = settings.load()
+        if preferences["url"].rstrip("/") == client.base_url and preferences[
+            "username"
+        ] == user.get("username"):
+            root = settings.workspace_root()
+    return root
+
+
+def _choose_workspace(client, document=None, force=False):
     from . import settings
 
     if document is not None and document.FileName:
@@ -202,14 +217,26 @@ def _choose_workspace(client, document=None):
                 for directory in Path(document.FileName).absolute().parents
             ):
                 raise
+    from .open_model import validate_workspace
+
+    configured = _configured_workspace(client)
+    if configured and not force:
+        try:
+            root = validate_workspace(configured, client.base_url)
+        except workspace.WorkspaceError:
+            pass
+        else:
+            settings.save_workspace(root, client.base_url, (Session.user or {}).get("id"))
+            return root
     selected = QtWidgets.QFileDialog.getExistingDirectory(
         _main_window(),
         "Choose ForgePDM workspace",
-        settings.workspace_root() or os.path.expanduser("~"),
+        configured or os.path.expanduser("~"),
     )
     if not selected:
         return None
-    settings.save_workspace(selected)
+    selected = validate_workspace(selected, client.base_url)
+    settings.save_workspace(selected, client.base_url, (Session.user or {}).get("id"))
     return selected
 
 
@@ -1846,111 +1873,161 @@ class UpdateFromServerCommand(Command):
                     pass
 
 
+class ConfigureWorkspaceCommand(Command):
+    icon_name = "workspace"
+    menu_text = "Set Workspace…"
+    tooltip = "Set the local workspace once for this server and account"
+
+    def action(self):
+        root = _choose_workspace(Session.require_client(), force=True)
+        if root:
+            _open_status("Workspace configured: " + root)
+        yield from ()
+
+
 class DownloadCommand(Command):
     icon_name = "download"
     menu_text = "Open from ForgePDM…"
     tooltip = "Search items and retrieve a selected revision"
 
     def action(self):
+        from .browser_panel import show_browser
+        from .tasks import run
+
         client = Session.require_client()
-        series = ask_choice(
-            "Catalog",
-            "Browse which items?",
-            ["All items", "Standard / purchased parts"],
-            "All items",
+        actor = (Session.user or {}).get("id")
+        show_browser(
+            _main_window(),
+            client,
+            actor,
+            _configured_workspace(client),
+            lambda: _choose_workspace(client, force=True),
+            lambda selection: run(_open_selected_configuration(client, selection)),
         )
-        if series is None:
-            return
-        query = ask_text(
-            "Find ForgePDM Item", "Item number, name or description (blank to browse)", ""
-        )
-        if query is None:
-            return
-        item = yield from _select_record(
-            "Items",
-            "Choose an item",
-            client.search_items,
-            lambda record: record["number"] + " — " + record["name"],
-            args=(query,),
-            kwargs={"number_series": "S"} if series == "Standard / purchased parts" else {},
-        )
-        if item is None:
-            return
-        revision = yield from _select_record(
-            "Revisions",
-            "Choose the revision to retrieve",
-            client.list_revisions,
-            lambda record: record["label"] + " — " + record["lifecycle_state"],
-            args=(item["id"],),
-        )
-        if revision is None:
-            return
-        datasets = yield Request(
-            "Loading native CAD snapshots…", client.list_datasets, (revision["id"],)
-        )
-        choices = [
-            (dataset, file_record)
-            for dataset in datasets
-            if dataset["dataset_type"] == "native_cad"
-            for file_record in dataset["files"]
-        ]
-        if not choices:
-            raise workspace.WorkspaceError(
-                "No native CAD snapshot is attached to the selected revision"
-            )
-        selected = 0
-        if len(choices) > 1:
-            labels = [
-                "{}. {} — {} — {}".format(
-                    index + 1,
-                    dataset["name"],
-                    dataset["created_at"],
-                    file_record["content_hash"][:8],
-                )
-                for index, (dataset, file_record) in enumerate(choices)
-            ]
-            value = ask_choice(
-                "CAD Snapshots", "Choose the exact saved snapshot", labels, labels[-1]
-            )
-            if value is None:
-                return
-            selected = labels.index(value)
-        dataset, file_record = choices[selected]
-        root = _choose_workspace(client)
-        if root is None:
-            return
-        configuration = None
-        opened = None
-        complete = False
+        yield from ()
+
+
+def _open_selected_configuration(client, selection):
+    actor = selection.get("actor_id")
+
+    def guard_session():
+        if actor and (Session.client is not client or (Session.user or {}).get("id") != actor):
+            raise workspace.WorkspaceError("The session changed; open the browser again")
+
+    guard_session()
+    revision, dataset, file_record, root = (
+        selection["revision"],
+        selection["dataset"],
+        selection["file"],
+        selection["workspace"],
+    )
+    from .open_model import validate_workspace
+
+    root = validate_workspace(root, client.base_url)
+    from . import settings
+
+    if (Session.user or {}).get("id"):
+        settings.save_workspace(root, client.base_url, Session.user["id"])
+    # Reuse only the exact recorded snapshot, never a different file of the same revision.
+    for document in FreeCAD.listDocuments().values():
+        if not document.FileName:
+            continue
+        metadata = document.getObject(METADATA_OBJECT)
+        if metadata is None or getattr(metadata, "RevisionId", "") != revision["id"]:
+            continue
         try:
-            configuration = yield Request(
-                "Retrieving verified CAD configuration…",
-                client.retrieve_configuration,
-                (root, revision["id"], dataset["id"], file_record["id"]),
-            )
-            opened = cad.open_configuration(configuration, _set_metadata)
+            bound = workspace.binding(document.FileName, client.base_url, require_uploaded=False)
+        except workspace.WorkspaceError:
+            continue
+        entry = bound["entry"]
+        if entry.get("dataset_id") == dataset["id"] and entry.get("file_id") == file_record["id"]:
+            # Recheck current access even when no transfer is required.
             yield Request(
-                "Recording verified workspace configuration…",
-                client.finish_configuration,
-                (configuration,),
+                "Checking access to the open snapshot…", client.get_revision, (revision["id"],)
             )
-            complete = True
-            information(
-                "ForgePDM",
-                "Opened the exact CAD configuration with verified external links. BOM extraction/synchronization remains a separate step.",
+            guard_session()
+            current = FreeCAD.getDocument(document.Name)
+            if current is not document or current.FileName != str(
+                bound["directory"] / entry["path"]
+            ):
+                raise workspace.WorkspaceError(
+                    "The open document changed while checking access; try again"
+                )
+            current_metadata = current.getObject(METADATA_OBJECT)
+            if current_metadata is None or current_metadata.RevisionId != revision["id"]:
+                raise workspace.WorkspaceError(
+                    "The open revision changed while checking access; try again"
+                )
+            current_binding = workspace.binding(
+                current.FileName, client.base_url, require_uploaded=False
             )
-        finally:
-            if not complete:
-                if opened is not None:
-                    retained = cad.close_owned(opened["owned"])
-                    if retained:
-                        warning(
-                            "ForgePDM",
-                            "Modified local documents were left open for review: "
-                            + ", ".join(retained),
-                        )
-                if configuration is not None:
-                    workspace.incomplete(configuration)
+            if any(
+                current_binding["entry"].get(key) != expected
+                for key, expected in (("dataset_id", dataset["id"]), ("file_id", file_record["id"]))
+            ):
+                raise workspace.WorkspaceError(
+                    "The open snapshot changed while checking access; try again"
+                )
+            FreeCAD.setActiveDocument(document.Name)
+            _record_recent(client, selection)
+            _open_status("Already open — local edits preserved.")
+            return
+    configuration = None
+    opened = None
+    complete = False
+    try:
+        configuration = yield Request(
+            "Retrieving verified CAD configuration…",
+            client.retrieve_configuration,
+            (root, revision["id"], dataset["id"], file_record["id"]),
+        )
+        guard_session()
+        opened = cad.open_configuration(configuration, _set_metadata)
+        yield Request(
+            "Recording verified workspace configuration…",
+            client.finish_configuration,
+            (configuration,),
+        )
+        complete = True
+        _record_recent(client, selection)
+        _open_status(
+            "Opened {} revision {} with its recorded components.".format(
+                selection["item"]["number"], revision["label"]
+            )
+        )
+    finally:
+        if not complete:
+            if opened is not None:
+                retained = cad.close_owned(opened["owned"])
+                if retained:
+                    warning(
+                        "ForgePDM",
+                        "Modified local documents were left open for review: "
+                        + ", ".join(retained),
+                    )
+            if configuration is not None:
+                workspace.incomplete(configuration)
+
+
+def _record_recent(client, selection):
+    actor = selection.get("actor_id")
+    if actor and Session.client is client and (Session.user or {}).get("id") == actor:
+        from .browser_library import BrowserLibrary
+
+        try:
+            BrowserLibrary(client.base_url, actor).add_recent(selection)
+        except (ValueError, RuntimeError, OSError) as error:
+            FreeCAD.Console.PrintWarning(
+                "ForgePDM: opened successfully, but Recent Items could not be saved: {}\n".format(
+                    error
+                )
+            )
+
+
+def _open_status(message):
+    window = _main_window()
+    if window is not None:
+        window.statusBar().showMessage("ForgePDM: " + message, 8000)
 
 
 def _walk_bom(lines):

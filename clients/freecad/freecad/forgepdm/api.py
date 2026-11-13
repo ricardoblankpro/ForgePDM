@@ -194,6 +194,17 @@ class ForgePDMClient:
         query = urllib.parse.urlencode(params)
         return self._catalog_request("/api/v1/items?" + query)
 
+    def my_checkouts(self, limit=50, offset=0):
+        return self._json_request(
+            "GET",
+            "/api/v1/me/checkouts?" + urllib.parse.urlencode({"limit": limit, "offset": offset}),
+        )
+
+    def browser_items(self, source, entries, query="", number_series=None, limit=50, offset=0):
+        from .open_model import shortcut_items
+
+        return shortcut_items(self, source, entries, query, number_series, limit, offset)
+
     def list_revisions(self, item_id, limit=50, offset=0):
         query = urllib.parse.urlencode({"limit": limit, "offset": offset})
         return self._catalog_request(

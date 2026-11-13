@@ -1,5 +1,108 @@
 # Development status
 
+## 2026-11-12 — Persistent browser and shortcuts (0.17.0)
+
+- Remove Name from opening results without changing stored names, descriptions or
+  search indexing. Keep Item, Description, Revision and Lifecycle visible at the
+  current dock width; descriptions have escaped full-text tooltips.
+- Replace the modal opening command with one modeless dockable/floating panel.
+  It stays available after opening, hides/reopens through the same toolbar ID,
+  and exposes one-click All Items, Recent, Favorites and My Checkouts tabs.
+  Preserve the configured workspace and in-place revision/snapshot selection.
+- Star/unstar local item favorites; remember up to 30 exact successfully opened
+  snapshots and 100 favorites per server/account. Store IDs only in FreeCAD
+  preferences. Favorites resolve current authorized metadata; Recent pins exact
+  revision/dataset/file and refuses to substitute a missing upload. Opening an
+  explicit alternative creates another exact recent entry. Clear Recent affects
+  only local history. No migration/scanning of previous workspace folders.
+- My Checkouts reads the existing authenticated API and labels expired leases.
+  Resolve shortcut IDs with current permissions; omit unavailable entries without
+  deleting the bookmarks. Corrupt local shortcuts remain preserved, while server
+  checkouts stay usable. No server writes occur for browsing, starring or history.
+- Bound HTTP workers, invalidate stale source/query/revision/session responses,
+  clear/hide the old panel immediately on logout/account switch, and drain jobs
+  before disposal. Use the existing single-operation task flow for opening;
+  revalidate session before activating/loading CAD and preserve dirty snapshots.
+- User explicitly keeps insertion in FreeCAD native assembly tools for now.
+  Record shared native/web thumbnail generation as future work in
+  docs/thumbnail-plan.md; no thumbnails or rendering service implemented.
+- Validation: 393 addon tests pass with three optional Qt modules skipped in the
+  base environment; 14 real offscreen Qt tests pass separately, including source
+  tabs, pins, failures, stale responses, corrupt preferences and in-flight account
+  switching. All-addon Ruff lint/format, manifest/archive and diff checks pass.
+- Installed FreeCAD 1.1.4/Qt 6.8.3 passes 17 live panel/HTTP/CAD checks against a
+  disposable backend, plus the 28-check atomic part/assembly seed acceptance.
+  Verify favorite persistence with a fresh HTTP client, exact Recent retrieval,
+  dirty reactivation, active My Checkouts and omission of unauthorized IDs under
+  another real account. User's four open documents, saved hashes, dirty states,
+  active document and login are preserved. Native fixtures are isolated.
+- Install 0.17.0 into both profiles after consistent online SQLite/blob and prior
+  addon backups. Initial pre-0.17 backup:
+  var/backups/before-browser-panel-20261113T014400Z; final layout backup:
+  var/backups/before-browser-panel-20261113T014912Z. All 39 database tables and
+  206 stored-file hashes preserved; integrity/FKs pass. Both profiles match final
+  archive bytes. Backend remains running unchanged at schema 17.
+- Refresh installed modules, the session notifier and cached command instances
+  without replacing the shared Session class or login object. Actual registered
+  toolbar action shows the new panel against production in read-only mode;
+  all four columns and source tabs fit, workspace is already configured, and
+  the four documents/active document/session remain unchanged. Leave it visible.
+- Guide: docs/freecad-open-browser.md; design ADR-020. Evidence:
+  docs/validation/browser-panel-{native,installed,freecad-installed,
+  production-readonly}-2026-11-12.json. No production engineering mutations tested.
+- Limits: shortcuts are local to a FreeCAD profile, not web/cloud synchronized.
+  Metadata is refreshed on demand; larger shortcut lists use per-entry reads.
+  My Checkouts scans at most 1000 leases and reports the cap. Pending HTTP can
+  drain until timeout while UI remains responsive. No automatic disk cleanup,
+  thumbnail backfill or new insertion action. Other platforms remain unverified.
+
+## 2026-11-12 — One-window search and opening (0.16.0)
+
+- Replace Open from ForgePDM's catalog/search/item/revision/snapshot dialog chain
+  with one asynchronous native window. Add debounced search, P/A/S filters,
+  result paging, visible revision/snapshot selectors and older-revision loading.
+  Current revision/newest uploaded native snapshot are explicit initial defaults;
+  Enter/double-click opens the selection. Show local-time upload dates and retain
+  exact dataset/file identities. No native CAD disables opening for that revision.
+- Remember workspace roots per server/account. Add Set Workspace to Session and
+  Change inside Open. Reuse valid configured roots without a folder chooser;
+  adopt the previous global root only for matching saved server/username.
+  Reject missing/unwritable roots, linked metadata and another server's identity.
+  Existing managed documents retain their own workspace for editing/upload.
+- Reuse existing verified configuration retrieval and exact component manifests.
+  Recheck read access and activate an already-open exact dataset/file without
+  modifying dirty documents. Other snapshots open separately. Success uses the
+  status bar; no routine opening-success modal. Opening never acquires checkout,
+  uploads files, changes revision pins or synchronizes BOMs.
+- Keep HTTP on bounded workers and GUI work on the main thread. Invalidate stale
+  query/revision responses immediately; close cancels and responsively drains
+  requests before destroying the dialog. Preserve all command IDs and nine-button
+  toolbar; Set Workspace adds one distinct icon/menu command (23 total).
+- Validation: 385 addon tests pass (two optional Qt modules skipped in base env);
+  eight real offscreen Qt tests pass separately with PySide6, including five new
+  browser checks and three existing BOM checks. All-addon Ruff lint/format,
+  manifest/layout/archive and diff checks pass. Backend unchanged; no migration.
+- Real FreeCAD 1.1.4/Qt 6.8.3: ten browser/retrieval checks pass using installed
+  0.16.0 against disposable native assembly data, plus the existing 28-check atomic
+  part/assembly acceptance fixture. Verify exact manifests, older snapshots,
+  unchanged dirty latest copy, no repeated folder prompt and no server writes
+  during opening. Registered toolbar action opens the new window and cancels
+  cleanly. Production engineering CAD was not opened or changed by acceptance.
+- Install 0.16.0 into both local profiles after a consistent online SQLite backup,
+  blob copy and prior-addon backups under
+  var/backups/before-open-browser-20261113T010022Z. All 39 tables and 202 stored-file
+  hashes preserved, integrity/FKs pass; both profiles match archive bytes.
+  Backend remains running unchanged at schema 17. Refresh running installed
+  modules/cached commands, add Set Workspace, preserve client/session; no user
+  documents were open. Verify runtime module paths and version 0.16.0.
+- Guide: docs/freecad-open-browser.md. Evidence:
+  docs/validation/open-browser-{native,installed,freecad-installed}-2026-11-12.json.
+- Limits: current-revision defaults reflect loaded catalog metadata; no live
+  revision subscription. Closing can wait for an in-flight HTTP timeout while
+  remaining responsive. Workspaces accumulate configurations; no automatic
+  cleanup. Recent items/favorites/My Checkouts and a persistent browser panel are
+  future increments. Other FreeCAD/platform combinations remain unverified.
+
 ## 2026-11-12 — Phase 5 reliability completion (0.15.0 / schema 17)
 
 - Fence ordinary dataset uploads, immutable manifest attachment and legacy
@@ -1031,7 +1134,7 @@ before acting. Git history and the linked reports provide the detailed record.
   revision-pinned BOMs and immutable CAD dependency manifests.
 - Web GUI: browsing and controlled user/project/account management at `/app/`,
   served by the backend; see docs/web-gui.md and docs/web-management.md.
-- FreeCAD addon: **0.15.0**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.17.0**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 implements atomic part/assembly check-in, pinned manifests,
@@ -1091,7 +1194,7 @@ Evidence:
 ## Next session
 
 1. Read root/nested `AGENTS.md`, this handoff and Git status before changes.
-   Current source and installed delivery are addon 0.15.0/backend schema 17. Standard Parts/shared
+   Current source and installed delivery are addon 0.17.0/backend schema 17. Standard Parts/shared
    catalog, simple P/A/M descriptions, physical P mass and bounded S supplier
    reference mass plus CAD/manual fallbacks are implemented. Use docs/material-management.md,
    docs/supplier-reference-mass.md and docs/upgrade-and-validation.md. The older

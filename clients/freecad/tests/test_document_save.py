@@ -502,3 +502,60 @@ def test_target_mapping_groups_repeated_occurrences_and_cancellation(commands, m
     assert len(calls) == 1
     monkeypatch.setattr(commands, "ask_choice", lambda *args: None)
     assert commands._map_replacement_objects(source, refs, ["First"], target_doc) is None
+
+
+def test_configured_workspace_is_used_without_opening_folder_picker(
+    commands, monkeypatch, tmp_path
+):
+    from freecad.forgepdm import settings
+
+    client = SimpleNamespace(base_url="http://forgepdm.test")
+    monkeypatch.setattr(commands.Session, "user", {"id": "actor", "username": "alice"})
+    monkeypatch.setattr(settings, "workspace_root", lambda *args: str(tmp_path))
+    saved = []
+    monkeypatch.setattr(settings, "save_workspace", lambda *args: saved.append(args))
+
+    def forbidden(*args):
+        raise AssertionError("unnecessary folder dialog")
+
+    monkeypatch.setattr(
+        commands.QtWidgets.QFileDialog, "getExistingDirectory", forbidden, raising=False
+    )
+    assert commands._choose_workspace(client) == str(tmp_path)
+    assert saved == [(str(tmp_path), client.base_url, "actor")]
+
+
+def test_open_exact_snapshot_activates_dirty_document_without_retrieval(
+    commands, monkeypatch, tmp_path
+):
+    source = Document(tmp_path / "model.FCStd")
+    source.getObject = lambda _: SimpleNamespace(RevisionId="revision")
+    entry = {"path": "model.FCStd", "dataset_id": "dataset", "file_id": "file"}
+    monkeypatch.setattr(
+        commands.FreeCAD, "listDocuments", lambda: {source.Name: source}, raising=False
+    )
+    monkeypatch.setattr(commands.FreeCAD, "getDocument", lambda _: source, raising=False)
+    activated = []
+    monkeypatch.setattr(commands.FreeCAD, "setActiveDocument", activated.append, raising=False)
+    monkeypatch.setattr(
+        commands.workspace,
+        "binding",
+        lambda *args, **kwargs: {"directory": tmp_path, "entry": entry},
+    )
+    monkeypatch.setattr(commands, "_open_status", lambda _: None)
+    client = SimpleNamespace(base_url="http://forgepdm.test", get_revision=lambda _: {})
+    workflow = commands._open_selected_configuration(
+        client,
+        {
+            "revision": {"id": "revision"},
+            "dataset": {"id": "dataset"},
+            "file": {"id": "file"},
+            "workspace": str(tmp_path),
+        },
+    )
+    request = next(workflow)
+    assert request.function == client.get_revision
+    with pytest.raises(StopIteration):
+        workflow.send({})
+    assert activated == [source.Name]
+    assert source.saved == [] and source.recomputes == 0

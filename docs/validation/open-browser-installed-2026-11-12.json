@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "addon": "0.16.0",
+  "schema": 17,
+  "database_tables_preserved": 39,
+  "stored_file_hashes_preserved": 202,
+  "backup": "/home/ricardoblank/Development/ForgePDM/var/backups/before-open-browser-20261113T010022Z",
+  "backend_restarted": false,
+  "profiles": [
+    "/home/ricardoblank/.local/share/FreeCAD/Mod/ForgePDM",
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM"
+  ],
+  "both_profiles_match_archive": true
+}
