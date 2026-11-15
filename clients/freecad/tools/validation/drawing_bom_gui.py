@@ -1,7 +1,7 @@
 """Disposable live Drawing BOM command, frozen uploads, retrieval and PDF acceptance."""
 
 
-def run(App, Gui, directory):
+def run(App, Gui, directory, shared_views=False):
     import hashlib
     import importlib.util
     import json
@@ -87,8 +87,14 @@ def run(App, Gui, directory):
     try:
         user = worker(client.login, config["username"], config["password"])
         session.Session.set_client(client, user)
-        item = worker(client.search_items, "", number_series="A")["items"][0]
+        item = max(
+            worker(client.search_items, "", number_series="A")["items"],
+            key=lambda row: row["number"],
+        )
         parts = worker(client.search_items, "", number_series="P")["items"][:2]
+        if len(parts) < 2:
+            worker(client.create_item, "part", "Secondary drawing BOM fixture")
+            parts = worker(client.search_items, "", number_series="P")["items"][:2]
         rid = item["current_revision_id"]
         worker(client.acquire_checkout, rid)
         lines = [
@@ -128,12 +134,36 @@ def run(App, Gui, directory):
                     dialog.columns.item(5, 1).setText("Finish")
                     dialog.preview()
                     dialog.grid.item(0, 5).setText("PAINT BLUE")
+                if mode.get("view"):
+                    dialog.view.setCurrentIndex(dialog.view.findData(mode["view"]))
+                    dialog.preview()
+                    if mode.get("note"):
+                        row = 1 if mode["view"] == "indented" else 0
+                        assert not dialog.grid.item(row, 5).text(), (
+                            "notes leaked between report views"
+                        )
+                        dialog.grid.item(row, 5).setText(mode["note"])
                 dialog.accept()
 
             ui.QtCore.QTimer.singleShot(20, accept)
             result = original_dialog(dialog)
             if mode["renew"]:
                 worker(client.renew_checkout, rid)
+            if mode.get("nested_change"):
+                worker(
+                    client._json_request,
+                    "PUT",
+                    f"/api/v1/revisions/{mode['sub_revision']}/bom",
+                    {
+                        "lines": [
+                            {
+                                "component_revision_id": parts[0]["current_revision_id"],
+                                "quantity": "9",
+                                "position": 1,
+                            }
+                        ]
+                    },
+                )
             return result
 
         commands.execute_dialog = configure
@@ -221,6 +251,29 @@ def run(App, Gui, directory):
             "generation never rewrites stored EBOM quantities",
             worker(client.get_bom, rid)[0]["quantity"] == "8",
         )
+        if shared_views:
+            shared_spec = importlib.util.spec_from_file_location(
+                "shared_bom_native", Path(__file__).with_name("shared_bom_native.py")
+            )
+            shared = importlib.util.module_from_spec(shared_spec)
+            shared_spec.loader.exec_module(shared)
+            shared.exercise(
+                App,
+                Gui,
+                document,
+                page,
+                target,
+                client,
+                worker,
+                drive,
+                mode,
+                rid,
+                item,
+                parts,
+                case,
+                check,
+                original_dialog,
+            )
         report["status"] = "passed"
     except BaseException as error:
         report.update(status="failed", error=str(error))

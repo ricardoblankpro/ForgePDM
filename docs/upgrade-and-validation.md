@@ -1,4 +1,4 @@
-# Upgrade and validation — addon 0.18.1 / schema 17
+# Upgrade and validation — addon 0.19.0 / schema 17
 
 The backend runs separately from FreeCAD. Use Python 3.11+ and `uv`; the native
 material workflow is validated on Linux with FreeCAD 1.1.4. Other FreeCAD/platform
@@ -20,7 +20,7 @@ combinations have not received the same acceptance coverage.
    uv run --project clients/freecad --extra dev --locked python clients/freecad/tools/addon.py build
    ```
 
-   The archive is `clients/freecad/dist/ForgePDM-0.18.1.zip`. Replace the previous
+   The archive is `clients/freecad/dist/ForgePDM-0.19.0.zip`. Replace the previous
    `Mod/ForgePDM` installation with the archive contents; do not overlay old files.
    Restart FreeCAD after a normal installation. Do not install the backend package
    or another Qt binding into FreeCAD.
@@ -163,3 +163,12 @@ backend with its existing DB/storage configuration; no migration beyond 17.
 Generated SVG/report/layout/custom row text is embedded in the FCStd drawing.
 Back up local preferences to retain named Drawing BOM layouts. See
 [drawing BOM tables](drawing-bom-tables.md).
+
+## Shared BOM reports (0.19.0)
+
+Upgrade/restart the backend before using addon 0.19.0; verify the new
+`/api/v1/revisions/{revision_id}/bom-report` route, then refresh the web browser.
+Schema stays 17. Direct/Indented/Flattened viewers and drawing tables share one
+read-snapshot report; see [semantics and compatibility](bom-reports.md). Older
+addons cannot update non-direct format-2 tables, but their embedded SVG remains
+viewable offline. Existing saved tables are not rewritten on upgrade.

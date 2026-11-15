@@ -56,7 +56,22 @@ def run(App, Gui):
 
     def load():
         lines = yield Request("Loading test data", io, (state["lines"],))
-        return lines, dict(mass_kg="0.08075", known_mass_kg="0.08075", issues=[])
+        rows = [
+            dict(
+                line,
+                row_key=line["component_revision_id"] + ":" + str(line["position"]),
+                quantity_per_parent=line["quantity"],
+                total_quantity=line["quantity"],
+                parent_key=None,
+                level=1,
+            )
+            for line in lines
+        ]
+        return dict(
+            views={key: rows for key in ("direct", "indented", "flattened")},
+            mass=dict(mass_kg="0.08075", known_mass_kg="0.08075", issues=[]),
+            structure_complete=True,
+        )
 
     def prepare():
         yield Request("Preparing test proposal", io, (None,))

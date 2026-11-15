@@ -431,12 +431,22 @@ the same panel without losing the current tab. Favorites/history persist locally
 per server/account and recheck authorization when loaded. Limits are 100 favorites
 and 30 recent snapshots. Component insertion stays in native FreeCAD tools.
 
-## Drawing BOM tables (0.18.0)
+## BOM views and drawing tables (0.19.0)
+
+Use **BOM / Mass…** to select Direct, Indented or Flattened views. The FreeCAD
+and web viewers share the same server report, with quantities per parent/per root,
+unit/extended masses and explicit missing evidence. Refresh to fetch new values;
+view changes do not synchronize the stored BOM. Indented parent/child masses
+overlap and must not be added together.
 
 Use **ForgePDM → BOM and publishing → Drawing BOM…** in a checked-out assembly
-working copy with a TechDraw page. Choose columns, headings, widths/alignment,
+working copy with a TechDraw page. Choose the BOM view, editable title, columns, headings, widths/alignment,
 font size and custom text, or reuse a saved layout. Select an existing generated
 table to explicitly update it while keeping placement and matching row notes.
-Data comes from the stored direct EBOM, not unsaved CAD. Values and SVG remain
+Data comes from the stored engineering BOM. Flattened rows combine parts by exact
+revision; indented rows show occurrence paths. Unsaved CAD edits are excluded. Values and SVG remain
 embedded/offline in the native file. Save/upload/publish explicitly afterward.
-Requires the updated backend drawing report endpoint; schema stays 17.
+Requires the updated backend `/bom-report` endpoint; schema stays 17. Legacy
+tables/layouts default to Direct. Non-direct tables use format 2; older addons
+refuse their update while the SVG remains viewable. Tables must fit one page
+and at most 500 rows. No footer is generated.

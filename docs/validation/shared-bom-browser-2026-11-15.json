@@ -1,0 +1,21 @@
+{
+  "scope": "Real Chrome, disposable backend; read-only report/view navigation",
+  "checks": [
+    "indented quantities distinguish four per parent from twelve per root",
+    "nested positions retain stored path",
+    "unknown mass stays unavailable with known subtotal",
+    "flattened combines repeated exact revision to fourteen parts",
+    "flattened quantity per parent is explicitly unavailable",
+    "direct keeps subassembly and direct part rows",
+    "indented collapse retains root lines",
+    "expansion restores server quantities",
+    "view switches use one common fetched snapshot",
+    "explicit refresh fetches another report",
+    "flattened navigation opens pinned A rather than latest B",
+    "viewing causes no engineering writes",
+    "no browser exceptions"
+  ],
+  "pageErrors": [],
+  "writes": [],
+  "status": "passed"
+}

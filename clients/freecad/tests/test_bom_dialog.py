@@ -39,7 +39,22 @@ def case():
 
     def load():
         lines = yield Request("Loading", request_result, (state["lines"],))
-        return lines, mass
+        rows = [
+            dict(
+                line,
+                row_key=line["component_revision_id"] + ":" + str(line["position"]),
+                quantity_per_parent=line["quantity"],
+                total_quantity=line["quantity"],
+                level=1,
+                parent_key=None,
+            )
+            for line in lines
+        ]
+        return {
+            "views": {key: deepcopy(rows) for key in ("direct", "indented", "flattened")},
+            "mass": mass,
+            "structure_complete": True,
+        }
 
     def prepare():
         assert get_ident() == main_thread
@@ -91,7 +106,7 @@ def case():
         )
     )
     yield dialog, state, wait, app
-    wait(lambda: dialog.job is None)
+    wait(lambda: dialog.job is None and dialog.notice_job is None and not dialog.retired_notices)
     dialog.reject()
     app.processEvents()
     assert threads and all(thread != main_thread for thread in threads)
@@ -110,7 +125,7 @@ def test_default_inclusion_apply_refresh_and_noop(case):
     assert dialog.review.isHidden()
     assert dialog.tree.topLevelItemCount() == 1
     wait(lambda: dialog.notice_job is None)
-    assert dialog.tree.topLevelItem(0).text(5) == "Newer: B"
+    assert dialog.tree.topLevelItem(0).text(9) == "Newer: B"
     dialog.update_button.click()
     wait(lambda: dialog.job is None and dialog.plan is not None)
     assert "up to date" in dialog.status.text()
@@ -152,4 +167,17 @@ def test_stale_write_invalidates_proposal_and_does_not_retry(case):
     assert dialog.plan is None and dialog.review.isHidden()
     assert "Stale BOM" in dialog.status.text()
     assert "outcome may be unknown" in dialog.status.text()
+    assert state["writes"] == 1
+
+
+def test_view_selection_keeps_root_quantities_and_direct_review(case):
+    dialog, state, wait, app = case
+    dialog.update_button.click()
+    wait(lambda: dialog.job is None and dialog.plan is not None)
+    dialog.apply_button.click()
+    wait(lambda: dialog.job is None and state["writes"] == 1)
+    for index in [0, 2, 1]:
+        dialog.view.setCurrentIndex(index)
+        assert dialog.tree.topLevelItemCount() == 1
+        assert dialog.tree.topLevelItem(0).text(5) == "1"
     assert state["writes"] == 1

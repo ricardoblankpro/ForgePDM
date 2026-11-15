@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "addon": "0.19.0",
+  "schema": 17,
+  "tables_preserved": 39,
+  "stored_file_hashes_preserved": 211,
+  "both_profiles_match_archive": true,
+  "backup": "/home/ricardoblank/Development/ForgePDM/var/backups/before-shared-bom-20261115T223508Z",
+  "report_endpoint_live": true,
+  "web_assets_match_source": true,
+  "integrity": "ok",
+  "foreign_key_errors": 0,
+  "final_documentation_installed": true
+}

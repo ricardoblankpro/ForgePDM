@@ -55,3 +55,5 @@ Current limits and next-session instructions live in DEVELOPMENT_STATUS.md.
 ## Future implementation plans
 
 - [Shared native/web CAD thumbnails](thumbnail-plan.md) — recorded, not implemented.
+
+- [Shared Direct, Indented and Flattened BOM reports](bom-reports.md)

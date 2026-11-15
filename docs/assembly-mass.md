@@ -50,3 +50,10 @@ Show BOM to recalculate after publishing component changes.
 From addon 0.14.0, **BOM / Mass… → Refresh published BOM** refreshes in place.
 Native and web mass displays use at most three decimal places; positive values
 below 0.001 kg show `<0.001 kg`. Stored/calculated/API values retain full precision.
+
+## Shared reports (0.19.0)
+
+Assembly mass now comes from the same single-snapshot traversal as the Direct,
+Indented and Flattened BOM views. Complete subassembly masses are available in
+report rows. The overall summary counts leaves once; do not sum indented parent
+and child rows. See [BOM reports](bom-reports.md).

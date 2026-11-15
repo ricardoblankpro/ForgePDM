@@ -99,3 +99,37 @@ def test_invalid_page_fit_and_width_stay_in_editor(case):
     dialog.columns.item(0, 2).setText("nan")
     dialog.accept()
     assert dialog.result() == 0 and "width" in dialog.status.text()
+
+
+def test_view_switch_preserves_layout_and_isolates_custom_notes(case, monkeypatch):
+    _, previous, values = case
+    report = {**previous.report, "structure_complete": True}
+    direct = {**report["lines"][0], "row_key": "direct:part", "quantity_per_parent": "2"}
+    nested = {**direct, "row_key": "nested:part", "position": "1.5", "quantity": "6", "level": 2}
+    flat = {**direct, "row_key": "flat:part", "quantity": "6"}
+    report["views"] = {"direct": [direct], "indented": [nested], "flattened": [flat]}
+    dialog = ui.DrawingBOMDialog(None, report, previous.pages)
+    try:
+        dialog.title.setText("Lista de peças")
+        dialog.add_column()
+        dialog.grid.item(0, 5).setText("Direct only")
+        dialog.view.setCurrentIndex(1)
+        assert dialog.definition()["view"] == "indented"
+        assert dialog.grid.item(0, 0).text() == "1.5"
+        assert dialog.grid.item(0, 5).text() == ""
+        dialog.view.setCurrentIndex(2)
+        assert dialog.grid.item(0, 3).text() == "6"
+        assert dialog.grid.item(0, 5).text() == ""
+        dialog.grid.item(0, 5).setText("Flattened only")
+        monkeypatch.setattr(QtWidgets.QInputDialog, "getText", lambda *args: ("Flat layout", True))
+        dialog.save_layout()
+        saved = json.loads(values["DrawingBOMLayouts"])["Flat layout"]
+        assert saved["view"] == "flattened" and saved["title"] == "Lista de peças"
+        dialog.view.setCurrentIndex(0)
+        assert dialog.grid.item(0, 5).text() == "Direct only"
+        dialog.load_layout(saved)
+        assert dialog.view.currentData() == "flattened"
+        assert dialog.grid.item(0, 5).text() == "Flattened only"
+    finally:
+        dialog.reject()
+        dialog.deleteLater()

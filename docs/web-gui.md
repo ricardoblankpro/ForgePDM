@@ -10,8 +10,9 @@ administrator CSV import. Catalog/detail subtitles prefer exact revision
 engineering descriptions. See [materials](material-management.md),
 [supplier mass](supplier-reference-mass.md) and
 [current upgrade/validation](upgrade-and-validation.md). Historical read-only
-claims below apply to that initial increment only. General CAD/BOM browser editing,
-assembly mass totals and ERP synchronization remain outside the current scope.
+claims below apply to that initial increment only. Assembly mass and shared
+Direct/Indented/Flattened BOM reports are delivered; see [BOM reports](bom-reports.md).
+General CAD/BOM browser editing and ERP synchronization remain deferred.
 
 ## Initial read-only increment
 
@@ -58,10 +59,10 @@ preserves the FreeCAD catalog contract.
 
 Revision selection and BOM/where-used navigation retain exact IDs. The current
 revision is available as an explicit choice; historical views are never silently
-substituted. Multilevel rows can be expanded/collapsed. Quantities are those within
-the immediate parent, with no implicit rollup or flattened parts aggregation.
-Empty stored subassembly BOMs have no expanded children; synchronize those BOMs
-from their respective FreeCAD working documents first.
+substituted. Indented rows can be expanded/collapsed. The shared report labels
+quantities per immediate parent and per root assembly, and offers flattened parts
+aggregation by exact revision. Empty subassemblies are flagged as incomplete
+structure; synchronize their stored BOMs from their managed FreeCAD documents.
 
 Dataset downloads use authenticated fetches and individual file bytes. They do
 not reconstruct an assembly's entire linked configuration. Use FreeCAD's download
@@ -114,3 +115,10 @@ node tests/web/browser.mjs /tmp/forgepdm-web-qa-case
 `FORGEPDM_BROWSER` to another Chrome executable. The harness defaults to
 `/usr/bin/google-chrome`, uses only disposable data, writes screenshots/reports
 under the fixture directory and does not print credentials.
+
+## Shared BOM reports (0.19.0)
+
+The initial multilevel-only behavior above is superseded by Direct, Indented and
+Flattened reports, shared with FreeCAD and TechDraw. The BOM tab shows quantities
+per parent/per root, unit/extended masses and incomplete totals. Use Refresh BOM
+to fetch current evidence. See [BOM reports](bom-reports.md) for exact semantics.

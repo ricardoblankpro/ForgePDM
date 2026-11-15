@@ -11,14 +11,15 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 
 ## Active development-direction roadmap
 
-**Current source: addon 0.18.1 / backend schema 17.** Simple P material/A assembly
+**Current source: addon 0.19.0 / backend schema 17.** Simple P material/A assembly
 descriptions, optional native density links and finished part mass, and bounded
 S supplier reference mass plus CAD/manual fallbacks are implemented. Current guides:
 [materials](material-management.md), [supplier mass](supplier-reference-mass.md)
 and [upgrade/validation](upgrade-and-validation.md). Assembly mass rollup is implemented (see [usage](assembly-mass.md));
 Direct customizable TechDraw BOM tables are delivered in 0.18.0; 0.18.1 adds editable
-titles and removes the generated footer. Flattened/indented
-tables, sheet splitting, balloons, stock/cutting optimization and ERPNext synchronization remain
+titles and removes the generated footer. Shared Direct/Indented/Flattened reports
+are delivered in 0.19.0 for FreeCAD, web and TechDraw (see [BOM reports](bom-reports.md)).
+Sheet splitting, balloons, stock/cutting optimization and ERPNext synchronization remain
 future increments; no new feature order is assumed without user direction.
 
 **Standard/purchased component catalog delivered (originally addon 0.7.4).** Shared library
@@ -51,7 +52,7 @@ user pilot testing. The first web increment is served at `/app/`
 and provides authorized project/item browsing, exact revision history, datasets,
 where-used and direct/multilevel BOM views. User-approved account/project management, my checkouts and activity history
 are now implemented; see [the functional GUI report](web-management.md). P/A/M description and material editing plus S supplier-mass enrichment are
-implemented. General CAD/BOM editing, flattened BOM tools and ERP integrations
+implemented. General CAD/BOM editing and ERP integrations
 remain future work. See [the web GUI report](web-gui.md).
 
 Phase 3 was explicitly authorized after Phase 2. Phase 4 provides reviewed,

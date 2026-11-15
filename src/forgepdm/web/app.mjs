@@ -1,14 +1,15 @@
+import { bomViews, reportRows, reportMass, reportSummary } from "./bom-report.mjs";
 import { materialsUI } from "./materials.mjs";
 import { managementUI } from "./management.mjs";
 import { drawingViewer } from "./drawings.mjs";
 import { API } from "./api.mjs";
-import { readRoute, routeFor, bomRows, allBomKeys, fileSize, dateLabel, stateLabel } from "./model.mjs";
+import { readRoute, routeFor, fileSize, dateLabel, stateLabel } from "./model.mjs";
 
 const $ = selector => document.querySelector(selector);
 const api = new API();
 const state = { user: null, projects: [], items: [], query: "", project: "", offset: 0,
   hasMore: false, item: null, revision: null, revisions: [], tab: "overview",
-  cache: {}, expanded: new Set(), multilevel: true, page: "catalog", historyAll: false };
+  cache: {}, expanded: new Set(), bomView: "indented", page: "catalog", historyAll: false };
 let session = new AbortController();
 let listVersion = 0;
 let detailVersion = 0;
@@ -291,16 +292,20 @@ async function loadTab(content) {
   const tab = state.tab;
   if (tab === "materials") return materialUI.render(content, state.item, revision);
   if (tab === "overview") { renderOverview(content); return; }
+  if (tab === "bom" && state.item.kind !== "assembly") {
+    content.replaceChildren(empty("No assembly BOM", "Engineering BOM reports apply to assembly revisions."));
+    return;
+  }
   if (Object.hasOwn(state.cache, tab)) { renderTabData(content, tab, state.cache[tab]); return; }
   content.replaceChildren(loading("Loading revision data…"));
-  const path = tab === "bom" ? `/revisions/${revision.id}/bom?recursive=true` :
+  const path = tab === "bom" ? `/revisions/${revision.id}/bom-report` :
     tab === "drawings" ? `/revisions/${revision.id}/drawings` :
     tab === "datasets" ? `/revisions/${revision.id}/datasets` : `/items/${state.item.id}/where-used`;
   try {
     const data = await request(path);
     if (version !== tabVersion || state.revision?.id !== revision.id || !state.user) return;
     state.cache[tab] = data;
-    if (tab === "bom") state.expanded = new Set(data.map(line => JSON.stringify([line.id])));
+    if (tab === "bom") state.expanded = new Set(data.views.indented.filter(line => line.level === 1).map(line => line.row_key));
     renderTabData(content, tab, data);
   } catch (error) { if (version === tabVersion) showError(content, error, () => loadTab(content)); }
 }
@@ -334,26 +339,36 @@ function renderTabData(content, tab, data) {
   else if (tab === "drawings") drawingUI.render(content, data, () => { delete state.cache.drawings; loadTab(content); });
   else renderWhereUsed(content, data);
 }
-function renderBOM(content, lines) {
+function renderBOM(content, report) {
+  const view = state.bomView;
   const controls = el("div", { class: "bom-controls" },
     el("div", { class: "segmented", "aria-label": "BOM view" },
-      ...[[false, "Direct"], [true, "Multilevel"]].map(([multi, label]) => button(label, () => { state.multilevel = multi; renderBOM(content, lines); }, {
-        class: state.multilevel === multi ? "active" : "", "aria-pressed": String(state.multilevel === multi)
+      ...bomViews.map(([key, label]) => button(label, () => { state.bomView = key; renderBOM(content, report); }, {
+        class: view === key ? "active" : "", "aria-pressed": String(view === key)
       }))),
-    state.multilevel && el("div", { class: "compact-actions" },
-      button("Expand all", () => { state.expanded = new Set(allBomKeys(lines)); renderBOM(content, lines); }, { class: "quiet" }),
-      button("Collapse all", () => { state.expanded.clear(); renderBOM(content, lines); }, { class: "quiet" })));
-  const rows = bomRows(lines, state.expanded, state.multilevel).map(({ line, key, depth, hasChildren, expanded }) => [
+    view === "indented" && el("div", { class: "compact-actions" },
+      button("Expand all", () => { state.expanded = new Set(report.views.indented.map(line => line.row_key)); renderBOM(content, report); }, { class: "quiet" }),
+      button("Collapse all", () => { state.expanded.clear(); renderBOM(content, report); }, { class: "quiet" })),
+    button("Refresh BOM", () => { delete state.cache.bom; loadTab(content); }, { class: "quiet" }));
+  const rows = reportRows(report, view, state.expanded).map(({ line, key, depth, hasChildren, expanded }) => [
+    String(line.position),
     el("div", { class: `bom-cell depth-${Math.min(depth, 12)}` }, hasChildren ? button(expanded ? "▾" : "▸", () => {
-      if (expanded) state.expanded.delete(key); else state.expanded.add(key); renderBOM(content, lines);
+      if (expanded) state.expanded.delete(key); else state.expanded.add(key); renderBOM(content, report);
     }, { class: "tree-toggle", "aria-expanded": String(expanded), "aria-label": `${expanded ? "Collapse" : "Expand"} ${line.item_number} revision ${line.revision_label}` }) : el("span", { class: "tree-spacer" }),
-    el("div", {}, button(line.item_number, () => navigate(line.item_id, line.component_revision_id), { class: "text-button number" }), el("span", { class: "row-description", title: line.item_name }, line.item_name))),
-    `Rev ${line.revision_label}`, line.quantity, badge(line.lifecycle_state)
+    el("div", {}, button(line.item_number, () => navigate(line.item_id, line.component_revision_id), { class: "text-button number" }), el("span", { class: "row-description", title: line.description || line.item_name }, line.description || line.item_name))),
+    `Rev ${line.revision_label}`, line.quantity_per_parent ?? "—", line.total_quantity,
+    reportMass(line, "unit_mass"), el("span", { title: line.mass_source?.reason || "" }, reportMass(line, "total_mass")), badge(line.lifecycle_state)
   ]);
-  content.replaceChildren(controls, ...(lines.length ? [
-    dataTable(["Component", "Revision", "Qty / parent", "State"], rows, "bom-table", "Revision-pinned bill of materials"),
-    el("p", { class: "small-muted" }, "Quantities are per immediate parent. Components use their recorded revision. Empty subassembly BOMs have no child rows.")
-  ] : [empty("No BOM lines recorded", "This revision has no stored engineering BOM. Assembly BOMs can be reviewed and synchronized from FreeCAD.", "assembly")]));
+  content.replaceChildren(controls,
+    el("p", { class: "bom-mass" }, reportSummary(report.mass)),
+    el("p", { class: "small-muted" }, "Quantities and extended masses refer to one root assembly. Qty / parent is the immediate-parent quantity. Indented parent and child masses must not be added together. Exact recorded revisions are preserved."),
+    view === "flattened" && el("p", { class: "small-muted" }, "Parts only, combined by exact revision. Positions are report row numbers."),
+    !report.structure_complete && el("p", { class: "inline-error", role: "status" }, "Structure incomplete: some assemblies have no stored BOM lines. Flattened results omit those unresolved assemblies."),
+    ...(rows.length ? [dataTable(["Position", "Component", "Revision", "Qty / parent", "Qty / root", "Unit mass (kg)", "Mass / root (kg)", "State"], rows, "bom-table", "Revision-pinned bill of materials")]
+      : [empty("No BOM lines in this view", "Review the stored assembly structure in FreeCAD.", "assembly")]),
+    report.mass.issues.length > 0 && el("details", {}, el("summary", {}, `Mass unavailable for ${report.mass.issues.length} occurrence(s)`),
+      ...report.mass.issues.slice(0, 30).map(issue => el("p", {}, `${issue.item_number}-${issue.revision_label} × ${issue.quantity}: ${issue.reason}`)),
+      report.mass.issues.length > 30 && el("p", {}, "Showing the first 30 occurrences.")));
 }
 function renderDatasets(content, datasets) {
   if (!datasets.length) { content.replaceChildren(empty("No files attached", "Uploaded CAD snapshots and supporting files for this revision will appear here.")); return; }

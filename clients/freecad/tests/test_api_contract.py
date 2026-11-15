@@ -31,6 +31,7 @@ def api(addon_root):
         ("get_item", ("item",), "GET", "/api/v1/items/item", None),
         ("get_checkout", ("rev",), "GET", "/api/v1/revisions/rev/checkout", None),
         ("get_bom", ("rev", True), "GET", "/api/v1/revisions/rev/bom?recursive=true", None),
+        ("bom_report", ("rev",), "GET", "/api/v1/revisions/rev/bom-report", None),
         ("bom_snapshot", ("rev",), "GET", "/api/v1/revisions/rev/bom/snapshot", None),
         (
             "synchronize_bom",

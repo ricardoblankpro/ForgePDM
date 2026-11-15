@@ -398,6 +398,11 @@ class ForgePDMClient:
     def get_item(self, item_id):
         return self._json_request("GET", "/api/v1/items/" + self._quote(item_id))
 
+    def bom_report(self, revision_id):
+        return self._json_request(
+            "GET", "/api/v1/revisions/{}/bom-report".format(self._quote(revision_id))
+        )
+
     def drawing_bom(self, revision_id):
         return self._json_request(
             "GET", "/api/v1/revisions/{}/drawing-bom".format(self._quote(revision_id))

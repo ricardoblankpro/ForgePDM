@@ -53,3 +53,8 @@ and `{revision_label}` substitutions; blank hides the title. Missing fields in
 older layouts resolve to the original default without changing saved drawings.
 New/explicitly updated SVG tables omit the generated footer at the user's request.
 Frozen tables are never rewritten merely by loading or upgrading the addon.
+
+Addon 0.19.0 supersedes direct-only reporting with the shared Direct/Indented/
+Flattened service described in [ADR-022](ADR-022-shared-bom-reports.md). Non-direct
+tables use embedded format 2; direct/legacy tables remain format 1. Subassembly
+mass now uses the same complete leaf rollup; the one-page boundary remains.

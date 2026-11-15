@@ -19,6 +19,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv run --group dev --locked pytest tests -q
+      - run: node --test tests/web/*.test.mjs
   addon:
     runs-on: ubuntu-latest
     timeout-minutes: 10

@@ -114,3 +114,43 @@ def test_legacy_layout_keeps_default_title_without_changing_saved_definition():
 def test_invalid_layout_is_rejected(change):
     with pytest.raises(ValueError):
         bom.layout({**copy.deepcopy(bom.DEFAULT), **change})
+
+
+def test_report_view_keys_isolate_notes_and_preserve_flat_notes_after_renumbering():
+    value = report()
+    direct = {**value["lines"][0], "row_key": "child-A:5"}
+    nested = {**direct, "row_key": "indented:root/sub/5", "position": "2.5", "level": 2}
+    flat = {**direct, "row_key": "flattened:child-A", "position": 1, "quantity": "12"}
+    bundle = {
+        **{k: v for k, v in value.items() if k != "lines"},
+        "views": {"direct": [direct], "indented": [nested], "flattened": [flat]},
+    }
+    column = {
+        "field": "custom",
+        "heading": "Finish",
+        "width": 30,
+        "align": "left",
+        "unit": "kg",
+        "key": "finish",
+    }
+    notes = {
+        bom.row_key(direct): {"finish": "Direct note"},
+        bom.row_key(flat): {"finish": "Flat note"},
+    }
+    for view, expected in [("direct", "Direct note"), ("indented", ""), ("flattened", "Flat note")]:
+        selected = bom.report_for_view(bundle, view)
+        assert bom.cell(selected["lines"][0], column, notes, 3) == expected
+        definition = {**bom.DEFAULT, "view": view}
+        svg, _, _ = bom.render(selected, definition, notes)
+        assert (">2.5<" in svg) == (view == "indented")
+    flat["position"] = 9
+    assert bom.cell(flat, column, notes, 3) == "Flat note"
+    assert bom.layout({k: v for k, v in bom.DEFAULT.items() if k != "view"})["view"] == "direct"
+
+
+def test_flat_drawing_rejects_unresolved_structure_and_view_mismatch():
+    value = {**report(), "view": "flattened", "structure_complete": False}
+    with pytest.raises(ValueError, match="incomplete"):
+        bom.render(value, {**bom.DEFAULT, "view": "flattened"}, {})
+    with pytest.raises(ValueError, match="do not match"):
+        bom.render(value, bom.DEFAULT, {})

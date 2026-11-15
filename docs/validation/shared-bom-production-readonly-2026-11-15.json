@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "addon": "0.19.0",
+  "installed_module": "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM/freecad/forgepdm/bom_ui.py",
+  "registered_command": "ForgePDM_ShowBOM",
+  "observations": [
+    {
+      "top_level_rows": {
+        "direct": 5,
+        "indented": 5,
+        "flattened": 5
+      },
+      "mass": "Assembly mass: 0.574 kg"
+    }
+  ],
+  "production_writes": 0,
+  "user_documents_preserved": 3,
+  "active_document_preserved": true,
+  "login_identity_preserved": true
+}

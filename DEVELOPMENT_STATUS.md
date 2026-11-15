@@ -1,5 +1,59 @@
 # Development status
 
+## 2026-11-15 — Shared direct/indented/flattened BOM reports (0.19.0)
+
+- Deliver the requested sequence: backend report first, FreeCAD/web viewers next,
+  then TechDraw consuming the same server-generated rows. New read-only
+  `/api/v1/revisions/{id}/bom-report` returns all three views, common evidence
+  token/timestamp, source paths, structure issues and one leaf-mass summary from
+  a single database snapshot. Existing BOM editing/recursive contracts remain.
+- Direct retains stored positions; Indented preserves repeated occurrence paths
+  and reports quantities per parent and per root; Flattened combines P/S leaves
+  by exact revision, with cumulative quantities and generated report positions.
+  Decimal math, full descendant access checks, cycle/depth/node/quantity limits,
+  missing mass and empty-assembly evidence are enforced without partial results.
+  `/assembly-mass` and legacy direct `/drawing-bom` project this shared traversal.
+- Both viewers show a local view selector, explicit refresh, root and parent
+  quantities, unit/extended masses and incomplete totals. Complete subassembly
+  unit mass is available; the summary counts leaves once. Indented row masses
+  overlap and must not be summed. CAD synchronization remains an independently
+  reviewed direct-BOM replacement; view switches do not write engineering data.
+- Drawing layouts remember view/title/columns. Native indented item numbers and
+  position paths, flattened root quantities, scoped annotation identities and
+  orphan-note retention reuse the same report. Empty-subassembly structures
+  block flattened drawing generation; missing part masses alone do not. Direct
+  tables retain format 1; non-direct tables use format 2 so older addons refuse
+  their update. Existing drawings stay frozen until explicitly updated.
+- Validation: 260 backend tests, 407 addon tests (four optional Qt modules skipped
+  in the base environment), 19 real Qt checks across four modules and five Node
+  test files pass. Targeted backend/all-addon lint/format, manifest/archive,
+  wheel/sdist, web syntax and diff checks pass. CI now runs pure web tests.
+  Chrome passes the 26 existing browser checks and 13 shared-report checks.
+- Installed FreeCAD 1.1.4 / Qt 6.8.3 passes 21 real HTTP/native drawing/viewer
+  checks plus the 28-check atomic seed acceptance. Verify nested 3×4+2=14,
+  parent/root quantity labels, view-specific notes, frozen format-2 retrieval
+  after nested updates, stale nested-report rejection and PDF export. Both
+  indented/flattened PDF rasters inspected. Tests use disposable DB/storage/CAD.
+- Install addon 0.19.0 in both local profiles, restart backend with its original
+  default DB/storage/loopback configuration; schema stays 17. Consistent backup:
+  var/backups/before-shared-bom-20261115T223508Z. All 39 table contents and 211
+  stored-file hashes preserved, integrity/FKs pass; both profiles match archive
+  bytes and served web assets match source. Final documentation refresh changes
+  only installed README/validation guide bytes, retaining backups of both.
+- Refresh installed table/editor/viewer modules and all 24 cached command objects.
+  Add the new API method without replacing the existing API/exception classes or
+  client/session object. Registered ShowBOM production acceptance uses GET only:
+  all three views load, mass remains 0.574 kg. All three user documents, frozen
+  tables, saved bytes, dirty states, active document and login are preserved.
+- Guide docs/bom-reports.md; design ADR-022. Evidence:
+  docs/validation/shared-bom-{browser,native,atomic-native,installed,
+  production-readonly}-2026-11-15.json. Native fixture extends drawing_bom_gui.py
+  via shared_bom_native.py. Report views select one fetched snapshot; refresh
+  explicitly. Drawings remain limited to 500 rows/one page; sheet splitting,
+  balloons, CAD-property mapping and automatic stale-publication gates remain.
+  Other platforms/runtime combinations and production engineering mutations
+  remain outside this acceptance scope.
+
 ## 2026-11-15 — Editable TechDraw BOM title and footer removal (0.18.1)
 
 - Add Title to Drawing BOM: full custom text up to 300 characters, optional
@@ -1208,7 +1262,7 @@ before acting. Git history and the linked reports provide the detailed record.
   revision-pinned BOMs and immutable CAD dependency manifests.
 - Web GUI: browsing and controlled user/project/account management at `/app/`,
   served by the backend; see docs/web-gui.md and docs/web-management.md.
-- FreeCAD addon: **0.18.1**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.19.0**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 implements atomic part/assembly check-in, pinned manifests,
@@ -1268,12 +1322,13 @@ Evidence:
 ## Next session
 
 1. Read root/nested `AGENTS.md`, this handoff and Git status before changes.
-   Current source and installed delivery are addon 0.18.1/backend schema 17. Standard Parts/shared
+   Current source and installed delivery are addon 0.19.0/backend schema 17. Standard Parts/shared
    catalog, simple P/A/M descriptions, physical P mass and bounded S supplier
    reference mass plus CAD/manual fallbacks are implemented. Use docs/material-management.md,
    docs/supplier-reference-mass.md and docs/upgrade-and-validation.md. The older
    component-catalog implementation plan is historical, not pending work.
-2. Follow the user's next priority. Expanded TechDraw BOM views,
+2. Follow the user's next priority. Shared BOM report views are delivered in
+   FreeCAD, web and TechDraw. TechDraw sheet splitting/balloons,
    broader supplier coverage and ERPNext synchronization remain unimplemented;
    do not infer a new priority or silently replace existing revision pins.
 3. For CAD issues, verify installed/runtime versions and reproduce against the

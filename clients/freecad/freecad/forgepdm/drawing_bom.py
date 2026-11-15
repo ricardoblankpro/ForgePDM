@@ -11,16 +11,18 @@ FIELDS = {
     "item_number": "Item number",
     "item_name": "Name / designation",
     "revision_label": "Revision",
-    "quantity": "Qty.",
+    "quantity": "Qty / root",
+    "quantity_per_parent": "Qty / parent",
     "description": "Description / Material",
     "material": "Material",
     "lifecycle_state": "Lifecycle",
     "item_kind": "Type",
     "unit_mass": "Unit mass",
-    "total_mass": "Total mass",
+    "total_mass": "Mass / root",
     "custom": "Custom text",
 }
 DEFAULT = {
+    "view": "direct",
     "title": "ENGINEERING BOM — {item_number} Rev {revision_label}",
     "columns": [
         {"field": field, "heading": FIELDS[field], "width": width, "align": "left", "unit": "kg"}
@@ -41,6 +43,9 @@ def layout(value):
     if not isinstance(value, dict):
         raise ValueError("Invalid table layout")
     value = copy.deepcopy(value)
+    value.setdefault("view", "direct")
+    if value["view"] not in ("direct", "indented", "flattened"):
+        raise ValueError("Unsupported BOM view")
     value.setdefault("title", DEFAULT["title"])
     if not isinstance(value["title"], str) or len(value["title"]) > 300:
         raise ValueError("Table title must contain at most 300 characters")
@@ -78,7 +83,19 @@ def layout(value):
 
 
 def row_key(line):
-    return line["component_revision_id"] + ":" + str(line["position"])
+    return line.get("row_key") or line["component_revision_id"] + ":" + str(line["position"])
+
+
+def report_for_view(report, view):
+    if "views" not in report:
+        if report.get("view", "direct") != view:
+            raise ValueError("The report does not contain the selected BOM view")
+        return report
+    return {
+        **{key: value for key, value in report.items() if key != "views"},
+        "view": view,
+        "lines": report["views"][view],
+    }
 
 
 def cell(line, column, notes, precision):
@@ -121,6 +138,14 @@ def measure_text(font):
 
 def render(report, definition, notes, measure=None):
     definition = layout(definition)
+    if definition["view"] != report.get("view", "direct"):
+        raise ValueError("Table layout and report BOM views do not match")
+    if len(report["lines"]) > 500:
+        raise ValueError("Drawing BOM exceeds the 500-row limit")
+    if definition["view"] == "flattened" and not report.get("structure_complete", True):
+        raise ValueError(
+            "Flattened structure is incomplete: supply stored BOM lines for empty subassemblies first"
+        )
     if not isinstance(notes, dict) or any(
         not isinstance(values, dict)
         or any(not isinstance(text, str) or len(text) > 1000 for text in values.values())
@@ -165,7 +190,29 @@ def render(report, definition, notes, measure=None):
         [cell(line, column, notes, definition["precision"]) for column in columns]
         for line in report["lines"]
     ]
-    wrapped = [[wrap(text, column["width"]) for text, column in zip(row, columns)] for row in rows]
+    indents = [[0] * len(columns)]
+    for line in report["lines"]:
+        indents.append(
+            [
+                (line.get("level", 1) - 1) * font * 1.5
+                if definition["view"] == "indented"
+                and column["field"] == "item_number"
+                and column["align"] == "left"
+                else 0
+                for column in columns
+            ]
+        )
+    if any(column["width"] - indent < 5 for row in indents for column, indent in zip(columns, row)):
+        raise ValueError(
+            "Indented item column is too narrow; increase its width or reduce font size"
+        )
+    wrapped = [
+        [
+            wrap(text, column["width"] - indent)
+            for text, column, indent in zip(row, columns, padding)
+        ]
+        for row, padding in zip(rows, indents)
+    ]
     heights = [max(len(value) for value in row) * font * 1.25 + 2 for row in wrapped]
     width = sum(column["width"] for column in columns)
     title = definition["title"].replace("{item_number}", report["item_number"])
@@ -184,15 +231,16 @@ def render(report, definition, notes, measure=None):
             f'<text x="1" y="{font + 1 + i * font * 1.25}" font-size="{font}">{escape(text)}</text>'
         )
     y = title_height
-    for values, row_height in zip(wrapped, heights):
+    for values, row_height, padding in zip(wrapped, heights, indents):
         x = 0
-        for lines, column in zip(values, columns):
+        for lines, column, indent in zip(values, columns, padding):
             w = column["width"]
             svg.append(
                 f'<rect x="{x}" y="{y}" width="{w}" height="{row_height}" fill="none" stroke="black" stroke-width="0.25"/>'
             )
             anchor = {"left": "start", "center": "middle", "right": "end"}[column["align"]]
             tx = x + 1 if anchor == "start" else x + w - 1 if anchor == "end" else x + w / 2
+            tx += indent
             for i, text in enumerate(lines):
                 svg.append(
                     f'<text x="{tx}" y="{y + 1 + font + i * font * 1.25}" font-size="{font}" text-anchor="{anchor}">{escape(text)}</text>'
@@ -214,11 +262,15 @@ def read_table(obj):
     if not hasattr(obj, "PDMTableData"):
         return None
     data = json.loads(obj.PDMTableData)
-    if data.get("format") != 1:
+    if data.get("format") not in (1, 2):
         raise ValueError("Unsupported saved drawing BOM format")
-    layout(data["layout"])
+    definition = layout(data["layout"])
     if not isinstance(data.get("report"), dict) or not isinstance(data.get("notes"), dict):
         raise ValueError("Invalid saved table data; original contents preserved")
+    if definition["view"] != data["report"].get("view", "direct") or (
+        data["format"] == 1 and definition["view"] != "direct"
+    ):
+        raise ValueError("Invalid saved table view; original contents preserved")
     for values in data["notes"].values():
         if not isinstance(values, dict) or any(
             not isinstance(text, str) or len(text) > 1000 for text in values.values()
@@ -252,7 +304,13 @@ def placement(page, target, report, definition, notes, x, y):
 
 def apply(document, page, target, report, definition, notes, x, y):
     svg = placement(page, target, report, definition, notes, x, y)
-    data = {"format": 1, "report": report, "layout": layout(definition), "notes": notes}
+    definition = layout(definition)
+    data = {
+        "format": 1 if definition["view"] == "direct" else 2,
+        "report": report,
+        "layout": definition,
+        "notes": notes,
+    }
     document.openTransaction("ForgePDM Drawing BOM")
     try:
         if target is None:

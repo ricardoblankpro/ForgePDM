@@ -1517,7 +1517,7 @@ def _choose_native_snapshot(client, revision_id):
 class DrawingBOMCommand(Command):
     icon_name = "drawing-bom"
     menu_text = "Drawing BOM…"
-    tooltip = "Insert or update a customizable direct engineering BOM on a TechDraw page"
+    tooltip = "Insert or update a direct, indented or flattened engineering BOM on a TechDraw page"
     needs_document = True
     number_series = ("A",)
 
@@ -1542,8 +1542,8 @@ class DrawingBOMCommand(Command):
             raise workspace.WorkspaceError(
                 "Check out this Working assembly before changing the drawing"
             )
-        report = yield Request("Loading drawing BOM report…", client.drawing_bom, (revision_id,))
-        if not report["lines"]:
+        report = yield Request("Loading drawing BOM report…", client.bom_report, (revision_id,))
+        if not report["views"]["direct"]:
             raise workspace.WorkspaceError(
                 "The stored BOM is empty. Review and synchronize it with BOM / Mass first"
             )
@@ -1569,6 +1569,7 @@ class DrawingBOMCommand(Command):
             return
         page, target = dialog.page.currentData(), dialog.target.currentData()
         definition, notes = dialog.definition(), dialog.notes
+        report = dialog.report
         x, y = dialog.x.value(), dialog.y.value()
         before = (
             (
@@ -1583,7 +1584,7 @@ class DrawingBOMCommand(Command):
             else None
         )
         fresh = yield Request(
-            "Revalidating drawing BOM evidence…", client.drawing_bom, (revision_id,)
+            "Revalidating drawing BOM evidence…", client.bom_report, (revision_id,)
         )
         yield Request("Checking edit permission…", client.bom_snapshot, (revision_id,))
         current = yield Request("Revalidating checkout…", client.get_checkout, (revision_id,))
@@ -1640,13 +1641,13 @@ class ShowBOMCommand(Command):
         revision_id, name = metadata.RevisionId, document.Name
 
         def load():
-            lines = yield Request(
-                "Loading published BOM…", client.get_bom, (revision_id,), {"recursive": True}
+            report = yield Request(
+                "Loading published BOM report…", client.bom_report, (revision_id,)
             )
-            mass = yield Request(
-                "Calculating assembly mass…", client.get_assembly_mass, (revision_id,)
-            )
-            return lines, mass
+            if Session.client is not client:
+                raise RuntimeError("Session changed; reopen BOM / Mass")
+            _guard_document(name, revision_id)
+            return report
 
         def prepare():
             current = _guard_document(name, revision_id)

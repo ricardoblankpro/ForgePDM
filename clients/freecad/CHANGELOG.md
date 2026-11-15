@@ -1,3 +1,14 @@
+## 0.19.0 — Shared engineering BOM report views
+
+- Add Direct, Indented and Flattened reports shared by the backend, FreeCAD and
+  web viewers and TechDraw tables. Preserve exact revision pins and quantities.
+- Show quantities per immediate parent and per root assembly, root extended
+  masses, rolled-up subassembly mass, incomplete totals and CAD estimate markers.
+- Keep CAD synchronization as a reviewed direct-BOM operation. Remember drawing
+  view in layouts and freeze report values in saved tables; isolate row notes by
+  view and full occurrence identity. Preserve custom titles and omit the footer.
+- Require the updated backend report endpoint. No database migration.
+
 ## 0.18.1 — Editable TechDraw BOM title
 
 - Edit the full drawing BOM title, with optional item/revision placeholders or a

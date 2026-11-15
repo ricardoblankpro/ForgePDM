@@ -243,6 +243,6 @@
       <translation>Set the local workspace once for this server and account</translation>
     </message>
     <message><source>Drawing BOM…</source><translation>Drawing BOM…</translation></message>
-    <message><source>Insert or update a customizable direct engineering BOM on a TechDraw page</source><translation>Insert or update a customizable direct engineering BOM on a TechDraw page</translation></message>
+    <message><source>Insert or update a direct, indented or flattened engineering BOM on a TechDraw page</source><translation>Insert or update a direct, indented or flattened engineering BOM on a TechDraw page</translation></message>
   </context>
 </TS>

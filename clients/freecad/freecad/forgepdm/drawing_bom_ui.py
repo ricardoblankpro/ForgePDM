@@ -11,7 +11,8 @@ from .ui import QtCore, QtWidgets
 class DrawingBOMDialog(QtWidgets.QDialog):
     def __init__(self, parent, report, pages, preferred=None):
         super().__init__(parent)
-        self.report, self.pages = report, pages
+        self.source_report, self.pages = report, pages
+        self.report = model.report_for_view(report, "direct")
         self.notes = {}
         self.keys = []
         self.preview_bindings = []
@@ -19,7 +20,8 @@ class DrawingBOMDialog(QtWidgets.QDialog):
         self.resize(1000, 760)
         box = QtWidgets.QVBoxLayout(self)
         label = QtWidgets.QLabel(
-            "Stored direct engineering BOM. Unsaved CAD changes are not included. Update preserves matching custom row text; no server BOM writes."
+            "Stored engineering BOM. Quantities and extended masses are per root assembly. "
+            "Indented parent/child masses must not be added together. Unsaved CAD changes are excluded."
         )
         label.setWordWrap(True)
         box.addWidget(label)
@@ -30,6 +32,15 @@ class DrawingBOMDialog(QtWidgets.QDialog):
         self.target = QtWidgets.QComboBox()
         form.addRow("Page", self.page)
         form.addRow("Table", self.target)
+        self.view = QtWidgets.QComboBox()
+        for key, label in [
+            ("direct", "Direct"),
+            ("indented", "Indented"),
+            ("flattened", "Flattened"),
+        ]:
+            if "views" in report or key == report.get("view", "direct"):
+                self.view.addItem(label, key)
+        form.addRow("BOM view", self.view)
         self.title = QtWidgets.QLineEdit()
         self.title.setMaxLength(300)
         self.title.setToolTip(
@@ -109,6 +120,7 @@ class DrawingBOMDialog(QtWidgets.QDialog):
         box.addWidget(buttons)
         self.page.currentIndexChanged.connect(self.page_changed)
         self.target.currentIndexChanged.connect(self.target_changed)
+        self.view.currentIndexChanged.connect(self.view_changed)
         load.clicked.connect(lambda: self.load_layout(self.presets.currentData()))
         save.clicked.connect(self.save_layout)
         if preferred:
@@ -153,9 +165,20 @@ class DrawingBOMDialog(QtWidgets.QDialog):
             if item:
                 self.notes.setdefault(key, {})[field] = item.text()
 
+    def view_changed(self, *_):
+        self.stash()
+        self.report = model.report_for_view(self.source_report, self.view.currentData())
+        self.preview()
+
     def load_layout(self, value):
         self.stash()
         value = model.layout(value)
+        self.view.blockSignals(True)
+        self.view.setCurrentIndex(self.view.findData(value["view"]))
+        self.view.blockSignals(False)
+        if self.view.currentIndex() < 0:
+            raise ValueError("The report does not contain the saved BOM view")
+        self.report = model.report_for_view(self.source_report, value["view"])
         self.title.setText(value["title"])
         self.font.setValue(value["font"])
         self.precision.setValue(value["precision"])
@@ -184,6 +207,7 @@ class DrawingBOMDialog(QtWidgets.QDialog):
     def definition(self):
         return model.layout(
             {
+                "view": self.view.currentData(),
                 "title": self.title.text(),
                 "font": self.font.value(),
                 "precision": self.precision.value(),

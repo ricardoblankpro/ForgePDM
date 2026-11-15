@@ -1,4 +1,4 @@
-# Engineering BOM tables — addon 0.18.1
+# Engineering BOM tables — addon 0.19.0
 
 1. Open the managed assembly working copy and use **Check Out / Renew**.
 2. Create a TechDraw page/template if needed.
@@ -7,9 +7,9 @@
 5. Save/upload/check in explicitly when ready. The command only changes the local
    drawing; it does not publish CAD or synchronize the server BOM.
 
-Rows come from the **stored direct engineering BOM**. Use BOM / Mass to review and
+Rows come from the **stored engineering BOM**, using Direct, Indented or Flattened views. Use BOM / Mass to review and
 synchronize CAD changes first when necessary. Empty stored BOMs cannot generate a
-table. Subassemblies remain direct lines; their contents are not expanded.
+table. Direct keeps subassemblies as lines; Indented expands their exact structures; Flattened combines P/S leaves by exact revision. See [shared reports](bom-reports.md) for quantity, mass and incomplete-structure rules.
 
 ## Columns and custom text
 
@@ -19,21 +19,20 @@ use the report's item/revision on each explicit update. For example,
 `Lista de peças — {item_number} Rev {revision_label}`. The title is stored in the
 drawing and reusable layouts. Older layouts keep the original default title.
 
-Default: Pos., Item number, Revision, Qty., Description / Material. Purchased/standard
+Default: Pos., Item number, Revision, Qty / root, Description / Material. Purchased/standard
 items without a description use their saved purchasing designation. P/A names are
 not forced into this default column. Add/remove
 columns, change headings/widths/alignment, move columns up/down and set text size.
 Optional fields include name/designation, material, lifecycle, type, unit/extended mass and custom
 text columns. Mass units can be kg or g with 0–6 decimal places. Unknown mass is
-shown as — and CAD estimates as ~. Direct subassembly unit mass is unavailable in
-this first report; no incomplete total is presented as zero.
+shown as — and CAD estimates as ~. Subassembly unit mass is available when its exact leaf rollup is complete; no incomplete total is presented as zero. Indented parent/child masses overlap and must not be added together.
 
 Press **Preview / edit custom text** after editing the column definition. Generated
 cells are read-only; edit custom text cells directly. Custom values follow the
 component revision + BOM position + column identity through updates/reordering.
 Changed revisions/positions do not inherit unrelated text; the previous entries
-remain in the table data. Up to 12 columns, 30 local named layouts and 500 direct
-report lines are supported; the table must fit one page. Text values are bounded.
+remain in the table data. Up to 12 columns, 30 local named layouts and 500
+report rows are supported; the table must fit one page. Text values are bounded.
 
 **Save layout as…** stores a reusable definition, without component values or row
 notes, in local FreeCAD preferences. The drawing also stores its own layout and
@@ -66,11 +65,12 @@ may render differently and have not received the same acceptance coverage.
 
 ## Delivery and future increments
 
-Requires the updated backend's `/api/v1/revisions/{id}/drawing-bom` read endpoint;
+Requires the updated backend's `/api/v1/revisions/{id}/bom-report` read endpoint;
 restart the backend when upgrading. Database schema remains 17. No engineering
 records are backfilled. Embedded pages use the existing upload/reconstruction and
 source-pinned PDF publication workflow.
 
-Flattened/indented views, table splitting across sheets, native CAD-property
-columns and balloon integration remain future increments. See ADR-021 and the
-current development handoff for validation and installation evidence.
+Direct, Indented and Flattened views are implemented. Table splitting across
+sheets, native CAD-property columns and balloon integration remain future
+increments. See ADR-022 and the current development handoff for validation and
+installation evidence.

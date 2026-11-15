@@ -56,11 +56,11 @@ try {
   await openItem(config.root, config.root.revision);
   await page.getByRole("tab", { name: "Bill of materials", exact: true }).click();
   await page.locator(".bom-table tbody tr").nth(2).waitFor();
-  check("multilevel BOM preserves per-parent quantities", await page.locator(".bom-table tbody tr").count() === 3 && await page.locator(".bom-table tbody tr").nth(1).locator("td").nth(2).innerText() === "4");
+  check("indented BOM preserves per-parent quantities", await page.locator(".bom-table tbody tr").count() === 3 && await page.locator(".bom-table tbody tr").nth(1).locator("td").nth(3).innerText() === "4");
   await page.screenshot({ path: path.join(caseDirectory, "bom-desktop.png"), fullPage: true });
   await page.getByRole("button", { name: "Direct", exact: true }).click();
   check("direct BOM excludes descendants", await page.locator(".bom-table tbody tr").count() === 2);
-  await page.getByRole("button", { name: "Multilevel", exact: true }).click();
+  await page.getByRole("button", { name: "Indented", exact: true }).click();
   await page.getByRole("button", { name: "Collapse all", exact: true }).click();
   check("collapse hides nested rows", await page.locator(".bom-table tbody tr").count() === 2);
   await page.getByRole("button", { name: "Expand all", exact: true }).click();
