@@ -1,3 +1,11 @@
+## 0.18.1 — Editable TechDraw BOM title
+
+- Edit the full drawing BOM title, with optional item/revision placeholders or a
+  blank title. Preserve it in the drawing and reusable layouts; older layouts
+  retain the original default title.
+- Remove the generated footer from new and explicitly updated tables. Existing
+  saved drawings retain their frozen contents until explicitly updated.
+
 ## 0.18.0 — Customizable TechDraw engineering BOM tables
 
 - Add Drawing BOM in BOM and publishing: direct stored-EBOM rows, editable column

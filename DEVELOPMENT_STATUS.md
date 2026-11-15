@@ -1,5 +1,31 @@
 # Development status
 
+## 2026-11-15 — Editable TechDraw BOM title and footer removal (0.18.1)
+
+- Add Title to Drawing BOM: full custom text up to 300 characters, optional
+  `{item_number}` / `{revision_label}` placeholders, or blank to hide the title
+  without reserving title space. Store it in embedded table data and reusable
+  local layouts. Older layouts default to the original engineering BOM title.
+- Remove the generated footer from new and explicitly updated tables. Preserve
+  frozen existing tables until the user explicitly updates them; mass cells
+  retain unavailable/estimated markers. The user's current Peso column was
+  inspected read-only and maps to total_mass (unit mass × direct line quantity).
+- Validation: 404 addon tests pass, four optional Qt modules skipped. Addon Ruff
+  lint/format, manifest/archive and diff checks pass. Installed FreeCAD 1.1.4 /
+  Qt 6.8.3 passes 12 native checks for legacy/custom titles, preset save/load,
+  explicit update, save/reopen, footer removal, blank titles and PDF export.
+  Exported PDF raster inspected. Fixture uses synthetic report/disposable CAD;
+  no production table edits or server writes. Three original user documents,
+  dirty states, stored tables, saved file hashes, active document and session
+  are preserved. Full protected HTTP command acceptance remains the 0.18.0 run.
+- Install 0.18.1 in both local profiles after moving prior addons to
+  var/backups/before-drawing-bom-title-20261115T200301Z. Both profiles match archive
+  bytes. Reload installed package/table/editor modules and verify running 0.18.1;
+  existing commands import the updated editor on use. Backend/schema 17 unchanged.
+- Evidence: docs/validation/drawing-bom-title-{native,installed}-2026-11-15.json.
+  Native fixture: clients/freecad/tools/validation/drawing_bom_title_gui.py.
+  Direct-only/single-page scope and other prior table limitations remain.
+
 ## 2026-11-12 — Customizable TechDraw BOM tables (0.18.0)
 
 - Add a read-only drawing-bom report endpoint: exact direct EBOM positions/pins,
@@ -1182,7 +1208,7 @@ before acting. Git history and the linked reports provide the detailed record.
   revision-pinned BOMs and immutable CAD dependency manifests.
 - Web GUI: browsing and controlled user/project/account management at `/app/`,
   served by the backend; see docs/web-gui.md and docs/web-management.md.
-- FreeCAD addon: **0.18.0**, modern `freecad.forgepdm` namespace; communicates
+- FreeCAD addon: **0.18.1**, modern `freecad.forgepdm` namespace; communicates
   through HTTP without importing backend business logic.
 - Development-direction Phases 1–4 are implemented for the documented supported
   structures. Phase 5 implements atomic part/assembly check-in, pinned manifests,
@@ -1242,7 +1268,7 @@ Evidence:
 ## Next session
 
 1. Read root/nested `AGENTS.md`, this handoff and Git status before changes.
-   Current source and installed delivery are addon 0.18.0/backend schema 17. Standard Parts/shared
+   Current source and installed delivery are addon 0.18.1/backend schema 17. Standard Parts/shared
    catalog, simple P/A/M descriptions, physical P mass and bounded S supplier
    reference mass plus CAD/manual fallbacks are implemented. Use docs/material-management.md,
    docs/supplier-reference-mass.md and docs/upgrade-and-validation.md. The older

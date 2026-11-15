@@ -11,12 +11,13 @@ Phase 1**. Its implementation and remaining acceptance gates are recorded in
 
 ## Active development-direction roadmap
 
-**Current source: addon 0.18.0 / backend schema 17.** Simple P material/A assembly
+**Current source: addon 0.18.1 / backend schema 17.** Simple P material/A assembly
 descriptions, optional native density links and finished part mass, and bounded
 S supplier reference mass plus CAD/manual fallbacks are implemented. Current guides:
 [materials](material-management.md), [supplier mass](supplier-reference-mass.md)
 and [upgrade/validation](upgrade-and-validation.md). Assembly mass rollup is implemented (see [usage](assembly-mass.md));
-Direct customizable TechDraw BOM tables are delivered in 0.18.0. Flattened/indented
+Direct customizable TechDraw BOM tables are delivered in 0.18.0; 0.18.1 adds editable
+titles and removes the generated footer. Flattened/indented
 tables, sheet splitting, balloons, stock/cutting optimization and ERPNext synchronization remain
 future increments; no new feature order is assumed without user direction.
 

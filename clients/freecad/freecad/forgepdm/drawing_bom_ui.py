@@ -30,6 +30,13 @@ class DrawingBOMDialog(QtWidgets.QDialog):
         self.target = QtWidgets.QComboBox()
         form.addRow("Page", self.page)
         form.addRow("Table", self.target)
+        self.title = QtWidgets.QLineEdit()
+        self.title.setMaxLength(300)
+        self.title.setToolTip(
+            "Enter the full title, or leave blank to hide it. "
+            "Optional {item_number} and {revision_label} follow the report being updated."
+        )
+        form.addRow("Title", self.title)
         self.presets = QtWidgets.QComboBox()
         self.presets.addItem("Default", copy.deepcopy(model.DEFAULT))
         self.preset_error = ""
@@ -149,6 +156,7 @@ class DrawingBOMDialog(QtWidgets.QDialog):
     def load_layout(self, value):
         self.stash()
         value = model.layout(value)
+        self.title.setText(value["title"])
         self.font.setValue(value["font"])
         self.precision.setValue(value["precision"])
         self.columns.setRowCount(0)
@@ -176,6 +184,7 @@ class DrawingBOMDialog(QtWidgets.QDialog):
     def definition(self):
         return model.layout(
             {
+                "title": self.title.text(),
                 "font": self.font.value(),
                 "precision": self.precision.value(),
                 "columns": [

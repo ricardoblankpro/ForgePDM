@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "addon": "0.18.1",
+  "backup": "/home/ricardoblank/Development/ForgePDM/var/backups/before-drawing-bom-title-20261115T200301Z",
+  "profiles": [
+    "/home/ricardoblank/.local/share/FreeCAD/Mod/ForgePDM",
+    "/home/ricardoblank/.local/share/FreeCAD/v1-1/Mod/ForgePDM"
+  ],
+  "both_profiles_match_archive": true,
+  "backend_changed": false
+}

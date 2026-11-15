@@ -21,6 +21,7 @@ FIELDS = {
     "custom": "Custom text",
 }
 DEFAULT = {
+    "title": "ENGINEERING BOM — {item_number} Rev {revision_label}",
     "columns": [
         {"field": field, "heading": FIELDS[field], "width": width, "align": "left", "unit": "kg"}
         for field, width in [
@@ -40,6 +41,9 @@ def layout(value):
     if not isinstance(value, dict):
         raise ValueError("Invalid table layout")
     value = copy.deepcopy(value)
+    value.setdefault("title", DEFAULT["title"])
+    if not isinstance(value["title"], str) or len(value["title"]) > 300:
+        raise ValueError("Table title must contain at most 300 characters")
     columns = value.get("columns")
     if not isinstance(columns, list) or not 1 <= len(columns) <= 12:
         raise ValueError("Choose 1 to 12 table columns")
@@ -164,12 +168,11 @@ def render(report, definition, notes, measure=None):
     wrapped = [[wrap(text, column["width"]) for text, column in zip(row, columns)] for row in rows]
     heights = [max(len(value) for value in row) * font * 1.25 + 2 for row in wrapped]
     width = sum(column["width"] for column in columns)
-    width = sum(column["width"] for column in columns)
-    title = "ENGINEERING BOM — {} Rev {}".format(report["item_number"], report["revision_label"])
-    title_lines = wrap(title, width)
-    footer_lines = wrap("Stored direct EBOM · — unavailable · ~ CAD estimate", width)
-    title_height = len(title_lines) * font * 1.25 + 2
-    height = sum(heights) + title_height + len(footer_lines) * font + 2
+    title = definition["title"].replace("{item_number}", report["item_number"])
+    title = title.replace("{revision_label}", report["revision_label"])
+    title_lines = wrap(title, width) if title.strip() else []
+    title_height = len(title_lines) * font * 1.25 + 2 if title_lines else 0
+    height = sum(heights) + title_height
     if width > 1000 or height > 2000:
         raise ValueError("Table is too large; reduce columns/font or use fewer direct lines")
     svg = [
@@ -196,10 +199,6 @@ def render(report, definition, notes, measure=None):
                 )
             x += w
         y += row_height
-    for i, text in enumerate(footer_lines):
-        svg.append(
-            f'<text x="1" y="{y + font + 1 + i * font}" font-size="{font * 0.8}">{escape(text)}</text>'
-        )
     svg.append("</g></svg>")
     result = "".join(svg)
     from .techdraw import validate_svg

@@ -38,6 +38,7 @@ def test_svg_is_self_contained_escaped_and_preserves_direct_positions():
     assert "http:" not in svg.replace('xmlns="http://www.w3.org/2000/svg"', "")
     assert 0 < h < 200 and w == 175
     assert value == before
+    assert "Stored direct EBOM" not in svg and "CAD estimate" not in svg
     assert (
         bom.cell(
             {"item_number": "S000001", "item_name": "M12 ISO4016", "description": ""},
@@ -80,8 +81,35 @@ def test_missing_and_estimated_masses_are_not_zero():
     assert bom.cell(line, column, {}, 3) == "—"
 
 
+def test_custom_title_is_escaped_and_optional_placeholders_follow_report():
+    definition = {**bom.DEFAULT, "title": "Peças <A> & {item_number} / {revision_label}"}
+    svg, _, height = bom.render(report(), definition, {})
+    assert "Peças &lt;A&gt; &amp; A000001 / A" in svg
+    assert "ENGINEERING BOM" not in svg
+    updated = {**report(), "item_number": "A000002", "revision_label": "B"}
+    assert "A000002 / B" in bom.render(updated, definition, {})[0]
+    blank, _, blank_height = bom.render(report(), {**definition, "title": ""}, {})
+    assert "Peças" not in blank and blank_height < height
+
+
+def test_legacy_layout_keeps_default_title_without_changing_saved_definition():
+    legacy = copy.deepcopy(bom.DEFAULT)
+    del legacy["title"]
+    assert bom.layout(legacy)["title"] == bom.DEFAULT["title"]
+    assert "ENGINEERING BOM — A000001 Rev A" in bom.render(report(), legacy, {})[0]
+    assert "title" not in legacy
+
+
 @pytest.mark.parametrize(
-    "change", [{"font": float("nan")}, {"font": 0}, {"columns": []}, {"precision": 9}]
+    "change",
+    [
+        {"font": float("nan")},
+        {"font": 0},
+        {"columns": []},
+        {"precision": 9},
+        {"title": None},
+        {"title": "x" * 301},
+    ],
 )
 def test_invalid_layout_is_rejected(change):
     with pytest.raises(ValueError):

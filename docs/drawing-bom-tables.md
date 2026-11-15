@@ -1,4 +1,4 @@
-# Engineering BOM tables — addon 0.18.0
+# Engineering BOM tables — addon 0.18.1
 
 1. Open the managed assembly working copy and use **Check Out / Renew**.
 2. Create a TechDraw page/template if needed.
@@ -12,6 +12,12 @@ synchronize CAD changes first when necessary. Empty stored BOMs cannot generate 
 table. Subassemblies remain direct lines; their contents are not expanded.
 
 ## Columns and custom text
+
+Edit **Title** to set the full table title (up to 300 characters), or leave it
+blank to hide it. Optional `{item_number}` and `{revision_label}` placeholders
+use the report's item/revision on each explicit update. For example,
+`Lista de peças — {item_number} Rev {revision_label}`. The title is stored in the
+drawing and reusable layouts. Older layouts keep the original default title.
 
 Default: Pos., Item number, Revision, Qty., Description / Material. Purchased/standard
 items without a description use their saved purchasing designation. P/A names are
@@ -50,8 +56,12 @@ changes. The table remains viewable offline without ForgePDM code. There is no
 background refresh and no automatic stale-table check at release/PDF publication:
 explicitly update and publish the intended drawing snapshot.
 
-The title is currently ENGINEERING BOM and the font family DejaVu Sans; headings,
-text size, alignment and mass formatting are configurable. Other fonts/platforms
+New and explicitly updated tables have no footer. Existing saved tables retain
+their frozen SVG (including the old footer) until explicitly updated. Mass cells
+still use — for unavailable mass and ~ for CAD estimates.
+
+The font family is DejaVu Sans; title, headings, text size, alignment and mass
+formatting are configurable. Other fonts/platforms
 may render differently and have not received the same acceptance coverage.
 
 ## Delivery and future increments

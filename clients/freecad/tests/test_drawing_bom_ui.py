@@ -52,6 +52,7 @@ def test_custom_text_survives_column_reordering_and_presets_do_not_store_row_tex
     case, monkeypatch
 ):
     _, dialog, values = case
+    dialog.title.setText("Lista de peças — {item_number}")
     dialog.add_column()
     dialog.grid.item(0, 5).setText("Paint blue")
     dialog.columns.setCurrentCell(5, 1)
@@ -60,10 +61,34 @@ def test_custom_text_survives_column_reordering_and_presets_do_not_store_row_tex
     monkeypatch.setattr(QtWidgets.QInputDialog, "getText", lambda *args: ("Fabrication", True))
     dialog.save_layout()
     assert "Fabrication" in json.loads(values["DrawingBOMLayouts"])
+    saved = json.loads(values["DrawingBOMLayouts"])["Fabrication"]
+    assert saved["title"] == "Lista de peças — {item_number}"
+    dialog.title.clear()
+    dialog.load_layout(saved)
+    assert dialog.title.text() == saved["title"]
     assert "Paint blue" not in values["DrawingBOMLayouts"]
     dialog.accept()
     assert dialog.result() == 1
     assert list(dialog.notes.values())[0]
+
+
+def test_existing_table_title_is_loaded_for_update(case):
+    _, dialog, _ = case
+    definition = {**dialog.definition(), "title": "Lista de materiais"}
+    table = SimpleNamespace(
+        Label="BOM",
+        PDMTableData=json.dumps(
+            {"format": 1, "report": dialog.report, "layout": definition, "notes": {}}
+        ),
+        X=140,
+        Y=50,
+    )
+    page = dialog.page.currentData()
+    page.Views.append(table)
+    dialog.page_changed()
+    dialog.target.setCurrentIndex(1)
+    assert dialog.title.text() == "Lista de materiais"
+    assert dialog.definition()["title"] == "Lista de materiais"
 
 
 def test_invalid_page_fit_and_width_stay_in_editor(case):

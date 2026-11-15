@@ -45,5 +45,11 @@ positions and decimal quantities, including repeated exact revisions.
 No flattened/indented tables, multi-sheet splitting, CAD-property mapping, balloon
 links or automatic stale-table publication/release gate in this increment. User
 must explicitly refresh drawing data before publishing changes. Released native
-snapshots remain unchanged. Header text is configurable; the title/font family
-are currently fixed. Presets are local to the FreeCAD profile.
+snapshots remain unchanged. Header text is configurable; the font family is
+currently fixed. Presets are local to the FreeCAD profile.
+
+Addon 0.18.1 adds a bounded full-title layout field with optional `{item_number}`
+and `{revision_label}` substitutions; blank hides the title. Missing fields in
+older layouts resolve to the original default without changing saved drawings.
+New/explicitly updated SVG tables omit the generated footer at the user's request.
+Frozen tables are never rewritten merely by loading or upgrading the addon.
