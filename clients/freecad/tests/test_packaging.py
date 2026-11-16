@@ -55,19 +55,19 @@ assert not {'FreeCAD', 'FreeCADGui', 'PySide', 'PySide6', 'forgepdm', 'sqlite3'}
         timeout=15,
     )
     # Validation also works against the extracted distribution, not just source.
-    assert addon_tools.validate(installed) == "0.19.0"
+    assert addon_tools.validate(installed) == addon_tools.validate(addon_root)
 
 
 @pytest.mark.parametrize(
     ("old", "new"),
     [
-        ("<version>0.19.0</version>", "<version>0.1.1</version>"),
+        ("<version>", "<version>invalid-"),
         ("<format-does-not-exist/>", ""),
         ("<classname>ForgePDMWorkbench</classname>", "<classname>DifferentWorkbench</classname>"),
         ("<name>ForgePDM</name>", ""),
         ("<pythonmin>3.11.0</pythonmin>", "<pythonmin>3.10.0</pythonmin>"),
         ("<tag>PDM</tag>", "<unexpected>PDM</unexpected>"),
-        ("<date>2026-11-15</date>", "<date>invalid</date>"),
+        ("<date>", "<date>invalid-"),
         ("<icon>resources/icons/forgepdm.svg</icon>", "<icon>missing.svg</icon>"),
         ("freecad/forgepdm/resources/icons/forgepdm.svg", "../outside.svg"),
     ],
@@ -141,3 +141,64 @@ def test_translation_sources_cover_command_resources(addon_root):
     assert strings <= set(catalog.xpath("//message/source/text()"))
     for icon in (addon_root / "freecad/forgepdm/resources/icons").glob("*.svg"):
         assert etree.parse(str(icon)).getroot().tag == "{http://www.w3.org/2000/svg}svg"
+
+
+def test_archive_contains_canonical_guides_with_local_links(addon_tools, tmp_path):
+    import posixpath
+    import re
+
+    archive_path = addon_tools.build(tmp_path / "docs.zip")
+    with ZipFile(archive_path) as archive:
+        names = set(archive.namelist())
+        assert "Documentation/user/bom.md" in names
+        assert "Documentation/user/examples/supplier-reference-mass.csv" in names
+        assert "Documentation/operations/server.md" in names
+        assert not any(name.startswith("Documentation/history/") for name in names)
+        for name in names:
+            if not name.endswith(".md"):
+                continue
+            for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", archive.read(name).decode()):
+                if target.startswith("#") or re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target):
+                    continue
+                destination = posixpath.normpath(
+                    posixpath.join(posixpath.dirname(name), target.split("#")[0])
+                )
+                assert destination in names, (name, target)
+        readme = archive.read("README.md").decode()
+        assert "Documentation/user/install.md" in readme
+        assert "https://github.com/ricardoblankpro/ForgePDM/blob/master/CONTRIBUTING.md" in readme
+
+
+def test_missing_or_linked_canonical_documentation_is_rejected(addon_tools, tmp_path):
+    with pytest.raises(ValueError, match="documentation is missing"):
+        addon_tools.build(tmp_path / "missing.zip", documentation_root=tmp_path / "absent")
+    docs = tmp_path / "docs"
+    (docs / "user").mkdir(parents=True)
+    (docs / "operations").mkdir()
+    (docs / "operations/server.md").write_text("# Server")
+    (docs / "user/leak.md").symlink_to(__file__)
+    with pytest.raises(ValueError, match="linked resource|escapes addon root"):
+        addon_tools.build(tmp_path / "linked-docs.zip", documentation_root=docs)
+
+
+def test_release_check_rejects_incomplete_preview_metadata(addon_tools, addon_root, tmp_path):
+    root = tmp_path / "addon"
+    shutil.copytree(addon_root, root, ignore=shutil.ignore_patterns(".venv", "dist", "__pycache__"))
+    manifest = root / "package.xml"
+    tree = etree.parse(str(manifest))
+    for maintainer in tree.findall("m:maintainer", addon_tools.NS):
+        maintainer.attrib.pop("email", None)
+    tree.write(str(manifest), encoding="UTF-8", xml_declaration=True)
+    with pytest.raises(ValueError, match="maintainer email"):
+        addon_tools.release_check(root)
+
+
+def test_copying_an_archive_does_not_approve_the_monorepo_distribution_source(
+    addon_tools, tmp_path
+):
+    archive = addon_tools.build(tmp_path / "preview.zip")
+    extracted = tmp_path / "preview"
+    with ZipFile(archive) as bundle:
+        bundle.extractall(extracted)
+    with pytest.raises(ValueError, match="addon-only distribution source"):
+        addon_tools.release_check(extracted)

@@ -8,7 +8,7 @@ Build ForgePDM, an open-source-oriented Product Data Management system with Free
 
 - Siemens Teamcenter: conceptual reference for Item, ItemRevision, Dataset, BOM, Lifecycle and revision management.
 - EasyPDM: https://github.com/pawelcel/EasyPDM — practical reference for CAD/PDM integration and workflows.
-- Existing FreeCAD PDM specification and legacy macros located in `references/legacy/`.
+- Prototype provenance and original-file pointers: `docs/history/provenance.md`. The inactive prototypes were removed after the approved repository audit.
 
 Do not assume these references are identical. Document architectural differences and tradeoffs.
 
@@ -46,18 +46,23 @@ Do not assume these references are identical. Document architectural differences
 - Write automated tests for domain logic.
 - Do not silently change established PDM rules.
 - Document important architectural decisions.
-- Never delete or overwrite legacy reference files.
+- Preserve database migrations, supported compatibility contracts, dated validation evidence and engineering data. Historical prototype inputs remain available in Git history.
 - Do not copy third-party source code without checking its license.
 
-## Initial development priorities
+## Repository and documentation
 
-1. Review legacy implementation and EasyPDM.
-2. Define the domain model and architecture.
-3. Create the backend project structure.
-4. Implement Item and ItemRevision.
-5. Implement file storage and datasets.
-6. Implement check-in/check-out and lifecycle.
-7. Create the FreeCAD Workbench client.
+- Start at `README.md`, `CONTRIBUTING.md` and the concise `DEVELOPMENT_STATUS.md`.
+- Current workflows belong in `docs/user/`, operations in `docs/operations/`, and
+  contributor/API/release references in `docs/development/`. One guide owns each rule.
+- Keep numbered ADRs and dated evidence; completed plans/chronology belong in
+  `docs/history/`. Do not append new behavior below contradictory old instructions.
+- User/operations guides are packaged from their canonical source; do not keep
+  a duplicate installed manual. Run documentation and archive-link checks.
+- The addon is versioned independently of the backend and schema. Preserve
+  command IDs, exact revision/file pins, saved metadata and replay recovery.
+- Respect approved licensing boundaries in `LICENSING.md`. Changing licenses or
+  public contact, or publishing an Addon Index entry, needs an explicit owner
+  decision. Preparing local artifacts is permitted.
 
 ## Language
 

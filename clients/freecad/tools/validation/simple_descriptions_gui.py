@@ -13,7 +13,7 @@ import freecad.forgepdm as package
 from freecad.forgepdm import cad as installed_cad, tree_status as installed_status
 from freecad.forgepdm.ui import QtWidgets
 
-repo = Path("/home/ricardoblank/Development/ForgePDM")
+repo = Path(__file__).resolve().parents[4]
 case = Path("/tmp/forgepdm-simple-description-qa")
 config = json.loads((case / "connection.json").read_text())
 browser = json.loads((case / "materials-browser-report.json").read_text())

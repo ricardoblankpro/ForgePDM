@@ -15,7 +15,7 @@ def run(App, Gui):
 
     import freecad.forgepdm as package
 
-    root = Path("/home/ricardoblank/Development/ForgePDM")
+    root = Path(__file__).resolve().parents[4]
     previous = list(package.__path__)
     package.__path__ = [str(root / "clients/freecad/freecad/forgepdm")]
     from freecad.forgepdm import bom, assembly_mass, commands, session, cad, ui

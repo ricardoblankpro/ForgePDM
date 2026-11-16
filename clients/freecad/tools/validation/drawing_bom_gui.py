@@ -43,7 +43,7 @@ def run(App, Gui, directory, shared_views=False):
         panel_state = (view.source.currentIndex(), view.query.text())
     previous_layouts = settings._parameters().GetString("DrawingBOMLayouts", "")
     spec = importlib.util.spec_from_file_location(
-        "drawing_seed", Path(__file__).parents[2] / "tests/freecad_atomic_checkin_integration.py"
+        "drawing_seed", Path(__file__).with_name("freecad_atomic_checkin_integration.py")
     )
     seed = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(seed)

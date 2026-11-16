@@ -1,16 +1,12 @@
-name: ForgePDM backend and addon
+name: ForgePDM checks
 
-on:
-  push:
-    paths: ["clients/freecad/**", "src/**", "tests/**", "pyproject.toml", "uv.lock", "pytest.ini", ".github/workflows/freecad-addon.yml"]
-  pull_request:
-    paths: ["clients/freecad/**", "src/**", "tests/**", "pyproject.toml", "uv.lock", "pytest.ini", ".github/workflows/freecad-addon.yml"]
+on: [push, pull_request]
 
 permissions:
   contents: read
 
 jobs:
-  backend:
+  backend-and-docs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -18,6 +14,12 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: uv run --group dev --locked ruff check src tools tests/test_repository_docs.py
+      - run: uv run --group dev --locked ruff format --check src tools tests/test_repository_docs.py
+      - run: uv run --group dev --locked python tools/check_docs.py
       - run: uv run --group dev --locked pytest tests -q
       - run: node --test tests/web/*.test.mjs
   addon:
@@ -33,3 +35,12 @@ jobs:
       - run: uv run --project clients/freecad --extra dev --locked ruff check clients/freecad
       - run: uv run --project clients/freecad --extra dev --locked ruff format --check clients/freecad
       - run: uv run --project clients/freecad --extra dev --locked python clients/freecad/tools/addon.py build
+  qt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv run --project clients/freecad --extra dev --locked --with PySide6==6.8.3 python -m pytest clients/freecad/tests/test_bom_dialog.py clients/freecad/tests/test_drawing_bom_ui.py clients/freecad/tests/test_browser_panel.py clients/freecad/tests/test_open_dialog.py -q

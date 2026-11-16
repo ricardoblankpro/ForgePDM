@@ -54,8 +54,12 @@ class TreeStatusService:
                     {
                         "revision_id": revision_id,
                         "available": True,
-                        "description": DescriptionService.read_in(connection, revision_id)["description"],
-                        "description_token": DescriptionService.read_in(connection, revision_id)["token"],
+                        "description": DescriptionService.read_in(connection, revision_id)[
+                            "description"
+                        ],
+                        "description_token": DescriptionService.read_in(connection, revision_id)[
+                            "token"
+                        ],
                         "item_id": revision["item_id"],
                         "item_number": revision["number"],
                         "revision_label": revision["label"],

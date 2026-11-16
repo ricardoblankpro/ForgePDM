@@ -43,7 +43,7 @@ grounding, observer insertion, historical retrieval and current toolbar behavior
 
 ## Evidence and limits
 
-Implementation and validation are recorded in [the feature report](../freecad-tree-labels.md).
+Implementation and validation are recorded in [the feature report](../history/guides/freecad-tree-labels.md).
 The observer's lease cache governs local CAD presentation edits; backend checkout
 and permission checks remain authoritative for uploaded state. Check-in/release
 invalidate cached permission. A raw FreeCAD file-open can reset the document

@@ -42,7 +42,7 @@ def run(App, Gui, directory):
     # Reuse the existing 28-check native assembly/part publication fixture.
     spec = importlib.util.spec_from_file_location(
         "panel_atomic_fixture",
-        Path(__file__).parents[2] / "tests/freecad_atomic_checkin_integration.py",
+        Path(__file__).with_name("freecad_atomic_checkin_integration.py"),
     )
     fixture = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(fixture)

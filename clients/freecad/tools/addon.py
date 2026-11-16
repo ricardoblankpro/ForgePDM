@@ -9,14 +9,20 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import posixpath
+import re
 import tempfile
 import tomllib
+from urllib.parse import quote
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from lxml import etree
 
 
 ADDON_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = ADDON_ROOT.parents[1]
+DOCUMENTATION_ROOT = PROJECT_ROOT / "docs"
+SOURCE_URL = "https://github.com/ricardoblankpro/ForgePDM/blob/master/"
 VENDOR = Path(__file__).resolve().parent / "vendor"
 NAMESPACE = "https://wiki.freecad.org/Package_Metadata"
 NS = {"m": NAMESPACE}
@@ -138,24 +144,106 @@ def distribution_files(root):
     return sorted(files)
 
 
-def build(destination, root=ADDON_ROOT):
+def documentation_files(documentation_root):
+    """Only current user/operations docs belong in the installed client."""
+    documentation_root = Path(documentation_root)
+    user = documentation_root / "user"
+    server = documentation_root / "operations/server.md"
+    if not user.is_dir() or not server.is_file():
+        raise ValueError("Canonical user/operations documentation is missing")
+    files = [server] + sorted(path for path in user.rglob("*") if path.suffix in (".md", ".csv"))
+    for path in files:
+        _installed_file(documentation_root, path.relative_to(documentation_root).as_posix())
+    return files
+
+
+def document_links(text, source_name, archive_name, names):
+    """Map repository-relative links to installed docs or canonical online sources."""
+
+    def rewrite(match):
+        target = match.group(2)
+        if target.startswith("#") or re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target):
+            return match.group(0)
+        path, marker, anchor = target.partition("#")
+        source = posixpath.normpath(posixpath.join(posixpath.dirname(source_name), path))
+        if source in names:
+            destination = posixpath.relpath(names[source], posixpath.dirname(archive_name) or ".")
+        else:
+            if source.startswith(("../", "/")):
+                raise ValueError("Documentation link escapes the source repository: " + target)
+            destination = SOURCE_URL + quote(source, safe="/")
+        return match.group(1) + destination + (marker + anchor if marker else "") + match.group(3)
+
+    return re.sub(r"(!?\[[^\]]*\]\()([^\)]+)(\))", rewrite, text)
+
+
+def release_check(root=ADDON_ROOT):
+    """Machine-checkable prerequisites, separate from preview package validation."""
+    validate(root)
+    root = Path(root)
+    manifest = etree.parse(str(root / "package.xml")).getroot()
+    problems = []
+    license_id = manifest.findtext("m:license", namespaces=NS)
+    project = tomllib.loads((root / "pyproject.toml").read_text())["project"]
+    if license_id == "UNLICENSED" or str(project.get("license", "")).startswith("LicenseRef-"):
+        problems.append("owner-approved project licensing is unset")
+    elif project.get("license") != license_id:
+        problems.append("manifest/Python license identifiers disagree")
+    if not any("@" in node.get("email", "") for node in manifest.findall("m:maintainer", NS)):
+        problems.append("owner-approved public maintainer email is unset")
+    repository = manifest.find("m:url[@type='repository']", NS)
+    monorepo = (
+        repository is not None
+        and (repository.text or "").removesuffix(".git").rstrip("/")
+        == "https://github.com/ricardoblankpro/ForgePDM"
+        and repository.get("branch") == "master"
+    )
+    if root.resolve() == ADDON_ROOT.resolve() or monorepo:
+        problems.append(
+            "approve/export an addon-only distribution source; the checkout addon is nested"
+        )
+    if problems:
+        raise ValueError("Release prerequisites: " + "; ".join(problems))
+    return validate(root)
+
+
+def build(destination, root=ADDON_ROOT, documentation_root=DOCUMENTATION_ROOT):
     root, destination = Path(root), Path(destination)
     validate(root)
     files = distribution_files(root)
     if destination.resolve() in [path.resolve() for path in files]:
         raise ValueError("Output must not replace an addon source file")
+    entries = {
+        path.relative_to(root).as_posix(): (
+            path,
+            "clients/freecad/" + path.relative_to(root).as_posix(),
+        )
+        for path in files
+    }
+    for path in documentation_files(documentation_root):
+        relative = path.relative_to(documentation_root).as_posix()
+        name = "Documentation/" + relative
+        if name in entries:
+            raise ValueError("Duplicate packaged documentation: " + name)
+        entries[name] = (path, "docs/" + relative)
+    names = {source: name for name, (_, source) in entries.items()}
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary = tempfile.mkstemp(dir=destination.parent, suffix=".zip.part")
     os.close(descriptor)
     try:
         with ZipFile(temporary, "w", compression=ZIP_DEFLATED) as archive:
-            for path in files:
+            for name, (path, source) in sorted(entries.items()):
                 # Stable timestamps, order, permissions and compression.
-                entry = ZipInfo(path.relative_to(root).as_posix(), (2020, 1, 1, 0, 0, 0))
+                entry = ZipInfo(name, (2020, 1, 1, 0, 0, 0))
                 entry.create_system = 3
                 entry.external_attr = 0o100644 << 16
                 entry.compress_type = ZIP_DEFLATED
-                archive.writestr(entry, path.read_bytes())
+                content = path.read_bytes()
+                if path.suffix == ".md":
+                    content = document_links(content.decode("utf-8"), source, name, names).encode(
+                        "utf-8"
+                    )
+                archive.writestr(entry, content)
         os.replace(temporary, destination)
     finally:
         Path(temporary).unlink(missing_ok=True)
@@ -164,15 +252,23 @@ def build(destination, root=ADDON_ROOT):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("check", "build"))
+    parser.add_argument("command", choices=("check", "build", "release-check"))
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--root", type=Path, default=ADDON_ROOT)
     arguments = parser.parse_args()
     if arguments.command == "check":
-        print(f"ForgePDM {validate()}: manifest and layout valid (namespace bridge applied)")
+        print(
+            f"ForgePDM {validate(arguments.root)}: manifest and layout valid (namespace bridge applied)"
+        )
+    elif arguments.command == "release-check":
+        try:
+            print(f"ForgePDM {release_check(arguments.root)}: release metadata prerequisites pass")
+        except ValueError as error:
+            parser.exit(2, str(error) + "\n")
     else:
-        version = validate()
+        version = validate(arguments.root)
         output = arguments.output or ADDON_ROOT / "dist" / f"ForgePDM-{version}.zip"
-        print(build(output))
+        print(build(output, arguments.root))
 
 
 if __name__ == "__main__":

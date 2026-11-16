@@ -6,9 +6,16 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from forgepdm.api.v1 import descriptions, drawings, management, materials, physical_materials, reference_mass, routes, tree_status
-from forgepdm.application.reference_mass import ReferenceMassService
-from forgepdm.infrastructure.fabory import FaboryProvider
+from forgepdm.api.v1 import (
+    descriptions,
+    drawings,
+    management,
+    materials,
+    physical_materials,
+    reference_mass,
+    routes,
+    tree_status,
+)
 from forgepdm.application.auth import AuthService
 from forgepdm.application.authorization import AuthorizationService
 from forgepdm.application.bom import BOMService
@@ -19,9 +26,11 @@ from forgepdm.application.drawings import DrawingService
 from forgepdm.application.items import ItemService
 from forgepdm.application.management import ManagementService
 from forgepdm.application.manifests import ManifestService
+from forgepdm.application.reference_mass import ReferenceMassService
 from forgepdm.application.revisions import RevisionService
 from forgepdm.application.tree_status import TreeStatusService
 from forgepdm.infrastructure.database import Database
+from forgepdm.infrastructure.fabory import FaboryProvider
 from forgepdm.infrastructure.storage import DEFAULT_MAX_UPLOAD_BYTES, FileStorage
 
 
@@ -37,8 +46,12 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     authorization = AuthorizationService(database)
     revisions = RevisionService(database, authorization)
     app = FastAPI(title="ForgePDM API", version="0.1.0")
-    app.state.reference_mass_service = ReferenceMassService(database, authorization, revisions,
-        FaboryProvider() if os.environ.get("FORGEPDM_SUPPLIER_LOOKUP", "1") == "1" else None)
+    app.state.reference_mass_service = ReferenceMassService(
+        database,
+        authorization,
+        revisions,
+        FaboryProvider() if os.environ.get("FORGEPDM_SUPPLIER_LOOKUP", "1") == "1" else None,
+    )
     app.state.database = database
     app.state.management_service = ManagementService(database)
     app.state.auth_service = AuthService(database)

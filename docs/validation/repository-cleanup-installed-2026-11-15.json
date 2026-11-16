@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "addon": "0.19.1",
+  "backend_package": "0.1.0",
+  "schema": 17,
+  "backup": "/home/ricardoblank/Development/ForgePDM/var/backups/before-repository-cleanup-20261115T235426Z",
+  "tables_preserved": 39,
+  "stored_file_hashes_preserved": 213,
+  "both_profiles_match_archive": true,
+  "backend_restarted": false,
+  "server_license": "AGPL-3.0-or-later",
+  "workbench_license": "LGPL-2.1-or-later",
+  "user_guides_packaged": 8,
+  "integrity": "ok",
+  "foreign_key_errors": 0,
+  "running_addon_verified": "0.19.1",
+  "native_user_documents_preserved": 3,
+  "packaged_files": 84,
+  "public_maintainer": "ricardoblankpro@gmail.com"
+}

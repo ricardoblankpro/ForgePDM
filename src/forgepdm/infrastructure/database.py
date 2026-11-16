@@ -278,7 +278,9 @@ MIGRATIONS = (
     (7, ATOMIC_CHECKIN_SCHEMA),
     (8, MANAGEMENT_SCHEMA),
     (9, DRAWING_SCHEMA),
-    (10, """
+    (
+        10,
+        """
 ALTER TABLE items ADD COLUMN number_series TEXT NOT NULL DEFAULT 'P' CHECK(number_series IN ('P','A','S'));
 UPDATE items SET number_series = 'A' WHERE kind = 'assembly';
 CREATE TABLE series_counters (
@@ -286,10 +288,13 @@ CREATE TABLE series_counters (
     next_value INTEGER NOT NULL CHECK(next_value > 0)
 );
 INSERT INTO series_counters SELECT CASE item_kind WHEN 'part' THEN 'P' ELSE 'A' END, next_value FROM number_counters;
-"""),
+""",
+    ),
     (11, STANDARD_PARTS_SCHEMA),
     (12, SHARED_STANDARD_LIBRARY_SCHEMA),
-    (13, """
+    (
+        13,
+        """
 CREATE TABLE dataset_material_evidence (
  dataset_id TEXT PRIMARY KEY REFERENCES datasets(id),
  payload_json TEXT NOT NULL
@@ -326,8 +331,11 @@ CREATE TABLE requirement_snapshots (
  payload_json TEXT NOT NULL,
  created_at TEXT NOT NULL
 );
-"""),
-    (14, """
+""",
+    ),
+    (
+        14,
+        """
 CREATE TABLE revision_descriptions (
  revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id),
  description TEXT NOT NULL DEFAULT '',
@@ -342,18 +350,27 @@ INSERT INTO revision_descriptions(revision_id,description)
 SELECT r.id,COALESCE(NULLIF(json_extract(d.specification_json,'$.description'),''),NULLIF(i.description,''),i.name)
 FROM item_revisions r JOIN items i ON i.id=r.item_id LEFT JOIN revision_material_data d ON d.revision_id=r.id
 WHERE i.number_series='M';
-"""),
-    (15, """
+""",
+    ),
+    (
+        15,
+        """
 CREATE TABLE material_physical_links (revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id), snapshot_json TEXT NOT NULL);
 CREATE TABLE part_physical_assignments (revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id), snapshot_json TEXT NOT NULL);
 CREATE TABLE dataset_part_mass (dataset_id TEXT PRIMARY KEY REFERENCES datasets(id), payload_json TEXT NOT NULL);
-"""),
-    (16, """
+""",
+    ),
+    (
+        16,
+        """
 CREATE TABLE revision_reference_mass (revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id), payload_json TEXT NOT NULL);
 CREATE TABLE supplier_mass_feed (specification_key TEXT PRIMARY KEY, payload_json TEXT NOT NULL);
 CREATE TABLE supplier_mass_attempts (revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id), attempted_at TEXT NOT NULL);
-"""),
-    (17, """
+""",
+    ),
+    (
+        17,
+        """
 CREATE TABLE revision_operations (
     actor_id TEXT NOT NULL REFERENCES users(id),
     operation_id TEXT NOT NULL,
@@ -363,7 +380,8 @@ CREATE TABLE revision_operations (
     result_json TEXT NOT NULL,
     PRIMARY KEY(actor_id, operation_id)
 );
-"""),
+""",
+    ),
 )
 
 
@@ -406,15 +424,20 @@ class Database:
                         if version == 13:
                             for table in ("items", "series_counters"):
                                 original = connection.execute(
-                                    "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,)
+                                    "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
+                                    (table,),
                                 ).fetchone()[0]
                                 replacement = original.replace("('P','A','S')", "('P','A','S','M')")
-                                replacement = replacement.replace("CREATE TABLE " + table, "CREATE TABLE " + table + "_new", 1)
+                                replacement = replacement.replace(
+                                    "CREATE TABLE " + table, "CREATE TABLE " + table + "_new", 1
+                                )
                                 connection.execute(replacement)
                                 connection.execute(f"INSERT INTO {table}_new SELECT * FROM {table}")
                                 connection.execute(f"DROP TABLE {table}")
                                 connection.execute(f"ALTER TABLE {table}_new RENAME TO {table}")
-                            connection.execute("UPDATE projects SET name='Shared Item Library' WHERE is_standard_library=1")
+                            connection.execute(
+                                "UPDATE projects SET name='Shared Item Library' WHERE is_standard_library=1"
+                            )
                         for statement in sql.split(";"):
                             if statement.strip():
                                 connection.execute(statement)

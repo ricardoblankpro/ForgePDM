@@ -103,10 +103,16 @@ class BOMService:
                     raise NotFound("component revision not found")
                 if component["number_series"] == "M":
                     raise Conflict("raw materials belong in the material BOM")
-                inputs = connection.execute("SELECT payload_json FROM material_boms WHERE revision_id=?", (parent_revision_id,)).fetchone()
+                inputs = connection.execute(
+                    "SELECT payload_json FROM material_boms WHERE revision_id=?",
+                    (parent_revision_id,),
+                ).fetchone()
                 if inputs and component["number_series"] == "S":
                     for line in json.loads(inputs[0])["lines"]:
-                        input_item = connection.execute("SELECT item_id FROM item_revisions WHERE id=?", (line["component_revision_id"],)).fetchone()
+                        input_item = connection.execute(
+                            "SELECT item_id FROM item_revisions WHERE id=?",
+                            (line["component_revision_id"],),
+                        ).fetchone()
                         if input_item[0] == component["item_id"]:
                             raise Conflict("purchased component already occurs in material inputs")
                 if component["lifecycle_state"] == "obsolete":
@@ -155,11 +161,16 @@ class BOMService:
                     json.dumps({"line_count": len(new_ids)}),
                 ),
             )
-            material = connection.execute("SELECT payload_json FROM material_boms WHERE revision_id=?", (parent_revision_id,)).fetchone()
+            material = connection.execute(
+                "SELECT payload_json FROM material_boms WHERE revision_id=?", (parent_revision_id,)
+            ).fetchone()
             if material:
                 value = json.loads(material[0])
                 value["readiness"] = "unreviewed"
-                connection.execute("UPDATE material_boms SET payload_json=? WHERE revision_id=?", (json.dumps(value), parent_revision_id))
+                connection.execute(
+                    "UPDATE material_boms SET payload_json=? WHERE revision_id=?",
+                    (json.dumps(value), parent_revision_id),
+                )
             result = self._read_bom(connection, user, parent_revision_id, False, 1, set())
         return result
 

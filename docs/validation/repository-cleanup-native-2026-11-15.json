@@ -1,0 +1,40 @@
+{
+  "checks": [
+    "native command inserts direct stored EBOM at exact positions",
+    "custom text is stored and rendered",
+    "server changes do not silently rewrite the drawing",
+    "explicit update refreshes quantities and keeps custom text",
+    "update preserves placement and column layout",
+    "checkout renewal during review rejects local mutation",
+    "managed upload accepts embedded table and exact CAD pins",
+    "retrieval retains frozen values after server changes",
+    "offline restoration keeps columns and row text without original template",
+    "restored table exports to PDF",
+    "generation never rewrites stored EBOM quantities",
+    "live shared report expands 3 times 4 plus 2 into 14 pinned parts",
+    "protected Drawing BOM command creates indented format 2",
+    "protected command uses the same server flattened rows",
+    "view switching preserves orphaned and isolated annotations",
+    "nested BOM change during drawing review invalidates the report",
+    "actual native BOM viewer switches all three views with root and parent quantities",
+    "viewer does not synchronize engineering structure",
+    "managed retrieval freezes format 2 quantities and notes after nested changes",
+    "live report changes independently to 26 parts",
+    "retrieved flattened table exports PDF"
+  ],
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "qt": "6.8.3",
+  "scope": "Disposable live HTTP/native CAD; actual Drawing BOM dialog and command; original documents preserved",
+  "status": "passed",
+  "original_documents_preserved": true,
+  "original_document_count": 3
+}

@@ -7,6 +7,8 @@ name = "forgepdm"
 version = "0.1.0"
 description = "Backend-first product data management for FreeCAD teams"
 requires-python = ">=3.11"
+license = "AGPL-3.0-or-later"
+maintainers = [{name = "Ricardo Blank", email = "ricardoblankpro@gmail.com"}]
 dependencies = [
     "fastapi>=0.115,<1.0",
     "python-multipart>=0.0.20,<1.0",
@@ -25,3 +27,7 @@ packages = ["src/forgepdm"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+# Explicit baseline shared with addon checks; imports are checked on backend/tooling.
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

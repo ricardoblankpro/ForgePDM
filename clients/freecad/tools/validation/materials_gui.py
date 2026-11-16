@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import FreeCAD as App
 
-repository = Path("/home/ricardoblank/Development/ForgePDM")
+repository = Path(__file__).resolve().parents[4]
 case = Path(globals().get("MATERIAL_QA_CASE", "/tmp/forgepdm-material-browser-case"))
 config = json.loads((case / "connection.json").read_text())
 browser = json.loads((case / "materials-browser-report.json").read_text())

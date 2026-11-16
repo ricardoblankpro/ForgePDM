@@ -25,7 +25,9 @@ def decimal_quantity(value, *, allow_zero=False):
         raise ValueError(
             "quantity must be positive" if not allow_zero else "quantity must be nonnegative"
         )
-    if result and (result.adjusted() > 18 or result.adjusted() < -100 or len(result.as_tuple().digits) > 128):
+    if result and (
+        result.adjusted() > 18 or result.adjusted() < -100 or len(result.as_tuple().digits) > 128
+    ):
         raise ValueError("quantity exceeds supported precision or magnitude")
     return result
 

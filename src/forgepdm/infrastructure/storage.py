@@ -3,12 +3,10 @@
 import hashlib
 import os
 import re
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
 from uuid import uuid4
-
 
 CHUNK_SIZE = 1024 * 1024
 DEFAULT_MAX_UPLOAD_BYTES = 1024 * 1024 * 1024

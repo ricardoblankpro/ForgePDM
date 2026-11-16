@@ -16,7 +16,7 @@ from freecad.forgepdm import cad as old_cad, commands as old_commands, tree_stat
 from freecad.forgepdm.ui import QtCore, QtWidgets
 from freecad.forgepdm.jobs import Context
 
-repo = Path("/home/ricardoblank/Development/ForgePDM")
+repo = Path(__file__).resolve().parents[4]
 case = Path(globals().get("MATERIAL_PHYSICAL_QA_CASE", "/tmp/forgepdm-physical-material-qa"))
 config = json.loads((case / "connection.json").read_text())
 checks = []

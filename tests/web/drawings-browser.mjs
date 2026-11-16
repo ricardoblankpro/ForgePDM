@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 const directory = process.argv[2];
 if (!directory) throw new Error("Pass a disposable PDF fixture directory.");
 const config = JSON.parse(await readFile(path.join(directory, "connection.json"), "utf8"));
-const { chromium } = await import(pathToFileURL(process.env.FORGEPDM_PLAYWRIGHT || "/tmp/forgepdm-pdf-browser/node_modules/playwright-core/index.mjs"));
+const { chromium } = await import(pathToFileURL(process.env.FORGEPDM_PLAYWRIGHT || "/tmp/forgepdm-web-qa/node_modules/playwright-core/index.mjs"));
 const browser = await chromium.launch({ executablePath: "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
 const page = await context.newPage();

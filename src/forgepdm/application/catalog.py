@@ -1,7 +1,7 @@
 """Authorized catalog queries for thin clients; no CAD dependencies."""
 
-from forgepdm.application.descriptions import DescriptionService
 from forgepdm.application.authorization import AuthorizationService
+from forgepdm.application.descriptions import DescriptionService
 from forgepdm.domain.entities import NotFound, User
 from forgepdm.infrastructure.database import Database
 

@@ -1,0 +1,29 @@
+name: Build reviewable artifacts
+
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+jobs:
+  artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: uv run --group dev --locked python tools/check_docs.py
+      - run: uv run --group dev --locked pytest tests -q
+      - run: node --test tests/web/*.test.mjs
+      - run: uv run --project clients/freecad --extra dev --locked pytest clients/freecad/tests -q
+      - run: uv run --group dev --locked python tools/build_artifacts.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forgepdm-review-${{ github.sha }}
+          path: dist/release/*
+          if-no-files-found: error

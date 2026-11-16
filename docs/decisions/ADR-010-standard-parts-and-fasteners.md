@@ -1,6 +1,6 @@
 # ADR-010: S numbering and embedded Fasteners occurrences
 
-Status: implemented, 2026-11-05. See [usage and limits](../standard-parts.md).
+Status: implemented, 2026-11-05. See [usage and limits](../history/guides/standard-parts.md).
 Project-scoped registration below is superseded by
 [ADR-011](ADR-011-shared-standard-parts-library.md) from migration 12.
 

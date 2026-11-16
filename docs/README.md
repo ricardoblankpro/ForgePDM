@@ -1,59 +1,32 @@
 # ForgePDM documentation
 
-Current delivery: **FreeCAD addon 0.18.0**, **backend SQLite schema 17**.
-Start with [the project README](../README.md) and
-[development handoff](../DEVELOPMENT_STATUS.md).
+Start with the [project overview](../README.md). [Development status](../DEVELOPMENT_STATUS.md)
+is the single current handoff for delivery versions, recent verification and limits.
 
-## Current user and deployment guides
+## User guides
 
-- [Upgrade, backup, configuration and validation](upgrade-and-validation.md)
-- [Persistent FreeCAD browser, shortcuts and workspace setup](freecad-open-browser.md)
-- [FreeCAD installation and workflows](../clients/freecad/README.md)
-- [Standard Parts, shared library and Fasteners association](standard-parts.md)
-- [P material / A assembly descriptions, native materials and part mass](material-management.md)
-- [Supplier reference mass for S fasteners and CSV feeds](supplier-reference-mass.md)
-- [Web management](web-management.md) and [web browsing/history](web-gui.md)
-- [Customizable TechDraw engineering BOM tables](drawing-bom-tables.md)
-- [Source-pinned TechDraw PDF publication](drawing-pdfs.md)
-- [Update from Server](update-from-server.md)
-- [Component revision replacement](component-revision-replacement.md)
-- [Native Assembly support](freecad-builtin-assembly.md)
-- [Tree labels](freecad-tree-labels.md) and [tree status/description](tree-pdm-status.md)
+| Guide | Covers |
+|---|---|
+| [Install the FreeCAD addon](user/install.md) | Requirements, package layout and connection |
+| [FreeCAD workflow](user/freecad.md) | Browser, workspaces, checkout, check-in, release, revisions and tree labels |
+| [Components](user/components.md) | Shared library, purchased models and Fasteners association |
+| [Materials and component mass](user/materials.md) | P/A/M descriptions, physical materials and S mass sources |
+| [BOMs and assembly mass](user/bom.md) | Direct/Indented/Flattened views, quantities and reviewed CAD synchronization |
+| [Drawings and publishing](user/drawings.md) | TechDraw BOM tables, frozen values and PDF publication |
+| [Web workspace](user/web.md) | Browsing, exact revision navigation and administration |
+| [Troubleshooting](user/troubleshooting.md) | Common failures and safe recovery paths |
 
-## Architecture and delivery boundaries
+## Operations and development
 
-- [Architecture](architecture.md), [domain model](domain-model.md) and [roadmap](roadmap.md)
-- [Phase 5 reliability and recovery](phase5-reliable-checkin.md)
-- [ADR-013: current simple descriptions](decisions/ADR-013-simple-material-and-assembly-descriptions.md)
-- [ADR-014: native physical materials and part mass](decisions/ADR-014-physical-material-links-and-part-mass.md)
-- [ADR-015: supplier reference mass](decisions/ADR-015-supplier-reference-mass.md)
-- [ADR-016: CAD/manual S mass fallbacks](decisions/ADR-016-standard-part-mass-fallbacks.md)
+- [Server setup, configuration, upgrades, backup and recovery](operations/server.md)
+- [Contributing](../CONTRIBUTING.md) and [test tiers](development/testing.md)
+- [Architecture](development/architecture.md), [domain model](development/domain-model.md) and [API contracts](development/api.md)
+- [Roadmap](development/roadmap.md), [release preparation](development/releasing.md) and [thumbnail proposal](development/plans/thumbnails.md)
+- [Fastener vocabulary research and provenance](development/references/fastener-options.md)
 
-Permanent P/A/S/M codes reuse one Item/revision system. ForgePDM owns engineering
-metadata, CAD and revision-pinned BOMs. Stock, purchasing, costing and production
-operations remain outside the prototype. Assembly mass aggregation, TechDraw BOM
-tables, full supplier catalogs, cutting optimization and ERPNext synchronization
-are not implemented.
+## Decisions and evidence
 
-## Historical plans and evidence
-
-Phase 1–4 reports, the original [component catalog plan](component-catalog-plan.md)
-and [S implementation sequence](../ForgePDM_Standard_Parts_Implementation_Plan.md)
-record earlier delivered increments. Their version numbers, test counts and
-stage-specific limitations are historical, not current installation instructions.
-[ADR-012](decisions/ADR-012-item-master-and-material-inputs.md) records the advanced
-material-input design superseded in the normal UI by ADR-013; its compatibility
-APIs/data remain available.
-
-Dated reports under `validation/` distinguish isolated automated/browser/native
-checks from installation preservation checks. They are evidence of the recorded
-runtime/date, not guarantees for untested platforms or future supplier responses.
-Current limits and next-session instructions live in DEVELOPMENT_STATUS.md.
-
-- [Assembly mass totals](assembly-mass.md): exact EBOM pins, source evidence and unknowns.
-
-## Future implementation plans
-
-- [Shared native/web CAD thumbnails](thumbnail-plan.md) — recorded, not implemented.
-
-- [Shared Direct, Indented and Flattened BOM reports](bom-reports.md)
+[Numbered ADRs](decisions/README.md) explain accepted decisions and superseded
+approaches. [Validation reports](validation/README.md) are dated evidence, with
+scope and runtime limitations. [Historical plans and development logs](history/README.md)
+are retained separately from current instructions.

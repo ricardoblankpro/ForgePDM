@@ -259,11 +259,17 @@ def create_item(
     result = {**_item_response(item), "current_checkout": _checkout_response(checkout)}
     if payload.number_series == "S" and payload.standard_specification:
         try:
-            result["reference_mass"] = request.app.state.reference_mass_service.lookup(user, item.current_revision_id)
+            result["reference_mass"] = request.app.state.reference_mass_service.lookup(
+                user, item.current_revision_id
+            )
         except Exception:
             # The Item is already committed. Optional enrichment cannot turn a
             # successful creation into an ambiguous failure/retry.
-            result["reference_mass"] = {"mass_kg": None, "status": "unavailable", "reason": "Supplier enrichment unavailable"}
+            result["reference_mass"] = {
+                "mass_kg": None,
+                "status": "unavailable",
+                "reason": "Supplier enrichment unavailable",
+            }
     return result
 
 
@@ -519,7 +525,11 @@ def part_checkin_status(
         raise HTTPException(status_code=404, detail="check-in operation not found") from error
 
 
-@router.post("/revisions/{revision_id}/checkin/fenced", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+@router.post(
+    "/revisions/{revision_id}/checkin/fenced",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
 @router.post(
     "/revisions/{revision_id}/checkin",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -532,7 +542,13 @@ def check_in(
     revisions: RevisionService = Depends(get_revision_service),
 ):
     try:
-        revisions.check_in(user, str(revision_id), payload.change_note, expected_checkout_id=str(payload.expected_checkout_id), expected_checkout_version=payload.expected_checkout_version)
+        revisions.check_in(
+            user,
+            str(revision_id),
+            payload.change_note,
+            expected_checkout_id=str(payload.expected_checkout_id),
+            expected_checkout_version=payload.expected_checkout_version,
+        )
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Forbidden as error:
@@ -575,7 +591,13 @@ def create_next_revision(
     revisions: RevisionService = Depends(get_revision_service),
 ):
     try:
-        revision, checkout = revisions.create_next_revision(user, str(item_id), payload.change_note, operation_id=str(payload.operation_id), expected_source_revision_id=str(payload.expected_source_revision_id))
+        revision, checkout = revisions.create_next_revision(
+            user,
+            str(item_id),
+            payload.change_note,
+            operation_id=str(payload.operation_id),
+            expected_source_revision_id=str(payload.expected_source_revision_id),
+        )
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except Forbidden as error:
@@ -588,7 +610,12 @@ def create_next_revision(
 
 
 @router.get("/items/{item_id}/revision-operations/{operation_id}")
-def revision_operation(item_id: UUID, operation_id: UUID, user: User = Depends(current_user), revisions: RevisionService = Depends(get_revision_service)):
+def revision_operation(
+    item_id: UUID,
+    operation_id: UUID,
+    user: User = Depends(current_user),
+    revisions: RevisionService = Depends(get_revision_service),
+):
     try:
         revision, checkout = revisions.revision_operation(user, str(item_id), str(operation_id))
     except NotFound as error:
@@ -617,7 +644,12 @@ def engineering_bom_report(revision_id: UUID, request: Request, user: User = Dep
     from forgepdm.application.bom_reports import bom_report
 
     try:
-        return bom_report(request.app.state.database, request.app.state.authorization_service, user, str(revision_id))
+        return bom_report(
+            request.app.state.database,
+            request.app.state.authorization_service,
+            user,
+            str(revision_id),
+        )
     except NotFound as error:
         raise HTTPException(404, str(error)) from error
     except Forbidden as error:
@@ -631,7 +663,12 @@ def drawing_bom_report(revision_id: UUID, request: Request, user: User = Depends
     from forgepdm.application.drawing_bom import drawing_bom
 
     try:
-        return drawing_bom(request.app.state.database, request.app.state.authorization_service, user, str(revision_id))
+        return drawing_bom(
+            request.app.state.database,
+            request.app.state.authorization_service,
+            user,
+            str(revision_id),
+        )
     except NotFound as error:
         raise HTTPException(404, str(error)) from error
     except Forbidden as error:

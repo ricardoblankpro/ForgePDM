@@ -13,7 +13,7 @@ from freecad.forgepdm import ui
 from freecad.forgepdm.jobs import Context
 from freecad.forgepdm.session import Session
 
-repo = Path("/home/ricardoblank/Development/ForgePDM")
+repo = Path(__file__).resolve().parents[4]
 case = Path("/tmp/forgepdm-reference-mass-qa")
 config = json.loads((case / "connection.json").read_text())
 old_client, old_user = Session.client, Session.user

@@ -1,6 +1,6 @@
 """Controlled registration vocabulary and deterministic purchasing labels.
 
-Sources and applicability limits: docs/fastener-selection-options-research.md.
+Sources and applicability limits: docs/development/references/fastener-options.md.
 Stored values retain the version-1 specification contract; labels are presentation.
 """
 

@@ -54,4 +54,4 @@ are invalidated and the UI remains responsive while the request times out.
 
 Native insertion, check-in, BOM synchronization and revision adoption remain
 explicit separate actions. Thumbnails are documented in
-[the future plan](../thumbnail-plan.md), not implemented in this increment.
+[the future plan](../development/plans/thumbnails.md), not implemented in this increment.

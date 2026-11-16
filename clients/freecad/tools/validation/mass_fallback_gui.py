@@ -15,7 +15,7 @@ from freecad.forgepdm import cad, tree_status
 from freecad.forgepdm.jobs import Context
 from freecad.forgepdm.session import Session
 
-repo = Path("/home/ricardoblank/Development/ForgePDM")
+repo = Path(__file__).resolve().parents[4]
 case = Path(globals().get("MASS_FALLBACK_QA_CASE", "/tmp/forgepdm-mass-fallback-qa"))
 config = json.loads((case / "connection.json").read_text())
 previous = {

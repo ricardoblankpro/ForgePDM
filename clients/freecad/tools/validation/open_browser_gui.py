@@ -17,7 +17,7 @@ def run(App, Gui, directory):
     # Seed disposable native part/AssemblyLink data using the existing full protocol fixture.
     spec = importlib.util.spec_from_file_location(
         "open_atomic_fixture",
-        Path(__file__).parents[2] / "tests/freecad_atomic_checkin_integration.py",
+        Path(__file__).with_name("freecad_atomic_checkin_integration.py"),
     )
     fixture = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(fixture)

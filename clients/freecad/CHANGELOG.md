@@ -1,3 +1,16 @@
+# Changelog
+
+## 0.19.1 — Repository and contributor cleanup
+
+- Replace obsolete installation/status text with canonical current user,
+  operations and contributor guides; package those guides with working links.
+- Archive phase plans and development chronology, remove unused prototype inputs,
+  and consolidate portable native validation scripts without changing PDM rules.
+- Add documentation/version/package checks and reviewable artifact automation.
+- Correct source metadata and apply owner-approved LGPL-2.1-or-later Workbench /
+  AGPL-3.0-or-later server licensing and public maintainer contact. Catalog
+  distribution remains separate. Backend/schema compatibility unchanged.
+
 ## 0.19.0 — Shared engineering BOM report views
 
 - Add Direct, Indented and Flattened reports shared by the backend, FreeCAD and
@@ -79,7 +92,6 @@
 - Give every command distinct vector artwork. Add fastener tree context access
   and document/series/selection activation guards.
 
-# Changelog
 
 ## 0.12.0 — 2026-11-09
 

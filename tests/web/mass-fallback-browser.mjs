@@ -2,11 +2,12 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
+import {pathToFileURL} from "node:url";
 const directory=process.argv[2];
-const {chromium}=await import(process.env.FORGEPDM_PLAYWRIGHT||"/tmp/forgepdm-material-web-qa/node_modules/playwright-core/index.mjs");
+const {chromium}=await import(pathToFileURL(process.env.FORGEPDM_PLAYWRIGHT||"/tmp/forgepdm-web-qa/node_modules/playwright-core/index.mjs"));
 const config=JSON.parse(await fs.readFile(path.join(directory,"connection.json"),"utf8"));
 const native=JSON.parse(await fs.readFile(path.join(directory,"mass-fallback-freecad-report.json"),"utf8"));
-const browser=await chromium.launch({executablePath:"/usr/bin/google-chrome",headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
+const browser=await chromium.launch({executablePath:process.env.FORGEPDM_BROWSER||"/usr/bin/google-chrome",headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
 const page=await browser.newPage({viewport:{width:1440,height:1050}});
 const pageErrors=[],checks=[];page.on("pageerror",e=>pageErrors.push(e.message));
 try{

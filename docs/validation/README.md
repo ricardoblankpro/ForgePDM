@@ -1,0 +1,35 @@
+# Validation evidence
+
+Reports are immutable evidence for the recorded runtime/date and fixture scope.
+They do not certify later behavior or untested platforms. Keep original files,
+including reports reused as regressions, and never add credentials/private CAD.
+See [test tiers](../development/testing.md) and [current handoff](../../DEVELOPMENT_STATUS.md).
+
+## Shared BOM functional baseline
+
+- [Backend/web browser acceptance](shared-bom-browser-2026-11-15.json)
+- [Real native drawing/viewer/PDF acceptance](shared-bom-native-2026-11-15.json)
+- [Native atomic seed acceptance](shared-bom-atomic-native-2026-11-15.json)
+- [Local installation and engineering-data preservation](shared-bom-installed-2026-11-15.json)
+- [Registered command production read-only acceptance](shared-bom-production-readonly-2026-11-15.json)
+
+## Repository cleanup
+
+- [Installation, licenses and data preservation](repository-cleanup-installed-2026-11-15.json)
+- [Relocated native drawing/viewer/PDF harness](repository-cleanup-native-2026-11-15.json)
+- [Atomic seed from the consolidated harness folder](repository-cleanup-atomic-native-2026-11-15.json)
+- [Browser regression](repository-cleanup-browser-2026-11-15.json)
+- [Materials browser](repository-cleanup-materials-browser-2026-11-15.json)
+- [Shared BOM browser](repository-cleanup-bom-browser-2026-11-15.json)
+
+These checks validate the reorganized source and manual-install preview, not an
+Addon Index publication, clean-start/platform matrix or production security review.
+
+## Earlier evidence
+
+The other dated JSON/Markdown reports cover workspaces, checkout/recovery,
+materials, purchased components, drawing publication, browsers and GUI regressions.
+Their naming convention includes feature, execution scope and date. Native tests,
+fake/offscreen tests, installation checks and production read-only observations
+are separate evidence categories. The [historical development log](../history/development-log.md)
+links each delivered increment to its exact reports.

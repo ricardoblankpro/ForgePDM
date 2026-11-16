@@ -1,0 +1,1358 @@
+> Historical record. Describes the implementation at its recorded date; use the [current documentation](../README.md) for supported workflows.
+
+# Development status
+
+## 2026-11-15 — Shared direct/indented/flattened BOM reports (0.19.0)
+
+- Deliver the requested sequence: backend report first, FreeCAD/web viewers next,
+  then TechDraw consuming the same server-generated rows. New read-only
+  `/api/v1/revisions/{id}/bom-report` returns all three views, common evidence
+  token/timestamp, source paths, structure issues and one leaf-mass summary from
+  a single database snapshot. Existing BOM editing/recursive contracts remain.
+- Direct retains stored positions; Indented preserves repeated occurrence paths
+  and reports quantities per parent and per root; Flattened combines P/S leaves
+  by exact revision, with cumulative quantities and generated report positions.
+  Decimal math, full descendant access checks, cycle/depth/node/quantity limits,
+  missing mass and empty-assembly evidence are enforced without partial results.
+  `/assembly-mass` and legacy direct `/drawing-bom` project this shared traversal.
+- Both viewers show a local view selector, explicit refresh, root and parent
+  quantities, unit/extended masses and incomplete totals. Complete subassembly
+  unit mass is available; the summary counts leaves once. Indented row masses
+  overlap and must not be summed. CAD synchronization remains an independently
+  reviewed direct-BOM replacement; view switches do not write engineering data.
+- Drawing layouts remember view/title/columns. Native indented item numbers and
+  position paths, flattened root quantities, scoped annotation identities and
+  orphan-note retention reuse the same report. Empty-subassembly structures
+  block flattened drawing generation; missing part masses alone do not. Direct
+  tables retain format 1; non-direct tables use format 2 so older addons refuse
+  their update. Existing drawings stay frozen until explicitly updated.
+- Validation: 260 backend tests, 407 addon tests (four optional Qt modules skipped
+  in the base environment), 19 real Qt checks across four modules and five Node
+  test files pass. Targeted backend/all-addon lint/format, manifest/archive,
+  wheel/sdist, web syntax and diff checks pass. CI now runs pure web tests.
+  Chrome passes the 26 existing browser checks and 13 shared-report checks.
+- Installed FreeCAD 1.1.4 / Qt 6.8.3 passes 21 real HTTP/native drawing/viewer
+  checks plus the 28-check atomic seed acceptance. Verify nested 3×4+2=14,
+  parent/root quantity labels, view-specific notes, frozen format-2 retrieval
+  after nested updates, stale nested-report rejection and PDF export. Both
+  indented/flattened PDF rasters inspected. Tests use disposable DB/storage/CAD.
+- Install addon 0.19.0 in both local profiles, restart backend with its original
+  default DB/storage/loopback configuration; schema stays 17. Consistent backup:
+  var/backups/before-shared-bom-20261115T223508Z. All 39 table contents and 211
+  stored-file hashes preserved, integrity/FKs pass; both profiles match archive
+  bytes and served web assets match source. Final documentation refresh changes
+  only installed README/validation guide bytes, retaining backups of both.
+- Refresh installed table/editor/viewer modules and all 24 cached command objects.
+  Add the new API method without replacing the existing API/exception classes or
+  client/session object. Registered ShowBOM production acceptance uses GET only:
+  all three views load, mass remains 0.574 kg. All three user documents, frozen
+  tables, saved bytes, dirty states, active document and login are preserved.
+- Guide docs/bom-reports.md; design ADR-022. Evidence:
+  docs/validation/shared-bom-{browser,native,atomic-native,installed,
+  production-readonly}-2026-11-15.json. Native fixture extends drawing_bom_gui.py
+  via shared_bom_native.py. Report views select one fetched snapshot; refresh
+  explicitly. Drawings remain limited to 500 rows/one page; sheet splitting,
+  balloons, CAD-property mapping and automatic stale-publication gates remain.
+  Other platforms/runtime combinations and production engineering mutations
+  remain outside this acceptance scope.
+
+## 2026-11-15 — Editable TechDraw BOM title and footer removal (0.18.1)
+
+- Add Title to Drawing BOM: full custom text up to 300 characters, optional
+  `{item_number}` / `{revision_label}` placeholders, or blank to hide the title
+  without reserving title space. Store it in embedded table data and reusable
+  local layouts. Older layouts default to the original engineering BOM title.
+- Remove the generated footer from new and explicitly updated tables. Preserve
+  frozen existing tables until the user explicitly updates them; mass cells
+  retain unavailable/estimated markers. The user's current Peso column was
+  inspected read-only and maps to total_mass (unit mass × direct line quantity).
+- Validation: 404 addon tests pass, four optional Qt modules skipped. Addon Ruff
+  lint/format, manifest/archive and diff checks pass. Installed FreeCAD 1.1.4 /
+  Qt 6.8.3 passes 12 native checks for legacy/custom titles, preset save/load,
+  explicit update, save/reopen, footer removal, blank titles and PDF export.
+  Exported PDF raster inspected. Fixture uses synthetic report/disposable CAD;
+  no production table edits or server writes. Three original user documents,
+  dirty states, stored tables, saved file hashes, active document and session
+  are preserved. Full protected HTTP command acceptance remains the 0.18.0 run.
+- Install 0.18.1 in both local profiles after moving prior addons to
+  var/backups/before-drawing-bom-title-20261115T200301Z. Both profiles match archive
+  bytes. Reload installed package/table/editor modules and verify running 0.18.1;
+  existing commands import the updated editor on use. Backend/schema 17 unchanged.
+- Evidence: docs/validation/drawing-bom-title-{native,installed}-2026-11-15.json.
+  Native fixture: clients/freecad/tools/validation/drawing_bom_title_gui.py.
+  Direct-only/single-page scope and other prior table limitations remain.
+
+## 2026-11-12 — Customizable TechDraw BOM tables (0.18.0)
+
+- Add a read-only drawing-bom report endpoint: exact direct EBOM positions/pins,
+  descriptions and available direct P/S masses from one consistent DB snapshot.
+  Return evidence token/timestamp and provenance; no schema change or server
+  engineering writes. Unknown mass remains unavailable; subassembly unit mass
+  is outside this direct report. Require read access to every component.
+- Add Drawing BOM to BOM and publishing (24 commands; toolbar unchanged). Insert
+  into a selected TechDraw page or update an existing generated table. Configure
+  column fields/headings/order/widths/alignment, font size, mass units/precision
+  and custom row text. Save up to 30 reusable local layouts without engineering
+  row values. Preview/fit failures stay in the editor for correction.
+- Render self-contained native DrawViewSymbol SVG using Qt font metrics, embedded
+  with frozen report/layout/custom-text JSON (format 1). Preserve matching custom
+  text by exact component revision + stored BOM position + column key, despite
+  new server line IDs. Preserve orphaned notes instead of applying them to another
+  revision/position. Updates retain native placement/scale/rotation and layout.
+- Require a managed writable working copy, Working lifecycle, owned live lease
+  and edit access. Revalidate report token, lease ID/version, GUI target and
+  session after review. Reject active CAD edit mode and stale proposals. Native
+  undo changes only the table; no automatic save/upload/check-in/BOM sync.
+- Validation: 243 backend tests, 400 addon tests (four optional Qt modules skipped
+  in base environment), and 16 real offscreen Qt tests pass. Addon Ruff
+  lint/format, manifest/archive, backend wheel/sdist and diff checks pass.
+- FreeCAD 1.1.4/Qt 6.8.3 live command acceptance passes 11 drawing checks plus the
+  28-check atomic seed fixture: insert, update, custom text/placement retention,
+  rejection of lease renewal during review, managed upload/retrieval with exact
+  dependency pins, frozen older values after later server BOM changes, missing
+  original SVG-template path and actual PDF export. PDF raster inspected. Source
+  0.18.0 modules were tested before install; installed runtime verified separately.
+- Install 0.18.0 into both profiles with prior addon, consistent SQLite and blob
+  backups under var/backups/before-drawing-bom-20261113T023425Z. Restart backend
+  with original default DB/storage configuration for the new route; schema stays
+  17. All 39 tables and 209 file hashes preserved; integrity/FKs pass. Both addon
+  profiles match the final archive. Refresh installed API/table/UI/commands and
+  register Drawing BOM without replacing the login/session object.
+- Preserve all four open user documents, their file bytes, active document and
+  current dirty states, including one unsaved document. Production acceptance is
+  read-only: the real client reads the new five-line stored EBOM report. No
+  production drawing tables or engineering records were created by validation.
+- Guide docs/drawing-bom-tables.md; design ADR-021. Evidence:
+  docs/validation/drawing-bom-{native,installed,freecad-installed}-2026-11-12.json.
+- Limits: direct components only; one table must fit one page. No flattened or
+  indented views, sheet splitting, balloons, CAD-property mappings or automatic
+  stale-table publication/release gate. Explicitly update before publishing.
+  Header text/size/format are configurable; title/font family are fixed for now.
+  Other runtime/platform/font combinations remain unverified.
+
+## 2026-11-12 — Persistent browser and shortcuts (0.17.0)
+
+- Remove Name from opening results without changing stored names, descriptions or
+  search indexing. Keep Item, Description, Revision and Lifecycle visible at the
+  current dock width; descriptions have escaped full-text tooltips.
+- Replace the modal opening command with one modeless dockable/floating panel.
+  It stays available after opening, hides/reopens through the same toolbar ID,
+  and exposes one-click All Items, Recent, Favorites and My Checkouts tabs.
+  Preserve the configured workspace and in-place revision/snapshot selection.
+- Star/unstar local item favorites; remember up to 30 exact successfully opened
+  snapshots and 100 favorites per server/account. Store IDs only in FreeCAD
+  preferences. Favorites resolve current authorized metadata; Recent pins exact
+  revision/dataset/file and refuses to substitute a missing upload. Opening an
+  explicit alternative creates another exact recent entry. Clear Recent affects
+  only local history. No migration/scanning of previous workspace folders.
+- My Checkouts reads the existing authenticated API and labels expired leases.
+  Resolve shortcut IDs with current permissions; omit unavailable entries without
+  deleting the bookmarks. Corrupt local shortcuts remain preserved, while server
+  checkouts stay usable. No server writes occur for browsing, starring or history.
+- Bound HTTP workers, invalidate stale source/query/revision/session responses,
+  clear/hide the old panel immediately on logout/account switch, and drain jobs
+  before disposal. Use the existing single-operation task flow for opening;
+  revalidate session before activating/loading CAD and preserve dirty snapshots.
+- User explicitly keeps insertion in FreeCAD native assembly tools for now.
+  Record shared native/web thumbnail generation as future work in
+  docs/thumbnail-plan.md; no thumbnails or rendering service implemented.
+- Validation: 393 addon tests pass with three optional Qt modules skipped in the
+  base environment; 14 real offscreen Qt tests pass separately, including source
+  tabs, pins, failures, stale responses, corrupt preferences and in-flight account
+  switching. All-addon Ruff lint/format, manifest/archive and diff checks pass.
+- Installed FreeCAD 1.1.4/Qt 6.8.3 passes 17 live panel/HTTP/CAD checks against a
+  disposable backend, plus the 28-check atomic part/assembly seed acceptance.
+  Verify favorite persistence with a fresh HTTP client, exact Recent retrieval,
+  dirty reactivation, active My Checkouts and omission of unauthorized IDs under
+  another real account. User's four open documents, saved hashes, dirty states,
+  active document and login are preserved. Native fixtures are isolated.
+- Install 0.17.0 into both profiles after consistent online SQLite/blob and prior
+  addon backups. Initial pre-0.17 backup:
+  var/backups/before-browser-panel-20261113T014400Z; final layout backup:
+  var/backups/before-browser-panel-20261113T014912Z. All 39 database tables and
+  206 stored-file hashes preserved; integrity/FKs pass. Both profiles match final
+  archive bytes. Backend remains running unchanged at schema 17.
+- Refresh installed modules, the session notifier and cached command instances
+  without replacing the shared Session class or login object. Actual registered
+  toolbar action shows the new panel against production in read-only mode;
+  all four columns and source tabs fit, workspace is already configured, and
+  the four documents/active document/session remain unchanged. Leave it visible.
+- Guide: docs/freecad-open-browser.md; design ADR-020. Evidence:
+  docs/validation/browser-panel-{native,installed,freecad-installed,
+  production-readonly}-2026-11-12.json. No production engineering mutations tested.
+- Limits: shortcuts are local to a FreeCAD profile, not web/cloud synchronized.
+  Metadata is refreshed on demand; larger shortcut lists use per-entry reads.
+  My Checkouts scans at most 1000 leases and reports the cap. Pending HTTP can
+  drain until timeout while UI remains responsive. No automatic disk cleanup,
+  thumbnail backfill or new insertion action. Other platforms remain unverified.
+
+## 2026-11-12 — One-window search and opening (0.16.0)
+
+- Replace Open from ForgePDM's catalog/search/item/revision/snapshot dialog chain
+  with one asynchronous native window. Add debounced search, P/A/S filters,
+  result paging, visible revision/snapshot selectors and older-revision loading.
+  Current revision/newest uploaded native snapshot are explicit initial defaults;
+  Enter/double-click opens the selection. Show local-time upload dates and retain
+  exact dataset/file identities. No native CAD disables opening for that revision.
+- Remember workspace roots per server/account. Add Set Workspace to Session and
+  Change inside Open. Reuse valid configured roots without a folder chooser;
+  adopt the previous global root only for matching saved server/username.
+  Reject missing/unwritable roots, linked metadata and another server's identity.
+  Existing managed documents retain their own workspace for editing/upload.
+- Reuse existing verified configuration retrieval and exact component manifests.
+  Recheck read access and activate an already-open exact dataset/file without
+  modifying dirty documents. Other snapshots open separately. Success uses the
+  status bar; no routine opening-success modal. Opening never acquires checkout,
+  uploads files, changes revision pins or synchronizes BOMs.
+- Keep HTTP on bounded workers and GUI work on the main thread. Invalidate stale
+  query/revision responses immediately; close cancels and responsively drains
+  requests before destroying the dialog. Preserve all command IDs and nine-button
+  toolbar; Set Workspace adds one distinct icon/menu command (23 total).
+- Validation: 385 addon tests pass (two optional Qt modules skipped in base env);
+  eight real offscreen Qt tests pass separately with PySide6, including five new
+  browser checks and three existing BOM checks. All-addon Ruff lint/format,
+  manifest/layout/archive and diff checks pass. Backend unchanged; no migration.
+- Real FreeCAD 1.1.4/Qt 6.8.3: ten browser/retrieval checks pass using installed
+  0.16.0 against disposable native assembly data, plus the existing 28-check atomic
+  part/assembly acceptance fixture. Verify exact manifests, older snapshots,
+  unchanged dirty latest copy, no repeated folder prompt and no server writes
+  during opening. Registered toolbar action opens the new window and cancels
+  cleanly. Production engineering CAD was not opened or changed by acceptance.
+- Install 0.16.0 into both local profiles after a consistent online SQLite backup,
+  blob copy and prior-addon backups under
+  var/backups/before-open-browser-20261113T010022Z. All 39 tables and 202 stored-file
+  hashes preserved, integrity/FKs pass; both profiles match archive bytes.
+  Backend remains running unchanged at schema 17. Refresh running installed
+  modules/cached commands, add Set Workspace, preserve client/session; no user
+  documents were open. Verify runtime module paths and version 0.16.0.
+- Guide: docs/freecad-open-browser.md. Evidence:
+  docs/validation/open-browser-{native,installed,freecad-installed}-2026-11-12.json.
+- Limits: current-revision defaults reflect loaded catalog metadata; no live
+  revision subscription. Closing can wait for an in-flight HTTP timeout while
+  remaining responsive. Workspaces accumulate configurations; no automatic
+  cleanup. Recent items/favorites/My Checkouts and a persistent browser panel are
+  future increments. Other FreeCAD/platform combinations remain unverified.
+
+## 2026-11-12 — Phase 5 reliability completion (0.15.0 / schema 17)
+
+- Fence ordinary dataset uploads, immutable manifest attachment and legacy
+  check-in with exact checkout UUID/version, including final-transaction checks
+  after staging. Required public tokens reject older clients; explicit protected
+  addon routes reject older servers rather than silently weakening guarantees.
+  Native Check In remains the existing atomic snapshot/manifest operation.
+- Add actor-scoped revision-operation records in additive migration 17. Create,
+  copy-forward, checkout, audit and original replay result commit together.
+  Exact-source pins prevent unintended successive revisions; retries never alter
+  later leases. Status/replay require current access. Preserve eight-hour leases,
+  required revision notes and all established lifecycle/BOM rules.
+- Add durable credential-free revision journals and locking in the addon. Recover
+  the original result/prepared CAD copy before latest-source guards or another
+  note/copy; preserve an already open dirty target. Web description controls use
+  fenced check-in and durable browser revision intent with Web Locks where
+  available. Backend/addon must be upgraded together; refresh the browser.
+- Add read-only `uv run forgepdm recovery-report`: DB/FK checks, file hash/size
+  verification, incomplete native uploads, staging/unreferenced candidates and
+  completed operation counts. Stop writers for authoritative orphan review.
+  Never automatically delete files or substitute revision pins. See ADR-019 for
+  local-copy loss/corrupt-journal recovery boundaries and offline cleanup policy.
+- Validation: 240 backend tests, 379 addon tests (one optional Qt test skipped),
+  four Node test files; addon Ruff lint/format, manifest/archive, backend build and
+  web syntax checks pass. Backend regression includes independent-process
+  same/different-key revision races, rollback, migration preservation and lease
+  changes during upload. Full backend lint retains existing repository findings.
+- FreeCAD 1.1.4/Qt 6.8.3 acceptance: 28 atomic part/native-assembly checks plus
+  13 new checks for revision-response loss, fresh-client recovery, source/dirty
+  target preservation and stale legacy upload/manifest rejection. Source modules
+  were exercised in the pre-upgrade package; installed runtime verified afterward.
+  Chrome: seven new protected-control/revision-recovery checks plus 26 existing
+  browser checks, with no unhandled page exceptions. All mutation tests use
+  disposable backend/storage/CAD fixtures, never production engineering data.
+- Install 0.15.0 into both FreeCAD profiles; restart backend with original default
+  DB/storage and loopback configuration, applying schema 17. Backup under
+  var/backups/before-phase5-20261113T003223Z. All 38 previous tables and 202 stored
+  file hashes preserved; integrity/FKs pass. Both profiles match archive bytes,
+  served web assets match source and five protected/status routes are live.
+  Running FreeCAD reports 0.15.0 from installed module paths; refresh 28 retained
+  command objects while preserving session/client. No user documents were open.
+- Evidence: docs/validation/phase5-{atomic-native,recovery-native,browser,installed,
+  freecad-installed}-2026-11-12.json. Production PDM mutations were not exercised.
+- Phase 5 implementation and bounded local acceptance are delivered. Phase 6
+  retains automated backup/restore, production security, fully automated garbage
+  collection, clean-start/platform and wider multiuser operational acceptance.
+
+## 2026-11-11 — Combined BOM review and mass presentation (0.14.0)
+
+- Display masses with at most three decimals in FreeCAD and web, omitting trailing
+  zeros and showing positive sub-threshold values as `<0.001` in the displayed
+  unit. Keep Decimal evidence/API values and manual inputs at full precision;
+  web gram conversion uses decimal-string arithmetic before rounding. Native
+  display properties update through normal recomputation; installation does not
+  rewrite existing CAD documents just to change presentation.
+- Replace the public separate selection/review/consent workflow with one
+  persistent expandable published BOM window. Load HTTP data asynchronously and
+  check newer-revision notices independently. Update from CAD includes supported
+  candidates by default, with optional Choose components; show current/proposed
+  direct lines and quantity changes together. Apply once, skip exact no-ops and
+  refresh BOM/mass in place. Confirm empty/removal/reduction and split/custom
+  position replacements. Stored exclusions/manual provenance cannot be inferred;
+  the review states this explicitly. See ADR-018 and docs/freecad-addon-phase4.md.
+- Preserve owned Working checkout, exact snapshot/revision pins, GUI document
+  revalidation, optimistic tokens and server policy. Failed proposals are
+  invalidated with no automatic retry. No automatic BOM writes on upload/check-in.
+- Validation: 379 addon tests including three real offscreen Qt tests, 228 backend
+  tests and 15 web tests pass; addon lint/format, manifest/archive and diff checks
+  pass. Chrome verifies six controlled mass-rendering cases and seven description
+  workflow checks on an isolated backend. Native FreeCAD 1.1.4/Qt 6.8.3 verifies
+  the dialog with fake-service Apply/no-op and real production read-only HTTP.
+  Actual installed toolbar action opens the new five-row published BOM and
+  0.574 kg summary. Production synchronization was not exercised.
+- Install 0.14.0 archive into both local profiles with prior addons and a consistent
+  SQLite backup under var/backups/before-bom-ux-20261111T194131Z. Integrity/FKs pass.
+  Refresh modules and all 22 cached command instances in the running FreeCAD,
+  preserving three open documents, saved hashes, dirty states, active document
+  and login. Verify both served web asset bytes against source and backend health;
+  no backend restart or schema change was needed. Refresh the browser for the UI.
+- Evidence: docs/validation/bom-ux-freecad-2026-11-11.json,
+  docs/validation/bom-ux-installed-2026-11-11.json and
+  docs/validation/mass-display-browser-2026-11-11.json.
+
+## 2026-11-10 — Workbench organization (0.13.0)
+
+- Replace the flat 21-button toolbar with nine primary actions and seven menu
+  groups. Register 22 commands including the new Manage Component dispatcher;
+  preserve every existing ID for macros/customization. Its three explicit modes
+  reuse existing snapshot, newer-revision and cross-item replacement workflows.
+- All 22 commands have distinct SVG artwork. Keep refresh/repair in Maintenance,
+  catalog/material tools in their menu, and fastener association in the Components
+  menu plus a selection-aware tree context menu. Improve managed-document and
+  P/A-series activation without network work or changing server authorization.
+- Validation: 365 addon tests pass, focused Ruff check passes, archive builds.
+  Installed archive into both local FreeCAD profiles with backups under
+  var/backups/before-workbench-ui-20261110T025948Z. Running FreeCAD reports
+  0.13.0; rebuilt its toolbar/menu and registered commands while preserving all
+  three open documents, file paths, modified states, active document and client.
+- Native UI verification confirms one nine-action toolbar, ordered labels and
+  non-null icons after refreshing FreeCAD cached actions.
+- No backend/schema or engineering-data changes. Native action mutations were
+  not exercised against production CAD. Material/description command resources
+  derive their text from the document when queried; FreeCAD may cache text until
+  UI reconstruction. Existing translated strings remain; new English source
+  strings are present in the translation catalog.
+
+## 2026-11-09 — Assembly mass 0.12.0 installed
+
+- Install the built 0.12.0 archive into both FreeCAD profiles with full prior
+  profile, SQLite and blob backups under
+  var/backups/before-assembly-mass-20261110T022530Z. Restart the backend with
+  unchanged default database/storage configuration; schema remains 16. All
+  38 table contents and 187 stored-file hashes preserved; integrity/FKs pass.
+- Refresh the running package/API/cad/commands and all 21 command instances.
+  Preserve the client/login, three open documents, file hashes, dirty states
+  and active document. Runtime reports 0.12.0 and the assembly-mass API works.
+- A000003 currently has known subtotal 1.4580623990476929862 kg, including
+  CAD estimates. Total remains unavailable because P000008 lacks published mass
+  evidence and S000001–S000005 have no saved masses. No mass values, engineering
+  records or checkouts were changed by installation. Refresh the web page.
+- User directs future implementations to include installing/verifying the latest
+  local backend/addon, rather than stopping at source/package delivery.
+- Evidence: docs/validation/assembly-mass-installed-2026-11-09.json.
+
+## 2026-11-09 — SheetMetal retrieval active-document fix
+
+- Reproduce P000007-A retrieval failure: SheetMetal SMUnfold resolves the stored
+  Bend.Face19 through App.ActiveDocument. Recomputing the component while its
+  assembly is active resolves the wrong object and leaves an invalid unfold.
+- Activate each owned component before relinking/recomputing in configuration
+  reconstruction. Keep all dirty-state and save-success guards. No face remapping
+  or geometry/reference edits.
+- 365 addon tests pass, including activation-before-recompute regression. Real
+  FreeCAD 1.1.4 full reconstruction of a disposable copy passes for P000008,
+  P000007 and A000003, all clean; original open documents/dirty states preserved.
+- Install only the targeted cad.py fix into both existing profiles and reload
+  the running module, with originals backed up under
+  var/backups/before-sheetmetal-retrieval-fix-20261110T021807Z. No server data,
+  production CAD files or existing unsaved documents changed. Assembly-mass
+  0.12.0 installation remains separate. Retry Download for a fresh configuration.
+
+## 2026-11-09 — Assembly mass totals (0.12.0)
+
+- Add read-only `/api/v1/revisions/{id}/assembly-mass` using a single read
+  snapshot, exact EBOM revision pins, nested Decimal quantities, published P mass
+  and saved S supplier/manual/CAD mass. No schema change beyond 16.
+- Web Description and native Show BOM show complete kg totals or a known subtotal
+  with per-path missing reasons; CAD estimates retain their warning and provenance.
+  Empty assemblies are unavailable. Read authorization applies to every child;
+  cycles and excessive traversal/numeric inputs fail explicitly.
+- Reports reflect current published content of pinned revisions, not unsaved CAD
+  or immutable historical certificates. Working child changes can alter later
+  reports. Manufacturing inputs and TechDraw tables remain separate.
+- Real FreeCAD 1.1.4 acceptance verified the actual HTTP client and Show BOM
+  dialog against a disposable backend (0.08075 kg nested total). No production
+  engineering data changed. Source validation does not install addon 0.12.0.
+- Validation: 228 backend tests and 364 addon tests pass, plus web presentation/
+  model checks, focused Ruff lint, JS syntax and addon manifest/ZIP build. No real
+  browser acceptance was run for this increment; web presentation uses a DOM stub.
+- Usage/API: docs/assembly-mass.md; design ADR-017; native evidence:
+  docs/validation/assembly-mass-freecad-2026-11-09.json.
+
+## 2026-11-07 — S fastener CAD/manual mass fallbacks installed (0.11.0)
+
+- Extend the existing S revision mass record with explicit cad_estimate/manual
+  sources and optimistic tokens. Supplier/CSV lookup remains first. When no mass
+  is saved, the addon reads one valid Fasteners solid's volume and BRep hash;
+  the backend uses a reviewed reference density for the selected material and
+  validates geometry identity/Decimal arithmetic. Keep density-card identity,
+  thread representation and generator provenance. No native shape, placement,
+  material or occurrence identity is changed. Unknown/unmapped materials and
+  invalid/null/multiple solids remain unavailable, never zero.
+- Add optional manual grams per piece plus a note in the controlled native
+  registration form and the web S Description tab. Manual values replace unknowns
+  or estimates under owned Working checkouts; supplier references are protected.
+  Estimates never overwrite manual/saved estimates. Lookup may upgrade an owned
+  Working estimate to verified supplier data, protecting concurrent manual edits.
+  Before/after provenance is audited. Released records stay immutable and new
+  revisions copy mass. Generic S items may receive manual mass without a spec.
+- Upload/association includes retained fasteners as well as newly selected ones,
+  coalescing optional mass work per S revision. It does not acquire child checkouts
+  or replace revision pins. Existing saved estimates are reused across occurrences;
+  thread-display changes do not recalculate the stored S value. Approximate
+  reference densities are explicit surrogates from FreeCAD 1.1.4 cards, not
+  certified properties of every alloy/grade/coating. Assembly totals remain future.
+- Validation: 221 backend tests, 364 addon tests; 41 real browser checks (8 fallback,
+  26 existing, 7 simple-material), no page errors; three real FreeCAD 1.1.4 checks
+  cover automatic ISO4016 solid estimate, unknown material registration and optional
+  manual registration/Released reuse. Unit/API coverage includes source priority,
+  arithmetic bounds, stale writes, permissions, copy-forward and in-flight supplier
+  vs manual races. Lint/format, web model/syntax, manifest/ZIP/backend builds pass.
+- Installed backend and both addon profiles at 0.11.0 with schema 16; no migration
+  or data backfill. Pre-update backup:
+  var/backups/before-mass-fallbacks-20261108T021643Z. All 38 tables including schema
+  history and 181 stored-file hashes unchanged; SQLite integrity/foreign keys pass.
+  Hot-refreshed UI/API/command instances while preserving login, three open
+  documents, active document, saved hashes, labels and current dirty state. No
+  production test records or mass values were created. Refresh the web page for
+  the new mass-source/manual controls; FreeCAD is already updated.
+- Design: ADR-016. Usage/density table/API: docs/supplier-reference-mass.md.
+  Evidence: docs/validation/mass-fallbacks-2026-11-07.json and installed report.
+  Backend fallback API is required despite unchanged schema number. No assembly
+  mass rollup, TechDraw BOM tables, inventory or ERP synchronization added.
+
+## 2026-11-07 — Documentation audit and GitHub publication preparation
+
+- Review the pending implementation against current guides. Update root/addon
+  READMEs, installation artifact/version/schema, architecture, domain extensions,
+  roadmap, web editing boundaries, Standard Parts and tree-description guidance.
+  Mark the earlier advanced material-input/catalog plans as historical/superseded
+  where applicable; retain dated evidence and legacy references unchanged.
+- Add docs/README.md as the current documentation index and
+  docs/upgrade-and-validation.md for backups, coordinated backend/addon upgrades,
+  configuration, rollback boundaries and automated/browser/native validation.
+  Document the 0.9.1 older-copy repair, exact supplier coverage, CSV source units,
+  immutable Released references and remaining assembly/TechDraw/ERP limitations.
+  Refresh next-session guidance to stop treating the delivered catalog as pending.
+- Run final CI-equivalent checks: 199 backend tests and 356 addon tests pass;
+  all-addon Ruff lint/format, manifest, ZIP build, web model and JS syntax checks
+  pass. Correct formatting/imports in pending addon code/native harnesses without
+  changing workflow semantics. Check changed Markdown local links and diff
+  whitespace. No changes to legacy reference files or local engineering data.
+- The publication includes the previously uncommitted material/description/mass
+  implementation, tests, decisions and validation reports together with these
+  documentation updates. Generated packages, local database/storage, credentials
+  and CAD workspaces remain outside version control. Current runtime remains
+  addon 0.10.0/schema 16; user-facing behavior is unchanged by this audit.
+
+## 2026-11-07 — Supplier reference mass installed (0.10.0)
+
+- Add optional exact-specification Fabory mass enrichment after structured S API
+  registration and on explicit FreeCAD catalog association/reassociation. Reuse
+  saved revision references without network access. Missing/unsupported data and
+  provider failures do not block registration/association. Generic S items remain
+  supported. Saving requires library edit permission and an owned Working checkout;
+  Released references are immutable and new revisions copy saved mass.
+- Add administrator CSV reference-feed import with full specification hashes,
+  explicit original quantity/unit, kg-per-piece Decimal conversion, source URL,
+  supplier/article and retrieval date. Validate complete feeds atomically and
+  preserve saved references when feeds change. Show S mass and provenance on the
+  existing web Description tab, with optional lookup and admin import controls.
+- Migration 16 adds three reference/feed/attempt tables. Live network I/O is
+  outside transactions, ownership/specification are rechecked before save, and
+  failed attempts have a one-hour cooldown. The Fabory adapter respects robots,
+  reads bounded explicit product URLs without redirects/search crawling, and
+  checks returned standards, size, material, grade, finish and article identity.
+  Initial coverage is seven supplier families; unknowns remain unavailable.
+  No whole supplier catalog, purchasing/inventory or assembly mass calculation.
+- Validation: 199 backend tests, 356 addon tests; 38 real browser checks (5 new,
+  26 existing and 7 simple-material); three real FreeCAD 1.1.4 checks cover the
+  controlled registration dialog with live 16 g lookup, reuse and Released reuse.
+  Six of seven live family samples returned verified values; one timed out and
+  stayed unavailable. Focused lint, JS syntax, diff, manifest/ZIP and backend build
+  checks pass. Tests use isolated fixtures and original native cards are untouched.
+- Deployment: verified pre-16 backup under
+  var/backups/before-supplier-reference-mass-20261108T014119Z. All 34 previous data
+  tables and 177 stored-file hashes preserved, integrity/foreign keys pass. Backend
+  runs schema 16 with live lookup enabled; both profiles have verified 0.10.0.
+  Commands/API updated in the running FreeCAD, preserving login, all three open
+  documents, saved hashes and current dirty state. No production test records or
+  supplier masses created. Existing five S specs do not meet live exact matching
+  (unknown fields/unsupported types/custom geometry); no substitutions inferred.
+- Usage/coverage: docs/supplier-reference-mass.md and example CSV; design: ADR-015.
+  Evidence: docs/validation/supplier-reference-mass-2026-11-07.json and installed
+  report. To add reference mass to a Released S, create its next revision; earlier
+  assembly revision pins stay unchanged. Broader supplier coverage and assembly
+  mass rollup remain separate increments.
+
+## 2026-11-07 — Existing working-copy upload compatibility fixed (0.9.1)
+
+- Reproduce the reported upload rejection when an open v1 description-only CAD
+  copy has the same M pin/text as the server but the server now has a physical
+  assignment. Preparation previously kept the old local record and produced no
+  native mass evidence. Upgrade matching v1 metadata to the saved physical
+  snapshot; also reconstruct missing mass metadata on matching v2 copies.
+  Conflicting local descriptions/material pins retain their pending edits and
+  concurrency token. Backend validation remains unchanged.
+- Validation: 353 addon tests, focused lint/manifest/ZIP/diff checks, eight live
+  FreeCAD 1.1.4 checks including an old-copy upload after web material assignment,
+  mass publication, recompute, check-in, cache recovery and clear. Tests use
+  disposable backend/data/documents. Evidence:
+  docs/validation/legacy-mass-upload-fix-2026-11-07.json.
+- Installed verified 0.9.1 in both profiles, retaining originals under
+  var/backups/before-legacy-mass-fix-*; hot-reloaded description preparation.
+  Login, all three open documents, saved file hashes and existing unsaved edits
+  preserved. No backend/schema changes and no production upload performed by
+  the repair. Retry Upload on P000007; no material reselection is required.
+
+## 2026-11-07 — Native material links and part mass installed (0.9.0)
+
+- Add simple FreeCAD **Register Raw Material…** (description + native physical
+  material, density read-only) and **Link Physical Material…** for existing M
+  entries. Reuse shared-library permissions, owned Working checkouts, revision
+  creation and concurrency tokens. Web registration remains description-only;
+  assemblies keep free text. Existing M links are never guessed or backfilled.
+- Selecting a linked M entry freezes its physical snapshot on the P revision,
+  applies a native density card to final local solids and computes kg from final
+  CAD volume. Exclude intermediate Body features, links and construction objects;
+  invalid/overlapping geometry reports unavailable. Owned geometry recompute
+  updates local mass; publication refresh rejects changed UUID or density.
+- Preserve portable UUID-only FreeCAD material references with deterministic,
+  immutable density cache cards under the native User library / ForgePDM.
+  Download reconstructs missing cards before opening the FCStd. Original material
+  cards remain untouched. This is density/mass support, not full FEM, thermal or
+  appearance synchronization; assembly totals and TechDraw BOMs remain deferred.
+- Add migration 15 for M physical links, frozen P assignments and immutable
+  dataset mass evidence. Native description v2 and mass publish atomically with
+  upload/check-in and exact source hashes; v1 remains compatible for unlinked
+  records. Backend validates native UUIDs, pinned snapshots and mass arithmetic;
+  CAD supplies geometry volumes. Web shows physical name/density and uploaded
+  mass, marking changed assignments unavailable until updated CAD is published.
+- Validation: 182 backend tests, 351 addon tests, 34 real Chrome checks (8 material
+  checks + 26 existing checks), seven real FreeCAD 1.1.4 checks. Native coverage
+  includes both dialogs, final-Body counting, 7.8→15.6 kg recompute, upload/check-in,
+  deleted-cache download/reopen and clear. Focused lint, JS syntax, diff checks,
+  addon manifest/ZIP and backend distribution builds pass.
+- Deployment: consistent pre-15 backup under
+  var/backups/before-physical-materials-20261107T230922Z. All 31 existing data
+  tables and 168 stored file hashes preserved; SQLite integrity/foreign keys pass.
+  Backend runs schema 15; both installed profiles contain verified addon 0.9.0.
+  Live commands and observer updated while preserving login, three open documents
+  and the one pre-existing unsaved document. No production test records created.
+- Usage: docs/material-management.md; design: ADR-014. Evidence:
+  docs/validation/physical-materials-2026-11-07.json and installed report.
+  To adopt a new link on an existing P, explicitly select the M entry again with
+  **Assign Material / Set Description…**, then Upload or Check In.
+
+## 2026-11-07 — Web catalog uses saved revision descriptions
+
+- Fix catalog row subtitles and item detail subtitles to prefer the saved
+  engineering revision description over the original CAD document name. Catalog
+  rows use the current revision; detail views use the selected exact revision.
+  Description edits/clear update both visible labels immediately. Catalog search
+  now also matches saved revision descriptions without changing item names.
+- Validation: 12 catalog/description tests, seven real Chrome acceptance checks
+  including both corrected labels and mobile layout; web model/syntax and diff
+  checks pass. Restarted the local backend; no schema or engineering data change.
+- Physical FreeCAD material linkage and automatic part mass are discussed as a
+  possible next increment, not implemented by this display fix. Native material
+  assignment supports a physical material; density must be available for mass.
+
+## 2026-11-07 — Simple material/assembly descriptions installed (0.8.1)
+
+- At user request, replace the normal advanced material workflow with one-field
+  M registration, M-only material selection on P revisions and free-text A
+  descriptions. Hide manufacturing inputs/allowances/readiness/requirements from
+  the normal UI; preserve their previous data and API contracts. Physical FreeCAD
+  material cards remain optional; TechDraw BOM tables remain future work.
+- Add migration 14 revision descriptions and dataset evidence. Existing M text is
+  seeded from prior specifications/descriptions/names; no P/A assignments are
+  inferred. Parts freeze selected M revision/text; assemblies store free text.
+  Changes require owned Working checkouts and concurrency tokens. New revisions
+  copy descriptions/pins; Released revisions remain immutable. Native publication
+  is atomic/replayable and rejects conflicting web edits. Retrieval projects the
+  saved engineering description into isolated configuration copies.
+- Add one visible read-only Description tree column alongside PDM status, resolving
+  linked component source revisions. Preserve labels and native Label2 data; the
+  native Description column's visibility is restored when the PDM column clears.
+  Local pending descriptions display without changing CAD through tree rendering.
+- Validation: 171 backend tests, 347 addon tests, six simple browser checks plus
+  26 existing browser checks; four disposable real FreeCAD 1.1.4 checks cover
+  description-only publication/replay, assembly text, linked tree display and
+  download/reopen with exact material pins. Focused lint, web syntax/model checks,
+  addon manifest/layout and 0.8.1 ZIP build pass; backend distributions rebuilt.
+- Deployment: consistent pre-14 backup under
+  var/backups/before-simple-descriptions-20261107T210434Z, including DB, storage
+  and both installed addon profiles. All 29 existing data tables and 163 storage
+  hashes are unchanged; one existing M description was seeded. SQLite integrity
+  and foreign-key checks pass. Backend is running at schema 14; both addon
+  profiles contain verified 0.8.1. Running command instances and tree display were
+  refreshed while preserving login, three open documents and one already-unsaved
+  document. No engineering record, checkout or BOM was changed during setup.
+- Evidence: docs/validation/simple-descriptions-2026-11-07.json and installed report.
+  Usage: docs/material-management.md; decision: ADR-013. Existing Phase 5 debt
+  remains separate. No TechDraw table or ERP synchronization implemented.
+
+
+## 2026-11-07 — Material management installed for user testing
+
+- At user request, stop the previous local backend and make a consistent pre-13
+  SQLite backup plus verified copies of all 163 stored files and both installed
+  addon profiles under var/backups/before-material-management-20261107T202610Z.
+- Apply migration 13 and verify all 23 pre-existing data tables retain their
+  counts/hashes, allowing only the intended shared-library display-name change.
+  SQLite integrity/foreign-key checks pass; all 163 storage hashes are unchanged.
+- Install verified addon 0.8.0 in both FreeCAD profiles (52 archive files each),
+  preserve originals in the backup and start the upgraded loopback backend.
+  Health, material routes and existing-account curator access are verified.
+- Refresh the running FreeCAD client without replacing its login or touching its
+  three open documents. Update all 18 registered command instances and verify
+  Assign Materials, Upload and Check In dispatch to the current implementations.
+  The ForgePDM Materials toolbar/menu is visible; all three documents remain clean.
+- Open the web interface for testing. No sample material, engineering revision,
+  checkout or BOM was created/changed as part of setup. Start by registering a
+  material in the catalog, then assigning it to an owned Working P/A revision.
+- Installed evidence: docs/validation/material-management-installed-2026-11-07.json.
+  A normal future FreeCAD restart loads 0.8.0 directly from the installed addon.
+
+
+## 2026-11-07 — Item Master and material management (addon 0.8.0)
+
+- Migration 13 extends permanent numbering to M without replacing P/A/S IDs,
+  counters, BOM pins or shared-library membership. S/M share library curators.
+  Raw material identity includes normalized grade/standard/form/section/base UOM;
+  density, descriptions, purchase sizes and explicit conversions are revisioned.
+- Add revision-bound P/A manufacturing inputs, indexed material where-used,
+  checkout/token guards, additional S duplicate protection and explicit readiness.
+  Existing P/A release rules remain; new M releases require specifications.
+  New revisions copy inputs/properties and reset review. CAD publication,
+  engineering-property changes and EBOM edits invalidate material readiness.
+- Calculate nested, repeated and multi-project gross requirements from explicit
+  revision roots using Decimal arithmetic. Persist immutable versioned snapshots
+  with source paths, exact revisions, CAD hashes, issues and revision subtotals;
+  approved reports require Released, reviewed sources without mixed input revisions.
+  JSON/CSV exports remain authenticated and recheck every recorded source.
+- Extend existing catalog with M registration/filtering and Materials/Requirements
+  views. Addon Assign Materials selects M/S revisions and optional separate final
+  solids, calculates density-based mass, projects technical metadata and embeds
+  evidence in FCStd. Upload/check-in publishes inputs/evidence atomically and
+  rejects conflicting web edits; file-hash replay remains intact.
+- Validation: 165 backend tests and 343 addon tests; web model/syntax checks;
+  26 existing browser checks plus six new material/mobile checks, no page errors;
+  five disposable real FreeCAD 1.1.4 checks (mass, geometry update, atomic native
+  publication/replay, source-pinned evidence API, save/reopen). Focused lint and diff checks pass. Addon 0.8.0
+  manifest/layout and ZIP build pass; backend distributions rebuilt.
+- Evidence: docs/validation/material-management-2026-11-07.json. Usage/API and
+  deployment: docs/material-management.md; design: ADR-012. No live database
+  migration or installed-addon upgrade performed. Back up before upgraded app
+  startup, which applies migration 13; test collection remains isolated.
+- Deliberate limits: explicit consumption, selected-solid mass only, small UOM
+  vocabulary, no stock/cost/supplier management, cutting optimization or ERPNext
+  connection. Versioned neutral JSON supports a future idempotent ERP adapter.
+  Existing Phase 5 legacy-write/revision-retry debt remains.
+
+
+## 2026-11-07 — Material requirement arithmetic foundation (partial)
+
+- Started the Item Master/material management implementation with CAD-independent
+  Decimal arithmetic for length, area, mass and count normalization, percentage
+  allowances, and finished mass from mm³ and kg/m³.
+- Validation: eight isolated domain tests passed with a disposable uv cache.
+- This is only the arithmetic foundation: M numbering, migrations, catalog,
+  revision-bound material inputs, readiness, consolidation/provenance, APIs,
+  web editing and FreeCAD assignment/check-in integration are not implemented.
+- No live database migration or installed addon change. Next increment must add
+  migration-preserving M identities and revision specifications, then material
+  inputs and requirements services, before exposing client commands.
+
+
+## 2026-11-05 — Remove dedicated web library navigation
+
+- At user request, undo the dedicated Standard Parts Library sidebar/view and
+  its specialized browsing state. Use the existing Item catalog S-series filter.
+- Restore the previous web project browsing and remove feature-specific browser
+  fixture/report/documentation. Shared library ownership, permissions, migration
+  12 and addon 0.7.4 remain in place. No engineering data change.
+- Validation: restored web files match their pre-feature versions; JS syntax,
+  existing Node model checks and diff checks pass. Backend distributions rebuilt;
+  live HTTP confirms the dedicated entry is absent and S-series filter remains.
+
+## 2026-11-05 — Shared Standard Parts Library (0.7.4)
+
+- Migration 12 creates a dedicated shared project/library and moves all S ownership
+  there, preserving Item/Revision identities, names/specifications, datasets,
+  checkouts and exact BOM pins. Legacy equivalent identities remain separate;
+  new exact specification duplicates are blocked across the library.
+- Enabled users start as library viewers; existing S creators become initial
+  editors. Administrators manage curator membership using existing project
+  management. Engineering-project edit rights grant no library write rights.
+- All S creation routes to this library, including older clients supplying another
+  project. Registration and native S uploads skip the project prompt. P/A creation
+  excludes/rejects the library; library archiving is prohibited. See ADR-011.
+- Validation: 146 backend and 340 addon tests passed; 16 disposable real FreeCAD/
+  HTTP checks cover no-prompt registration, permissions, curator promotion and the
+  same exact S revision in two project BOMs. Open document/object states, saved
+  hashes and user session preserved. Evidence:
+  docs/validation/shared-standard-library-2026-11-05.json.
+- Installed 0.7.4 in both local profiles with verified archive contents and backups;
+  refreshed four registered command instances and verified current backend library
+  capability. Local database is at migration 12 with five S items in the library.
+- Deployment caveat: collection-time import of main.app in existing tests eagerly
+  initialized the local database before the intended pre-migration backup. A private
+  current-state backup exists, but it is not a pre-12 rollback point. Added explicit
+  test-collection database/file-root isolation to prevent recurrence. Migration
+  preservation is covered by synthetic pre-12 tests; local integrity/foreign-key
+  checks pass. Do not claim a full local before/after comparison was available.
+
+## 2026-11-05 — Specification selections and uppercase catalog text (0.7.3)
+
+- Fasteners-driven registration now uses one form with controlled material,
+  mechanical-class and finish choices; known norms classify type/family, unknown
+  norms require explicit choices. Extended options include researched specialist
+  entries. Obvious family/material mismatches are filtered; no certification of
+  every product/size/coating combination is implied.
+- Generate Name and Description as TYPE MATERIAL FAMILY NORM DIMENSION GRADE
+  FINISH, uppercase with X dimensions, and show a live preview. No separate name/
+  description prompts for this path. Preserve unknown values, custom dimensions
+  and left-hand indication; reject oversized names without silent truncation.
+- Existing S items/associations and backend specification contract remain intact;
+  no migration or automatic alias merge. Generic purchased-item registration
+  without Fasteners geometry retains manual text entry.
+- Validation: 337 addon tests, focused lint and 28 real Qt/HTTP checks passed on
+  disposable data, including exact screw/nut/washer names, dependent choices and
+  cancel safety. User document states and hashes preserved. Evidence:
+  docs/validation/standard-parts-form-2026-11-05.json.
+- Built and installed 0.7.3 in both local addon profiles with backups; runtime
+  command dispatch refreshed. No engineering records automatically altered.
+
+## 2026-11-05 — Specification dropdown vocabulary research (no implementation)
+
+- User prefers specification-only registration with selections instead of free
+  typing. Researched primary standards/manufacturer sources for a broad material,
+  mechanical-class and finish seed inventory; see docs/development/references/fastener-options.md.
+- Recommend dependent family/material/class selectors and generated catalog text.
+  Distinguish current vs legacy classes (notably ISO 898-2:2022), bolt vs nut vs
+  washer/set-screw systems, and coating processes vs appearance. Unknown values
+  and supplier extensions need explicit handling.
+- Research is not an exhaustive certified compatibility matrix; extended stainless
+  combinations and specialist specifications need further verification. No UI,
+  schema, installed-addon or engineering-record changes in this research increment.
+
+## 2026-11-05 — Selected standard-part reassociation (addon 0.7.2)
+
+- Add Change Standard Part Association command for selected direct fasteners in
+  an owned Working assembly. Reuse matching/registration for a different grade,
+  material or finish; preserve occurrence UUIDs, placement, attachments and all
+  unselected associations. Recheck edit/checkout rights before one undoable local
+  transaction. Save/upload and reviewed BOM synchronization remain explicit.
+- Shared upload preflight additionally detects association changes during review.
+  No description/name standardization implemented; existing text remains unchanged.
+- Validation: 321 addon tests passed; focused lint and package/layout checks passed.
+  Focused tests cover subset changes, cancellation, stale metadata,
+  checkout loss, invalid selection and new-spec registration. Disposable live
+  CAD/HTTP checks prove two identical screws retain distinct grade 8.8/10.9
+  revisions after upload/retrieval, with separate BOM quantities and preserved
+  user documents/session. Eleven live checks passed. Built and installed 0.7.2
+  in both addon profiles with backups; registered the new command in the current
+  session. See docs/validation/standard-parts-reassociation-2026-11-05.json.
+
+## 2026-11-05 — Repair stale GUI command instances after addon reload
+
+- User upload skipped Fasteners prompts because FreeCAD retained the registered
+  0.6.6 UploadCommand instance, despite the module being reloaded from 0.7.1.
+  Re-adding an existing command name did not replace its Python instance.
+- Rebound registered workflow command instances to the current installed classes.
+  Intercepted dispatch without advancing workflows and verified both toolbar
+  Upload and Check In now invoke actions containing the Fasteners preflight.
+  No CAD save/upload or catalog mutation performed.
+- Future in-process upgrades must verify registered command dispatch, not merely
+  module version or command-name presence. A normal FreeCAD restart loads current
+  installed classes without this hot-reload issue.
+
+## 2026-11-05 — Qualified local Fasteners attachments (addon 0.7.1)
+
+- Actual A000003 inspection found a valid local Assembly attachment using
+  Body002.Hole.Edge5. The 0.7.0 adapter incorrectly required an unqualified name.
+  Accept bounded local object paths ending in one topology element, resolve the
+  full path and retain null-shape rejection. External attachment limits unchanged.
+- Validation: 314 addon tests passed; disposable live save/reopen/path-rewrite
+  checks passed, preserving all user document dirty/touched flags and saved hashes.
+  Actual A000003 attachment passes read-only preflight; no user document saved,
+  altered or uploaded. P000008 already had unsaved edits and was preserved.
+- Built 0.7.1, updated both installed addon profiles with backups and reloaded the
+  runtime adapter. No backend or schema change. Evidence:
+  docs/validation/fasteners-qualified-attachment-2026-11-05.json.
+
+## 2026-11-05 — Installed addon upgraded for user testing
+
+- Installed 0.7.0 in both local FreeCAD addon profiles, preserving prior addon
+  directories in the private ForgePDM-backups directory outside Mod. Verified
+  every installed distribution file against the built ZIP.
+- Reloaded installed modules and refreshed the running ForgePDM menu/toolbar;
+  Register Standard / Purchased Part is available. No engineering document edits.
+- Local database was already at migration 11; no new migration was needed. Started
+  the configured loopback backend and verified health and standard-parts API presence.
+  User can log in and test the workflow documented in docs/standard-parts.md.
+
+## 2026-11-05 — Standard parts and Fasteners integration (addon 0.7.0)
+
+- Complete S creation/search foundation plus metadata-only registration and explicit
+  check-in/release actions. Migrations 10–11 preserve P/A counters, identifiers and
+  relationships; S remains ordinary part kind with existing revision/access rules.
+- Upload and Check In discover Fasteners, reuse exact associations, group new/changed
+  specifications for confirmation, and offer registration of missing S items.
+  Material/grade/finish are explicit, including unknowns. Normal toolbar-created
+  root fasteners and direct native Assembly members are supported; nested local
+  groups remain rejected. No automatic release or server BOM change.
+- Save occurrence UUIDs, geometry and generator provenance in native snapshots.
+  Validate/publish immutable occurrence evidence with datasets and atomic check-in.
+  Extend reviewed BOM capture to mixed links/embedded fasteners without flattening
+  linked subassemblies. Preserve manual-line review and stale/checkout guards.
+- Narrow freecad-fasteners-v1 manifests pin external BaseObject targets and one
+  explicit subelement. Retrieval rewrites paths before open, verifies attachments
+  and associations, and rejects missing/null subelement shapes. Old link-only
+  snapshots remain compatible. Compatible Fasteners installation is required.
+- Validation: 140 backend tests, 305 addon tests, three web model tests; focused
+  lint, web syntax and addon manifest/layout checks passed. Backend distributions
+  and ForgePDM-0.7.0.zip built. Isolated real FreeCAD/HTTP pilot passed 32 checks:
+  four families, managed attachments, qty eight, purchased-model qty two, atomic
+  check-in/recovery, exact retrieval, edits/copies/deletion/cancel, stale reviews
+  and nested assembly boundaries. Runtime: Linux FreeCAD 1.1.4 / Fasteners 0.5.43.
+- Evidence: [live report](../validation/standard-parts-freecad-2026-11-05.json).
+  Reusable isolated fixtures live under clients/freecad/tools/validation/.
+  [Usage and limits](guides/standard-parts.md); architectural contract: ADR-010.
+- No production database upgrade or installed-addon deployment in this session.
+  Backend and addon must be upgraded together before using this with engineering
+  data. Other families sharing the parameter contract can be discovered but are
+  not individually certified; arrays, arbitrary proxies and semantic topology
+  remapping remain unsupported. Phase 5 legacy-write/revision-retry debt remains.
+
+## 2026-11-05 — S numbering backend foundation (partial implementation)
+
+- Migration 10 adds item numbering series and independent P/A/S counters copied
+  from previous counter values. Item creation accepts optional number_series;
+  defaults remain P/A and assembly/S is rejected. Item API responses expose series.
+- Validation: 131 backend tests passed; git diff --check passed. No live database
+  upgrade or FreeCAD deployment performed.
+- Remaining: catalog filtering and creation UI, stronger migration/concurrency
+  coverage, metadata-only registration, matching and the complete Fasteners
+  upload/check-in/BOM/retrieval integration. This is not a completed feature.
+
+## 2026-11-05 — Simplified standard parts proposal (planning only)
+
+- Reformulated the catalog proposal around the original Fasteners BOM problem:
+  ordinary S-numbered parts, explicit multi-object association, and reviewed
+  occurrence counting for one validated Fasteners case. Purchased models reuse
+  existing managed links. Revisions, lifecycle and permissions stay in place.
+- Authoritative proposal: [standard parts plan](plans/standard-parts.md).
+  The older catalog plan now links there. Automatic matching, taxonomy and special
+  administration are deferred; duplicate-equivalence review is initially manual.
+- First implementation task, when requested: reproduce attachment/capture/upload/
+  retrieval behavior in disposable fixtures. No implementation or runtime changes;
+  validation in this session is documentation/diff review only. Phase 5 debt remains.
+
+## 2026-11-04 — Next priority: personal component catalog (planning only)
+
+- User selected a ForgePDM-owned standard/purchased component catalog as the next
+  feature, with optional Fasteners Workbench integration after the foundation.
+- Detailed implementation sequence and acceptance gates:
+  [component catalog plan](plans/standard-parts.md). Reuse existing Items,
+  revisions and exact BOM/reference workflows; separate catalog classification
+  from part/assembly kind. Define specification identity, revision ownership,
+  normalized matching and sharing permissions before implementation.
+- Three increments: backend catalog and matching; browsing/managed CAD reuse;
+  optional Fasteners adapter. No implementation, migration or runtime change in
+  this session. Validation is documentation/diff review only.
+- This is the next feature priority. Phase 5 reliability work remains pending;
+  it has not been completed or removed from the roadmap.
+
+## 2026-11-03 — Published TechDraw PDFs (addon 0.6.6)
+
+- Add explicit Publish Drawing PDFs from clean uploaded managed Working copies
+  with an owned checkout. Render selected pages from isolated verified exact
+  configurations under a modal GUI guard; preserve original documents/selection
+  and lease. One PDF per page, 1–32 pages, 25 MiB/page and 100 MiB/publication.
+- Migration 9 adds immutable publications and page/source associations. Bounded
+  ZIP transport, verified hashes, final lease/permission/source fencing and one
+  metadata transaction protect the complete page set. Actor-scoped operation
+  replay plus frozen local PDFs/journal recover response loss without reexport.
+- Web Drawings tab provides publication/page history, exact native source details,
+  stale same-revision warnings, authenticated download and native browser PDF
+  preview. Temporary Blob URLs are revoked on navigation/session changes; tokens
+  never enter URLs. Download fallback covers browsers without inline PDF support.
+- Validation: 130 backend tests, 295 addon tests, three web model tests; live
+  FreeCAD 1.1.4 fixture passed 59 checks; real Chrome drawings passed 18 checks,
+  existing web/management acceptance passed 26/23. Evidence:
+  docs/validation/drawing-pdfs-*-2026-11-03.json. No real engineering publication.
+- Publication remains separate from native check-in and keeps the checkout.
+  Subsequent native datasets can make published PDFs historical, including when
+  bytes are unchanged. Released revisions remain read-only; new revisions start
+  with their own publication list. Combined PDFs, automatic check-in integration,
+  local cache cleanup and orphan-blob recovery remain deferred.
+- Usage, architecture and limits: docs/drawing-pdfs.md and ADR-009.
+- Deployment: backend wheel/addon ZIP and focused lint passed. Local migration 9
+  applied after a private consistent database backup; hashes/counts of every
+  existing non-migration table were unchanged and foreign-key checks passed.
+  Both installed addon profiles updated with backups, and the new runtime command
+  registered while preserving login, open document states, saved bytes and
+  selection. Refresh the web page to load the new Drawings tab.
+
+## 2026-11-03 — Embedded TechDraw pages (addon 0.6.5)
+
+- Upload/check-in accepts native TechDraw SVG Template paths only when the same
+  object has a verified embedded self-contained PageResult SVG. Preserve embedded
+  bytes, editable fields, views, dimensions and notes; reconstruction uses FreeCAD's
+  embedded template without reassigning Template or requiring its historical path.
+  Other file/path assets and cross-document drawing adapters remain unsupported.
+- Validate SVG/member limits, structure, local resource references and embedded
+  PNG/JPEG images (including wrapped Base64). Reject missing/unsafe resources,
+  external CSS/images, DTD/entities and active content. The user's saved drawing
+  also passed read-only preflight with the new adapter; no automatic upload made.
+- Settle native Qt drawing projection/face results before managed saves and
+  reconstruction saves, with a bounded responsive wait. TechDraw documentation
+  objects do not enter BOM quantities, including pages inside native Assembly.
+  Local CAD validation failures now say that the failed step did not upload the
+  snapshot; earlier completed writes and uncertain transport failures remain clear.
+- Validation: 288 addon tests, focused lint and manifest/package checks passed.
+  Real FreeCAD 1.1.4/HTTP disposable fixture passed 43 checks: two-page part and
+  native assembly, atomic check-in, original SVGs unavailable, editable title
+  re-check-in, 100 mm dimensions, notes/embedded logos/rendering, clean retrieval
+  and exact child pins. User documents/dirty states/saved bytes preserved.
+  Evidence: docs/validation/freecad-techdraw-2026-11-03.json.
+- Both installed profiles updated with backups and running CAD/validation/command
+  modules reloaded. Session and document states preserved; actual engineering
+  check-in remains the user's explicit next action.
+- Usage/scope: docs/techdraw-support.md. Pages share model revisions/checkouts;
+  no backend schema/API changes, separate drawing revisions or PDF publication.
+
+## 2026-11-03 — Visual tree status (addon 0.6.4)
+
+- **Refresh PDM Status** adds an ephemeral native-tree PDM column beside labels.
+  Independent colored badges/text/tooltips show your/other-user checkout and owner,
+  released lifecycle, newer revision, and newer same-revision snapshot per exact
+  occurrence pin. Include local-edit/unknown/stale indicators and refresh times.
+  Native icons/error display, labels, properties, CAD dirty state and files remain
+  unchanged. Duplicate indistinguishable document roots remain unknown safely;
+  their occurrences in an identifiable parent still compare independent pins.
+- Additive authorized `POST /api/v1/status/revisions` batches 1–200 revision IDs,
+  reads a consistent metadata snapshot, hides missing/inaccessible identities
+  identically and exposes only checkout owners of readable revisions. No migration
+  or engineering rule changes. Latest snapshot ordering matches update commands.
+- After explicit activation, refresh every 60 seconds and after PDM command
+  completion. All HTTP/hash work runs in a worker; unchanged files reuse stat-keyed
+  hash cache. Defer during commands/modals. Logout/account switch clears private
+  statuses immediately; discard late previous-session replies. Offline/old data is
+  explicitly stale. Status never grants edit permission or adopts server changes.
+- Validation: 103 backend tests, 260 addon tests, focused lint, manifest validation,
+  addon ZIP and backend wheel builds passed. Real FreeCAD 1.1.4/Qt 6.8.3 isolated
+  two-user HTTP/Qt workflow passed 45 checks, including selected component pins,
+  simultaneous status badges, owner names, offline recovery, logout/session races,
+  command deferral and preserved CAD labels/properties/dirty flags/bytes/selection.
+  Screenshot inspected locally; evidence: docs/validation/freecad-tree-status-2026-11-03.json.
+- Both installed profiles updated with backups. Local backend gracefully restarted
+  with original arguments/environment/data to load the new route. Runtime command
+  registered and feature activated while preserving login and open documents.
+  Usage/legend and adapter limitations: docs/tree-pdm-status.md. No startup network;
+  after a future FreeCAD restart, use Refresh PDM Status to activate polling again.
+
+## 2026-11-03 — Selected component snapshot updates (addon 0.6.3)
+
+- New **Update Selected Components from Server…** command adopts the latest
+  uploaded same-revision snapshot for reviewed direct occurrences of one source
+  item/revision group at a time. Require a clean uploaded managed Working parent
+  and owned checkout. Skip current occurrences; no automatic new-revision adoption.
+- Extend the existing replacement transaction with explicit exact snapshot pins;
+  recheck parent bytes/identity, pending recovery, source pins and checkout before
+  applying. Preserve occurrence UUIDs, labels, placements, unselected targets and
+  valid joints. Reject unsafe mappings/dependencies and rollback detected errors.
+  Leave the parent modified; check-in and BOM synchronization remain explicit.
+- Validation: 251 addon tests, focused lint and manifest/build checks passed.
+  Live FreeCAD 1.1.4 with disposable HTTP DB/storage and two users passed 22 checks,
+  including selected-only geometry adoption, preserved grounding/occurrences,
+  cancellation, checkout enforcement, unchanged source/parent saved bytes and BOM,
+  and mixed exact pins persisted by later atomic check-in. Native AssemblyLink
+  same-revision replacement and generated-child constraint rollback also passed.
+  User documents, saved hashes and session preserved. Evidence:
+  docs/validation/freecad-component-update-2026-11-03.json.
+- Both installed profiles updated with backups. Registered/enabled the command
+  in the running ForgePDM menu and Updates toolbar; preserved login and active
+  document. Future startup includes both update commands in the main toolbar.
+- Workflow: docs/update-from-server.md. One group per operation; save/upload after
+  inspecting it before updating another group. No geometry merge or schema/API
+  changes. Phase 5 reliability follow-ups remain separate.
+
+## 2026-11-03 — Update from Server (addon 0.6.2)
+
+- Added explicit menu/toolbar command to compare the active managed document
+  with the latest native upload on the same revision. Review timestamp/hash,
+  retrieve the exact chosen snapshot, and activate a separate verified copy.
+  Preserve the original document/files, incoming links and checkout state.
+- Reject unsaved or saved-but-unuploaded edits, inconsistent workspace identity
+  and pending check-in recovery. Recheck local state after download. Report
+  newer revision labels without automatic adoption. Assembly roots retain their
+  exact uploaded dependency manifest; component updates inside an existing parent
+  remain a later increment. No backend/schema or PDM-rule changes.
+- Validation: 238 addon tests passed. Focused lint and manifest/distribution
+  checks passed. Real FreeCAD 1.1.4 with disposable HTTP storage, two users and
+  separate workspaces passed 16 checks: changed geometry from another user's
+  check-in, cancellation, clean verified copy, exact ledger, no new checkout or
+  dataset, unsaved-edit rejection, worker HTTP, preserved user documents/bytes.
+  Evidence: docs/validation/freecad-server-update-2026-11-03.json.
+- Both installed addon profiles updated with backups. Command registered in the
+  running FreeCAD menu and an Updates toolbar; enabled state and preserved login
+  verified. Normal future startup includes it in the main ForgePDM toolbar.
+- Usage and bounded design: docs/update-from-server.md. The original copy stays
+  open deliberately; close it when no longer needed. Acquire checkout on the
+  updated copy before editing. No geometry merging or automatic link retargeting.
+
+## 2026-11-02 — Functional web management workspace
+
+- User-approved GUI priorities brought forward: admin user creation/edit/enable/
+  disable/roles, password resets and own-password changes, project properties
+  (customer, due date, description), membership/roles, My checkouts and activity.
+- Additive migration 8 preserves existing accounts/passwords/projects/leases.
+  Consistent private local metadata backup taken before applying it. New/reset
+  accounts must change their temporary password before other API access; existing
+  accounts are unchanged. Password changes/reset/disable/role changes revoke
+  sessions. Current admin role is checked inside writes; last-admin removal and
+  unsafe self-disable/demotion are rejected. No password/token data is audited.
+- Regular users see assigned project properties, their accessible unreleased
+  checkouts and scoped activity. Activity user choices derive from visible events;
+  raw event details are admin-only. Project archiving preserves data/permissions
+  and excludes the project from active catalog selectors. CAD mutations stay in
+  the existing FreeCAD workflows.
+- Validation: 98 backend tests, 228 addon tests, 3 Node model tests, 26 existing
+  browser checks and 23 management browser checks passed. Migration preservation,
+  role/visibility/session boundaries and real browser mutations use disposable
+  fixtures. Desktop/mobile screens inspected; tables scroll at readable widths.
+  Focused lint, JS syntax and wheel packaging passed.
+- Usage/test checklist: docs/web-management.md. Evidence:
+  docs/validation/web-management-browser-2026-11-02.json. Phase 5 remains incomplete;
+  the user prioritized the functional GUI before independent thorough tests.
+
+## 2026-11-02 — Phase 5 increment 2: atomic assembly check-in (addon 0.6.1)
+
+- Native check-in now publishes exact CAD reference pins in the same transaction
+  as file/dataset/manifest, audits, note, fenced lease release and replay result.
+  Validate target permissions and exact revision/dataset/file membership at the
+  final gate. Shared validation preserves legacy manifest cycle checks.
+- Durable client journals retain normalized pins; recovery uses the original
+  snapshot and manifest, verifies the server manifest, and reconciles exact pins
+  to the local ledger. Prior 0.6.0 empty-manifest journals/fingerprints remain
+  compatible. BOM synchronization remains a separate explicit action.
+- Nonempty manifests use an explicit new checkin-native-with-references route,
+  preventing older servers from silently dropping unknown manifest form fields.
+  No migration or legacy check-in fallback.
+- Validation: 89 backend and 228 addon tests passed, strict lint for modified
+  implementation/tests, addon layout check and addon/backend builds passed.
+  Isolated live FreeCAD/HTTP harness passed 28 checks, including nested native
+  AssemblyLink occurrences, generated saved child links, lost response, exact pin
+  recovery, no duplicates and preserved unsaved edits. User session/data preserved.
+  Evidence: docs/validation/phase5-atomic-assembly-checkin-2026-11-02.json.
+- Both installed addon profiles updated with backups; runtime command reloaded.
+  Phase 5 remains incomplete: legacy-write fencing, revision-creation idempotency
+  and recovery/orphan diagnostics remain. See ADR-008 and the Phase 5 plan.
+
+## 2026-11-02 — Phase 5 increment 1: reliable part check-in (addon 0.6.0)
+
+- Added fenced atomic native part check-in and actor-scoped operation status API.
+  One metadata transaction publishes File/Dataset/empty manifest, optional note,
+  audits, checkout release and immutable replay result. Migration 7 is additive;
+  consistent private backup taken before applying it to the local database.
+- Recheck lease owner, exact ID/version, expiry, lifecycle and permissions after
+  staging, inside the final serialized transaction. Retries return the recorded
+  result and do not release a later checkout. Eight-hour/note rules unchanged.
+- Addon keeps a credential-free durable snapshot journal. Recover pending/committed
+  results before saving current edits; preserve and report edits not included.
+  Superseded uncommitted leases require an explicit restart; old snapshots are
+  archived. Assemblies/external-reference parts remain on the legacy workflow.
+- Isolated live FreeCAD/HTTP validation passed 22 checks: response loss, duplicate-
+  free recovery, retained edits, interrupted transfer, renewal rejection, explicit
+  restart and worker-thread HTTP. User engineering data/session preserved.
+- Backend tests include independent process races, rollback, changed intent/bytes,
+  stale/expired/reacquired checkout tokens, permissions, limits and migration
+  preservation. Addon tests cover journal/ledger failures and unsupported servers.
+- Validation: 77 backend, 223 addon and 3 web model tests passed; 38 targeted
+  addon tests also passed after the final private-snapshot/fsync adjustment.
+  Addon layout validation and backend/addon package builds passed.
+- Both local addon profiles updated with backups; Check In command/client reloaded.
+  Design and scope: ADR-008 and docs/phase5-reliable-checkin.md. Live evidence:
+  docs/validation/phase5-atomic-part-checkin-2026-11-02.json.
+- Limits: blob promotion can leave unreferenced blobs after failure; no orphan
+  deletion/reconciliation added. Assembly atomicity, legacy-write fencing and
+  revision-creation retry/idempotency remain Phase 5 follow-ups.
+
+## 2026-11-02 — Read-only web GUI (first increment)
+
+- Brought basic Phase 8 web browsing forward with user approval; Phase 5 remains
+  the next backend reliability priority. Updated the active roadmap accordingly.
+- New same-origin `/app/` client: login/logout, authorized projects/items, search
+  and paging, exact revision history, direct/multilevel BOMs, datasets/downloads
+  and where-used. Uses the existing bearer API and no frontend runtime/build deps.
+- Added optional authorized project_id item filter. Hidden-project membership is
+  not disclosed, including items shared into another accessible project. Existing
+  unfiltered API behavior remains unchanged. No schema or CAD-client changes.
+- Tokens stay in page memory; logout/expiry clears protected UI. Refresh requires
+  sign-in. No engineering-data edits, automatic revision adoption or BOM writes.
+- 57 backend tests, 3 Node model tests and 26 isolated real Chrome checks passed.
+  Desktop/mobile screenshots inspected; authenticated file bytes, XSS text, CSP,
+  private-item access, historical pins and session expiry verified. Wheel includes
+  all six assets. Targeted new/changed-file checks pass; broad lint has existing
+  unrelated findings. Evidence: docs/validation/web-gui-browser-2026-11-02.json.
+- Local backend restarted with its existing database/storage and loopback binding;
+  `/health` and `/app/` return 200. No production engineering records modified.
+- Limits: no web editing, flattened view, CAD rendering or full configuration
+  downloads. Individual large downloads use browser Blobs. Browser deployment is
+  local only; production security/backup and Phase 5 transaction work remain.
+- Design/usage/QA: docs/web-gui.md; README links the local GUI.
+
+## 2026-11-02 — General component replacement (addon 0.5.8)
+
+- Added Replace Component menu/toolbar command with part/assembly-number or name
+  search, explicit item/revision/snapshot selection and whole-object mapping.
+  Uses the revision replacement engine; the newer-revision shortcut remains
+  restricted to the same item. Mapping can change part names/feature types.
+- Preserve selected occurrence UUIDs/placements and unselected targets; labels
+  reflect the new item. Block direct self-item insertion and unselected internal
+  link dependencies that would otherwise silently follow the replaced object.
+  Existing checkout/lifecycle, review, joint validity and rollback checks remain.
+- 212 addon tests passed; 34 isolated live workflow checks passed, including
+  renamed-object cross-item replacement, search/mapping cancellation, grounding,
+  unchanged source files and BOM, plus exact pins after separate explicit upload.
+  Native different-item assembly replacement and constraint rollback probes passed.
+- Both addon profiles updated with backups. Command registered in running
+  FreeCAD; main toolbar/menu registration included for future startup.
+  Actual A000001 invocation correctly rejected its missing checkout and preserved
+  its references, clean state and original selection. No checkout was acquired.
+- Evidence: docs/validation/freecad-general-component-replacement-2026-11-02.json
+  and docs/validation/freecad-general-native-replacement-2026-11-02.json.
+- Limits: native AssemblyLinks still require native Assembly targets. No joint
+  remapping or automatic save/upload/BOM synchronization. Inspect changed geometry.
+
+## 2026-11-02 — Explicit component revision replacement (addon 0.5.7)
+
+- Added Replace with New Revision menu/toolbar command. Select direct component
+  occurrences, a newer revision and an exact uploaded native snapshot, then review.
+  Require clean Working parent, managed working copy and owned checkout.
+- Replace link targets in place in one undoable transaction with tree labels.
+  Preserve occurrence UUIDs, placements, unselected targets and valid joint links.
+  Reject missing/type-incompatible targets and unsafe joint mappings; rollback
+  detected failures. Does not save/upload or synchronize BOM automatically.
+- 201 addon tests passed; lint, manifest and distribution build passed.
+  Twenty-six live isolated workflow checks cover cancel, one-of-two
+  replacement, grounding, later explicit upload pin verification and rollback.
+  Native subassembly replacement and generated-child constraint rejection tested
+  in disposable documents. Actual registered command checklist/cancel tested on
+  A000001 without replacing its components.
+- Both installed profiles updated with backups. Runtime command/menu/toolbar
+  registered; normal future startup adds it to the main ForgePDM toolbar.
+- Limits: same internal target object names/types required. Changed face semantics
+  cannot be inferred from names; inspect geometry/joints before saving. Native
+  generated-child joint mappings may need manual work. Phase 5 atomicity unchanged.
+- Design and usage: docs/component-revision-replacement.md and addon README.
+  Evidence: docs/validation/freecad-component-replacement-2026-11-02.json and
+  docs/validation/freecad-native-replacement-2026-11-02.json.
+
+## 2026-11-02 — Live revision isolation (addon 0.5.6)
+
+- Fixed New Revision mutating the live source document: new revisions now open
+  distinct verified working-copy documents, leaving incoming assembly links,
+  source metadata, geometry and paths unchanged. Clean/latest Released source
+  guards prevent discarding unsaved edits or revising from stale geometry.
+- Show BOM reports newer revisions separately while displaying the pinned
+  revision; no automatic replacement, BOM update or background polling.
+- 184 addon tests passed; targeted lint and manifest/build checks passed.
+  Seventeen isolated live FreeCAD/HTTP checks passed, including editing B while
+  the existing parent still targets A with unchanged labels/geometry/source hash.
+- Actual registered Show BOM dialog verified the pinned Rev A and its newer
+  revision B notice; the dialog was inspected and closed without synchronization.
+- Repaired A000001's two P000006 links using the recorded uploaded revision A
+  pins and original occurrence registry. Local assembly saved cleanly with
+  P000006-A|1 and |2; revision B file and stored BOM preserved. A000002's
+  already-dirty open document was not saved or closed. Backups kept outside Mod.
+- Both installed profiles updated; runtime command classes/client refreshed.
+  ADR-007 records the decision. Evidence in docs/validation/freecad-live-revision-
+  isolation-2026-11-02.json and freecad-revision-pin-repair-2026-11-02.json.
+- Limit: creation/upload still span separate operations (Phase 5); update
+  notices are checked on Show BOM, and component adoption is not automated.
+
+## 2026-11-02 — Direct native subassembly BOMs (addon 0.5.5)
+
+- BOM synchronization now captures direct parts and native AssemblyLink
+  subassemblies, excluding their generated child links/groups from quantities.
+  Repeated occurrences group by exact revision. Child assemblies retain their
+  independent BOMs; no recursive CAD flattening or automatic child writes.
+- Preserved uploaded snapshot/pin verification, selection/review, checkout and
+  optimistic concurrency checks. No backend/schema changes.
+- 178 addon tests passed; targeted lint, manifest check and build passed.
+- Both installed addon profiles updated with backups; CAD adapter reloaded.
+  Live A000002-A produced A000001-A x 1 only, passing real HTTP snapshot/pin
+  preparation. All open file hashes and the stored empty BOM were preserved.
+  User can complete synchronization through the normal selection/review UI.
+- Evidence: docs/validation/freecad-native-subassembly-bom-2026-11-02.json;
+  supported boundaries documented in docs/freecad-builtin-assembly.md.
+
+## 2026-11-02 — Native AssemblyLink Python binding (addon 0.5.4)
+
+- Reproduced the setLink binding failure on Assembly::AssemblyLink in a
+  disposable live FreeCAD copy. Native references now use LinkedObject property
+  assignment; rebasing clears/reassigns the property to invalidate cached paths.
+  Reconstruction also uses property assignment for this native type.
+- Live installed-code Save As probe preserved all eight exact reference paths
+  and all 29 objects. 170 addon tests, targeted lint, package check/build passed.
+- Both addon profiles updated with backups; running CAD module reloaded.
+- Repaired the failed working copy in place and retried the registered Upload
+  command successfully. A000002-A saved cleanly with all eight references
+  validated and all generated child labels matching the source subassembly.
+
+## 2026-11-02 — Native subassembly labels (addon 0.5.3)
+
+- Generated AssemblyLink children now project their pinned source occurrence
+  labels; only the inserted assembly receives a parent occurrence allocation.
+  Source registries, link targets and previous allocation history are preserved.
+- Live FreeCAD verification: all seven generated part labels matched their
+  exact source occurrences (P000004-B, P000005-A, P000006-A), and the inserted
+  assembly displayed A000001-A|1. Existing downloaded configuration was repaired
+  in memory; its saved file hash remained unchanged. Normal refresh correctly
+  required a working copy for persistent edits.
+- 169 addon tests passed; targeted lint, package validation and build passed.
+  Both installed profiles updated with backups. Native insertion observer now
+  recognizes AssemblyLink. Native subassembly BOM support remains separate.
+
+## 2026-11-02 — Native subassembly upload fix (addon 0.5.2)
+
+- FreeCAD native insertion creates `Assembly::AssemblyLink`, which the exact
+  `App::Link` checks previously skipped/rejected. Capture, rebasing, FCStd
+  inspection and reconstruction now accept this explicit native link type.
+  Subelement/array serialization checks remain enforced.
+- Installed in both local addon profiles and reloaded in running FreeCAD.
+  The actual registered Upload command succeeded for the open assembly,
+  recording its subassembly link and seven generated child references.
+  The document remained clean after upload. No credentials recorded.
+- Validation: 167 addon tests passed; targeted lint, manifest validation and
+  0.5.2 distribution build passed. Added capture, rewrite and rejection tests.
+- Limitation: native AssemblyLink BOM synchronization/tree label projection
+  remains outside the direct App::Link adapter. A live download roundtrip for
+  this new native link type has not yet been validated. Follow up on generated
+  child ownership before extending BOM counting; do not flatten subassemblies.
+
+
+Updated after addon 0.5.1 was pushed to `master` in commit `2ac9c3e`.
+This is a handoff for future sessions; verify the current checkout and runtime
+before acting. Git history and the linked reports provide the detailed record.
+
+## Current implementation
+
+- Backend: FastAPI, SQLite, separate SHA-256 file storage, authentication,
+  project permissions, Items/revisions/datasets, checkout leases, lifecycle,
+  revision-pinned BOMs and immutable CAD dependency manifests.
+- Web GUI: browsing and controlled user/project/account management at `/app/`,
+  served by the backend; see docs/web-gui.md and docs/web-management.md.
+- FreeCAD addon: **0.19.0**, modern `freecad.forgepdm` namespace; communicates
+  through HTTP without importing backend business logic.
+- Development-direction Phases 1–4 are implemented for the documented supported
+  structures. Phase 5 implements atomic part/assembly check-in, pinned manifests,
+  fenced leases and durable replay; ordinary-write fencing, recoverable revision
+  creation and read-only recovery diagnostics are delivered in 0.15.0. The original MVP roadmap has different phase numbering: use the active
+  development-direction table in [the roadmap](guides/roadmap.md).
+- Live validation has used Linux FreeCAD **1.1.4**, Python **3.11.14**,
+  Qt **6.8.3**. Other runtime/platform combinations remain unverified.
+
+## Recent behavior and fixes
+
+- Passwords accept at least four characters, including numeric passwords.
+  Local CLI commands support password resets and role changes; see the README.
+- Check-in does not prompt for a change note. An omitted note preserves the
+  existing revision note. Creating a new revision still requires a note.
+- Asynchronous commands refresh FreeCAD command activation when they finish,
+  preventing the toolbar from remaining gray until another command runs.
+- Show BOM displays the stored engineering BOM. CAD synchronization is a
+  separate reviewed action: it verifies saved/uploaded snapshots and exact
+  component revisions before proposing replacement lines.
+- The bounded native Assembly adapter supports direct whole-object App::Link
+  components and excludes standard joints from quantities. Unsupported layouts
+  require an adapter; this is not general support for every assembly workbench.
+- Tree labels use `ITEM-REVISION|OCCURRENCE`, for example `P000005-A|2`.
+  Numbers are scoped to the immediate parent and exact component revision;
+  persistent UUIDs and allocation history preserve surviving occurrences.
+  Deleted indices are not reused. Display labels never determine PDM identity.
+- Addon 0.4.3 changed reconstruction to GUI document save so the GUI Modified
+  flag clears correctly. Version 0.5.1 additionally recomputes after tree-label
+  projection: legacy FeaturePython metadata can remain Touched after a save.
+  Both clean-state guards remain enforced; unresolved edits are not discarded.
+
+## Historical validation — addon 0.5.1
+
+- **162 addon tests passed** after the 0.5.1 fix. The preceding 0.5.0 validation
+  recorded **54 backend tests passed**; the latest fix did not change backend code.
+- Manifest/package build and targeted lint checks passed for 0.5.1.
+- The exact assembly snapshot that failed on retrieved component `P000005-A`
+  was retried through the actual registered Download command in live FreeCAD.
+  The root and three component documents opened cleanly, all four occurrence
+  links used their exact pinned revisions, and previous open documents and file
+  bytes were preserved. Dialog choices/notifications were automated; real CAD,
+  worker and HTTP paths executed.
+- Both local FreeCAD addon profiles were backed up and updated to 0.5.1.
+  The running CAD module was reloaded. Do not assume a future runtime still has
+  the same version, active documents, authenticated session or running services.
+
+Evidence:
+
+- [Legacy snapshot download](../validation/freecad-legacy-label-download-2026-11-01.json)
+- [Tree labels and occurrence identity](guides/freecad-tree-labels.md)
+- [Phase 4 BOM synchronization](phases/freecad-addon-phase4.md)
+- [Native Assembly profile](guides/freecad-builtin-assembly.md)
+- [Detailed runtime validation](freecad-validation.md)
+- [Addon changelog](../../clients/freecad/CHANGELOG.md)
+
+## Next session
+
+1. Read root/nested `AGENTS.md`, this handoff and Git status before changes.
+   Current source and installed delivery are addon 0.19.0/backend schema 17. Standard Parts/shared
+   catalog, simple P/A/M descriptions, physical P mass and bounded S supplier
+   reference mass plus CAD/manual fallbacks are implemented. Use docs/material-management.md,
+   docs/supplier-reference-mass.md and docs/upgrade-and-validation.md. The older
+   component-catalog implementation plan is historical, not pending work.
+2. Follow the user's next priority. Shared BOM report views are delivered in
+   FreeCAD, web and TechDraw. TechDraw sheet splitting/balloons,
+   broader supplier coverage and ERPNext synchronization remain unimplemented;
+   do not infer a new priority or silently replace existing revision pins.
+3. For CAD issues, verify installed/runtime versions and reproduce against the
+   actual object structure. Preserve open documents, edits, checkouts, immutable
+   source bytes and exact revisions. Distinguish mocked tests, disposable native
+   acceptance and local installation evidence.
+4. Phase 5 write fencing, revision retries and bounded recovery diagnostics are
+   delivered. Read ADR-019 and docs/phase5-reliable-checkin.md for compatibility
+   and recovery boundaries. Phase 6 production security, automated backup/restore,
+   automated garbage collection, clean-start/platform acceptance and distribution
+   gates remain outstanding. Follow the user's next priority.
+
+## Verification commands
+
+Run from the repository root:
+
+```sh
+uv run --project clients/freecad --extra dev pytest clients/freecad/tests -q
+uv run --group dev pytest tests -q
+uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.py check
+uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.py build
+```
+
+Use the runtime harnesses documented in the validation guide when real FreeCAD
+verification is required. Never store passwords or bearer tokens in this file.

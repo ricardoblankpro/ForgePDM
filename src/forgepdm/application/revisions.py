@@ -16,7 +16,6 @@ from forgepdm.domain.entities import (
 )
 from forgepdm.infrastructure.database import Database
 
-
 CHECKOUT_DURATION = timedelta(hours=8)
 
 
@@ -179,7 +178,15 @@ class RevisionService:
             ).fetchone()
         return _checkout(row) if row is not None else None
 
-    def check_in(self, user: User, revision_id: str, change_note: str = "", *, expected_checkout_id=None, expected_checkout_version=None) -> None:
+    def check_in(
+        self,
+        user: User,
+        revision_id: str,
+        change_note: str = "",
+        *,
+        expected_checkout_id=None,
+        expected_checkout_version=None,
+    ) -> None:
         change_note = change_note.strip()
         if len(change_note) > 2000:
             raise ValueError("check-in note must contain at most 2000 characters")
@@ -188,7 +195,9 @@ class RevisionService:
             self.authorization.require_edit_revision(user, revision_id, connection)
             checkout = self.require_checkout_owner(user, revision_id, connection)
             if expected_checkout_id is not None:
-                self.require_checkout_token(user, revision_id, expected_checkout_id, expected_checkout_version, connection)
+                self.require_checkout_token(
+                    user, revision_id, expected_checkout_id, expected_checkout_version, connection
+                )
             connection.execute(
                 "UPDATE item_revisions SET change_note = CASE WHEN ? = '' THEN change_note ELSE ? END, "
                 "modified_at = ? WHERE id = ?",
@@ -222,7 +231,8 @@ class RevisionService:
             ).fetchone()
             if target == LifecycleState.RELEASED and material[0] == "M":
                 if not connection.execute(
-                    "SELECT 1 FROM revision_descriptions WHERE revision_id=? AND trim(description)!=''", (revision_id,)
+                    "SELECT 1 FROM revision_descriptions WHERE revision_id=? AND trim(description)!=''",
+                    (revision_id,),
                 ).fetchone():
                     raise Conflict("raw materials require a description before release")
             current = LifecycleState(row["lifecycle_state"])
@@ -270,7 +280,13 @@ class RevisionService:
             )
 
     def create_next_revision(
-        self, user: User, item_id: str, change_note: str, *, operation_id=None, expected_source_revision_id=None
+        self,
+        user: User,
+        item_id: str,
+        change_note: str,
+        *,
+        operation_id=None,
+        expected_source_revision_id=None,
     ) -> tuple[ItemRevision, Checkout]:
         change_note = change_note.strip()
         if not change_note or len(change_note) > 2000:
@@ -284,11 +300,22 @@ class RevisionService:
         expires = now + CHECKOUT_DURATION
         with self.database.transaction() as connection:
             if operation_id is not None:
-                existing = connection.execute("SELECT * FROM revision_operations WHERE actor_id=? AND operation_id=?", (user.id, operation_id)).fetchone()
+                existing = connection.execute(
+                    "SELECT * FROM revision_operations WHERE actor_id=? AND operation_id=?",
+                    (user.id, operation_id),
+                ).fetchone()
                 if existing is not None:
-                    self.authorization.require_read_revision(user, existing["source_revision_id"], connection)
-                    if (existing["item_id"], existing["source_revision_id"], existing["change_note"]) != (item_id, expected_source_revision_id, change_note):
-                        raise Conflict("revision operation key was already used for different intent")
+                    self.authorization.require_read_revision(
+                        user, existing["source_revision_id"], connection
+                    )
+                    if (
+                        existing["item_id"],
+                        existing["source_revision_id"],
+                        existing["change_note"],
+                    ) != (item_id, expected_source_revision_id, change_note):
+                        raise Conflict(
+                            "revision operation key was already used for different intent"
+                        )
                     result = self._creation_result(existing["result_json"])
                     self.authorization.require_read_revision(user, result[0].id, connection)
                     return result
@@ -298,8 +325,13 @@ class RevisionService:
             if item is None:
                 raise NotFound("item not found")
             previous_id = item["current_revision_id"]
-            if expected_source_revision_id is not None and previous_id != expected_source_revision_id:
-                raise Conflict("source revision changed; review the current revision before retrying")
+            if (
+                expected_source_revision_id is not None
+                and previous_id != expected_source_revision_id
+            ):
+                raise Conflict(
+                    "source revision changed; review the current revision before retrying"
+                )
             self.authorization.require_manage_revision(user, previous_id, connection)
             previous = connection.execute(
                 "SELECT lifecycle_state FROM item_revisions WHERE id = ?", (previous_id,)
@@ -361,10 +393,22 @@ class RevisionService:
                         now.isoformat(),
                     ),
                 )
-            connection.execute("INSERT INTO revision_reference_mass SELECT ?,payload_json FROM revision_reference_mass WHERE revision_id=?", (revision_id,previous_id))
-            connection.execute("INSERT INTO material_physical_links SELECT ?,snapshot_json FROM material_physical_links WHERE revision_id=?",(revision_id,previous_id))
-            connection.execute("INSERT INTO part_physical_assignments SELECT ?,snapshot_json FROM part_physical_assignments WHERE revision_id=?",(revision_id,previous_id))
-            connection.execute("INSERT INTO revision_descriptions SELECT ?,description,material_revision_id FROM revision_descriptions WHERE revision_id=?",(revision_id,previous_id))
+            connection.execute(
+                "INSERT INTO revision_reference_mass SELECT ?,payload_json FROM revision_reference_mass WHERE revision_id=?",
+                (revision_id, previous_id),
+            )
+            connection.execute(
+                "INSERT INTO material_physical_links SELECT ?,snapshot_json FROM material_physical_links WHERE revision_id=?",
+                (revision_id, previous_id),
+            )
+            connection.execute(
+                "INSERT INTO part_physical_assignments SELECT ?,snapshot_json FROM part_physical_assignments WHERE revision_id=?",
+                (revision_id, previous_id),
+            )
+            connection.execute(
+                "INSERT INTO revision_descriptions SELECT ?,description,material_revision_id FROM revision_descriptions WHERE revision_id=?",
+                (revision_id, previous_id),
+            )
             connection.execute(
                 "INSERT INTO revision_material_data SELECT ?,specification_json FROM revision_material_data WHERE revision_id=?",
                 (revision_id, previous_id),
@@ -427,8 +471,21 @@ class RevisionService:
             ).fetchone()
             checkout = _checkout(checkout_row)
             if operation_id is not None:
-                result = json.dumps({"revision": asdict(revision), "checkout": asdict(checkout)}, default=lambda value: value.isoformat())
-                connection.execute("INSERT INTO revision_operations VALUES (?,?,?,?,?,?)", (user.id, operation_id, item_id, expected_source_revision_id, change_note, result))
+                result = json.dumps(
+                    {"revision": asdict(revision), "checkout": asdict(checkout)},
+                    default=lambda value: value.isoformat(),
+                )
+                connection.execute(
+                    "INSERT INTO revision_operations VALUES (?,?,?,?,?,?)",
+                    (
+                        user.id,
+                        operation_id,
+                        item_id,
+                        expected_source_revision_id,
+                        change_note,
+                        result,
+                    ),
+                )
             return revision, checkout
 
     @staticmethod
@@ -441,7 +498,10 @@ class RevisionService:
 
     def revision_operation(self, user, item_id, operation_id):
         with self.database.connection() as connection:
-            row = connection.execute("SELECT * FROM revision_operations WHERE actor_id=? AND operation_id=? AND item_id=?", (user.id, str(UUID(operation_id)), item_id)).fetchone()
+            row = connection.execute(
+                "SELECT * FROM revision_operations WHERE actor_id=? AND operation_id=? AND item_id=?",
+                (user.id, str(UUID(operation_id)), item_id),
+            ).fetchone()
             if row is None:
                 raise NotFound("revision operation not found")
             revision, checkout = self._creation_result(row["result_json"])

@@ -1,16 +1,16 @@
 """Atomic metadata publication for a fenced, replayable native check-in."""
 
-from forgepdm.application.physical_materials import read_native_mass,persist_mass
-from forgepdm.application.descriptions import read_native_description, persist_native_description
 import hashlib
 import json
 import re
 from uuid import UUID, uuid4
 
 from forgepdm.application import revisions as revision_clock
-from forgepdm.application.material_evidence import read_material_evidence, persist_material_evidence
 from forgepdm.application.datasets import _media_type, _safe_filename
+from forgepdm.application.descriptions import persist_native_description, read_native_description
 from forgepdm.application.manifests import REFERENCE_FIELDS, ManifestService
+from forgepdm.application.material_evidence import persist_material_evidence, read_material_evidence
+from forgepdm.application.physical_materials import persist_mass, read_native_mass
 from forgepdm.application.standard_parts import persist_occurrences, read_occurrences
 from forgepdm.domain.entities import Conflict, Forbidden, NotFound
 
@@ -115,7 +115,9 @@ class CheckInService:
         try:
             part_mass = read_native_mass(staged.path)
             simple_description = read_native_description(staged.path)
-            material_evidence = read_material_evidence(staged.path) if simple_description is None else None
+            material_evidence = (
+                read_material_evidence(staged.path) if simple_description is None else None
+            )
             occurrences = read_occurrences(staged.path)
         except BaseException:
             staged.path.unlink(missing_ok=True)
@@ -153,9 +155,27 @@ class CheckInService:
             )
             persist_occurrences(connection, self.authorization, user, dataset_id, occurrences)
             if simple_description is None:
-                persist_material_evidence(connection, self.database, self.authorization, self.revisions, user, revision_id, dataset_id, material_evidence)
-            persist_native_description(connection, self.database, self.authorization, self.revisions, user, revision_id, dataset_id, simple_description)
-            persist_mass(connection,revision_id,dataset_id,part_mass)
+                persist_material_evidence(
+                    connection,
+                    self.database,
+                    self.authorization,
+                    self.revisions,
+                    user,
+                    revision_id,
+                    dataset_id,
+                    material_evidence,
+                )
+            persist_native_description(
+                connection,
+                self.database,
+                self.authorization,
+                self.revisions,
+                user,
+                revision_id,
+                dataset_id,
+                simple_description,
+            )
+            persist_mass(connection, revision_id, dataset_id, part_mass)
             connection.execute(
                 "INSERT INTO dataset_files(dataset_id,file_id,position) VALUES (?,?,0)",
                 (dataset_id, file_id),

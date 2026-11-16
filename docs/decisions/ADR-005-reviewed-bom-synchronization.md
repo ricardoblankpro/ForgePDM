@@ -64,4 +64,4 @@ components is now recognized. Standard JointGroup/Joint/GroundedJoint objects
 are constraints and do not add engineering occurrences. Nested local native
 assemblies, custom proxies and other unsupported structures remain rejected.
 The extension does not change manifest, selection, review, quantity, lifecycle
-or concurrency rules. See [scope and evidence](../freecad-builtin-assembly.md).
+or concurrency rules. See [scope and evidence](../history/guides/freecad-builtin-assembly.md).

@@ -10,7 +10,6 @@ from uuid import uuid4
 from forgepdm.domain.entities import User
 from forgepdm.infrastructure.database import Database
 
-
 SESSION_DURATION = timedelta(hours=8)
 MIN_PASSWORD_LENGTH = 4
 PASSWORD_SCRYPT_N = 2**14
@@ -151,4 +150,3 @@ class AuthService:
                 "VALUES (?, ?, 'auth.logout', 'User', ?, ?)",
                 (str(uuid4()), user_id, user_id, now),
             )
-
