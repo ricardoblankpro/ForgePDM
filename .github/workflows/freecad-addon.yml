@@ -38,8 +38,14 @@ jobs:
   qt:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@v4
+      - name: Install Qt graphics libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends libegl1 libgl1 libopengl0
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.11"

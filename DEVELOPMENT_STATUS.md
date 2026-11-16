@@ -38,6 +38,11 @@ installable Addon Manager distribution source/publication remains a separate ste
 
 ## Validation and local installation
 
+The CI Qt job explicitly installs Ubuntu EGL/GL/OpenGL libraries and sets
+`QT_QPA_PLATFORM=offscreen`. The initial hosted run lacked `libEGL.so.1` and failed
+during Qt import; backend/docs and addon jobs passed. The correction passes all
+19 Qt tests locally; hosted results are recorded in GitHub Actions.
+
 Repository cleanup passes 264 backend tests, 411 addon tests (four optional Qt
 modules skipped in the base environment), 19 real Qt checks and five Node test
 files. Source/tooling and addon lint/format, documentation targets/anchors/version

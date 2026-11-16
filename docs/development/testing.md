@@ -16,6 +16,17 @@ prove different things and should be reported separately.
 
 ## Optional Qt
 
+On Ubuntu, install the Qt graphics libraries before running these tests:
+
+```sh
+sudo apt-get update
+sudo apt-get install --yes --no-install-recommends libegl1 libgl1 libopengl0
+```
+
+The CI Qt job installs these explicitly and uses `QT_QPA_PLATFORM=offscreen`.
+Offscreen execution still needs the shared graphics libraries; missing
+`libEGL.so.1` prevents PySide6 widgets from importing before any test runs.
+
 Use an isolated uv environment outside FreeCAD and invoke pytest through that
 Python, so the added binding is visible:
 
