@@ -2,8 +2,8 @@
 <package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
   <name>ForgePDM</name>
   <description>Thin FreeCAD Workbench for the ForgePDM API. Development preview.</description>
-  <version>0.19.1</version>
-  <date>2026-11-15</date>
+  <version>0.20.0</version>
+  <date>2026-11-16</date>
   <maintainer email="ricardoblankpro@gmail.com">Ricardo Blank</maintainer>
   <author>ForgePDM contributors</author>
   <license file="LICENSE">LGPL-2.1-or-later</license>

@@ -143,6 +143,7 @@ def test_writable_document_saves_in_place(commands, monkeypatch, tmp_path):
 
 
 def test_checkin_uploads_and_releases_without_prompting_for_a_note(commands, monkeypatch):
+    monkeypatch.setattr(commands.thumbnail_render, "optional", lambda document: {"png": b"preview"})
     document = Document("/tmp/managed.FCStd")
     metadata = SimpleNamespace(RevisionId="revision", ItemId="item")
     calls = []

@@ -122,8 +122,15 @@ try {
   token = await login();
   await fetch(`${config.url}/api/v1/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
   token = null;
-  await page.locator("#search").fill("bracket");
-  await page.getByRole("button", { name: "Search", exact: true }).click();
+  // A background revision/preview read may detect revocation before this action.
+  // Trigger synchronously only while signed in; either path must clear the UI.
+  await page.evaluate(() => {
+    if (!document.querySelector("#workspace").hidden) {
+      const input = document.querySelector("#search");
+      input.value = "bracket";
+      input.form.requestSubmit();
+    }
+  });
   await page.locator("#login-screen").waitFor({ state: "visible" });
   check("expired/revoked session clears data and asks for sign-in", await page.locator("#login-error").innerText().then(text => text.includes("expired")) && await page.locator(".item-row").count() === 0);
   check("browser performs no engineering writes", report.writes.length === 0);

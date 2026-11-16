@@ -7,7 +7,7 @@ from uuid import UUID
 import FreeCAD
 import FreeCADGui
 
-from . import bom, cad, tree_labels, tree_observer, workspace
+from . import bom, cad, thumbnail_render, tree_labels, tree_observer, workspace
 from .api import ForgePDMClient, ForgePDMError
 from .i18n import translate
 from .jobs import Request
@@ -293,12 +293,19 @@ def _upload_native(client, document, path, references):
     yield from _prepare_description(client, document, metadata)
     tree_labels.refresh(document)
     _save_document(document)
+    preview = thumbnail_render.optional(document)
     result = yield Request(
         "Uploading verified native CAD snapshot…",
         client.upload_native,
-        (path, metadata.RevisionId, metadata.ItemId, references),
+        (path, metadata.RevisionId, metadata.ItemId, references, preview),
         mutates=True,
     )
+    if result.get("thumbnail_warning") or preview is None:
+        warning(
+            "ForgePDM",
+            result.get("thumbnail_warning")
+            or "CAD uploaded successfully; its preview is unavailable.",
+        )
     if result.get("local_changes_remain") or document.isTouched():
         warning(
             "ForgePDM",
@@ -923,6 +930,8 @@ class CheckInCommand(Command):
                 )
                 recovered = None
             if recovered is not None:
+                if recovered.get("thumbnail_warning"):
+                    warning("ForgePDM", recovered["thumbnail_warning"])
                 tree_observer.revoke_revision(revision_id)
                 if recovered.get("local_changes_remain") or cad.document_modified(document):
                     warning(
@@ -951,12 +960,19 @@ class CheckInCommand(Command):
         tree_labels.refresh(document)
         yield from _prepare_description(client, document, metadata)
         _save_document(document)
+        preview = thumbnail_render.optional(document)
         result = yield Request(
             "Checking in verified CAD snapshot…",
             client.checkin_part,
-            (path, revision_id, metadata.ItemId, actor_id, references),
+            (path, revision_id, metadata.ItemId, actor_id, references, preview),
             mutates=True,
         )
+        if result.get("thumbnail_warning") or preview is None:
+            warning(
+                "ForgePDM",
+                result.get("thumbnail_warning")
+                or "CAD checked in successfully; its preview is unavailable.",
+            )
         tree_observer.revoke_revision(revision_id)
         if result.get("local_changes_remain") or cad.document_modified(document):
             warning(

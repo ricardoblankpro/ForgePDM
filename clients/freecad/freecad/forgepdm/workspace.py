@@ -306,11 +306,14 @@ def snapshot(client, path, references):
         raise
 
 
-def upload(client, path, revision_id, item_id, references):
+def upload(client, path, revision_id, item_id, references, preview=None):
     """Upload one stable snapshot and bind its immutable dependency manifest."""
     references = bind_references(client, references)
     saved = snapshot(client, path, references)
     try:
+        from . import thumbnail_transfer
+
+        thumbnail = thumbnail_transfer.prepare(saved, preview)
         dataset = client.upload_file(revision_id, saved["path"], "native_cad", "Native CAD")
         record = dataset["files"][0]
         if (
@@ -346,6 +349,10 @@ def upload(client, path, revision_id, item_id, references):
         dataset["local_changes_remain"] = (
             digest(path, client._checkpoint)[0] != saved["content_hash"]
         )
+        if preview is not None:
+            dataset["thumbnail_warning"] = thumbnail_transfer.send(
+                client, record, saved["path"], thumbnail
+            )
         return dataset
     finally:
         Path(saved["path"]).chmod(0o600)

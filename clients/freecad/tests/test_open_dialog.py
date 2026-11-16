@@ -9,7 +9,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PySide6")
 from freecad.forgepdm.open_ui import OpenDialog  # noqa: E402
-from freecad.forgepdm.ui import QtWidgets  # noqa: E402
+from freecad.forgepdm.ui import QtCore, QtGui, QtWidgets  # noqa: E402
 
 
 class Client:
@@ -171,3 +171,47 @@ def test_failure_keeps_window_open_and_open_button_disabled(case):
     assert not dialog.open_button.isEnabled()
     assert "Session expired" in dialog.status.text()
     assert dialog.selection is None
+
+
+def test_missing_preview_does_not_disable_open(case):
+    _, client, dialog, wait, _ = case
+    client.get_thumbnail = lambda *args: None
+    wait(lambda: dialog.open_button.isEnabled() and not dialog.jobs)
+    assert dialog.preview.text() == "No preview available"
+    assert dialog.open_button.isEnabled()
+
+
+def test_stale_preview_cannot_replace_selected_snapshot(case):
+    _, client, dialog, wait, _ = case
+    started, release = Event(), Event()
+
+    def png(color):
+        image = QtGui.QImage(20, 20, QtGui.QImage.Format_RGB32)
+        image.fill(QtGui.QColor(color))
+        data = QtCore.QByteArray()
+        buffer = QtCore.QBuffer(data)
+        buffer.open(QtCore.QIODevice.WriteOnly)
+        image.save(buffer, "PNG")
+        return bytes(data)
+
+    red, blue = png("red"), png("blue")
+
+    def get(file_id, _source_hash):
+        if file_id.startswith("B"):
+            started.set()
+            release.wait(3)
+            return blue
+        return red
+
+    client.get_thumbnail = get
+    try:
+        wait(started.is_set)
+        assert dialog.open_button.isEnabled()
+        dialog.revision.setCurrentIndex(1)
+        wait(lambda: dialog.preview.pixmap() is not None and not dialog.preview.pixmap().isNull())
+        assert dialog.preview.pixmap().toImage().pixelColor(0, 0).name() == "#ff0000"
+        release.set()
+        wait(lambda: not dialog.jobs)
+        assert dialog.preview.pixmap().toImage().pixelColor(0, 0).name() == "#ff0000"
+    finally:
+        release.set()

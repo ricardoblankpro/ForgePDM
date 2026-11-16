@@ -4,12 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "forgepdm"
-version = "0.1.0"
+version = "0.1.2"
 description = "Backend-first product data management for FreeCAD teams"
 requires-python = ">=3.11"
 license = "AGPL-3.0-or-later"
 maintainers = [{name = "Ricardo Blank", email = "ricardoblankpro@gmail.com"}]
 dependencies = [
+    "pillow>=12.1.1,<14",
     "fastapi>=0.115,<1.0",
     "python-multipart>=0.0.20,<1.0",
     "uvicorn>=0.30,<1.0",

@@ -13,6 +13,27 @@ See [test tiers](../development/testing.md) and [current handoff](../../DEVELOPM
 - [Local installation and engineering-data preservation](shared-bom-installed-2026-11-15.json)
 - [Registered command production read-only acceptance](shared-bom-production-readonly-2026-11-15.json)
 
+## Backup automation
+
+- [Installed timers, actual-data restore and source preservation](backup-automation-installed-2026-11-16.json)
+
+This establishes local SQLite/blob capture, isolated structural restore, disposable
+API regressions and Linux user scheduling. It does not establish off-device
+replication, full disaster cutover, workstation backup or wider platform support.
+
+## Shared isometric thumbnails
+
+- [Installed versions, migration preservation and backup compatibility](thumbnails-installed-2026-11-16.json)
+- [Installed native rendering and browser acceptance](thumbnails-native-2026-11-16.json)
+- [Installed atomic check-in and lost-response regression](thumbnails-atomic-native-2026-11-16.json)
+- [Real Chrome snapshot previews](thumbnails-web-2026-11-16.json)
+- [General Chrome browsing regression](thumbnails-web-regression-2026-11-16.json)
+
+Native/browser mutation tests use disposable data. They cover new snapshots,
+preserved document/view state and exact preview source identity. Existing
+production CAD is not backfilled; headless rendering, drawing-sheet previews and
+wider runtime/platform combinations remain unverified.
+
 ## Repository cleanup
 
 - [Installation, licenses and data preservation](repository-cleanup-installed-2026-11-15.json)

@@ -30,3 +30,8 @@ textarea{font:inherit;border:1px solid #d7dfe8;border-radius:6px;padding:11px 12
 .material-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
 .material-panel input:disabled,.material-panel select:disabled{opacity:.75}
 #new-material{margin:12px 0}
+/* Exact CAD snapshot previews stay bounded and reflow with the detail pane. */
+.thumbnail-preview { margin-bottom: 24px; }
+.thumbnail-preview select { max-width: 100%; width: 100%; margin-bottom: 10px; }
+.thumbnail-image { display: flex; align-items: center; justify-content: center; min-height: 160px; }
+.thumbnail-image img { display: block; max-width: 100%; height: auto; object-fit: contain; }

@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-16",
+  "delivery": {
+    "backend": "0.1.2",
+    "addon": "0.20.0",
+    "schema": 18,
+    "both_profiles_match_archive": true,
+    "running_freecad_addon_verified": "0.20.0"
+  },
+  "production_preservation": {
+    "all_39_prior_table_contents_preserved": true,
+    "only_new_schema_row_and_empty_thumbnail_table_added": true,
+    "all_stored_hashes_preserved": 217,
+    "automatic_backfill": false,
+    "user_documents_modified": false
+  },
+  "checks": {
+    "backend_tests": 301,
+    "addon_tests": 420,
+    "optional_qt_modules_skipped_in_base": 4,
+    "real_qt_tests": 21,
+    "node_tests": 21,
+    "installed_atomic_native_checks": 28,
+    "installed_native_preview_checks": 13,
+    "chrome_preview_checks": 10,
+    "chrome_regression_checks": 26,
+    "lint_format_docs_packaging": "passed"
+  },
+  "backup": {
+    "schema_17_archive_verifies": true,
+    "schema_18_scheduled_backup_drill_status_ok": true,
+    "isolated_fixture_restored_thumbnail_associations": 16,
+    "isolated_fixture_restored_file_records": 32
+  },
+  "scope": "Linux FreeCAD 1.1.4 / Python 3.11.14 / Qt 6.8.3; mutations in disposable fixtures only",
+  "limitations": [
+    "No automatic preview backfill or per-row thumbnails",
+    "No headless renderer or drawing-sheet preview",
+    "Capture limited to existing 3D views, 256 MiB per file and 1000 linked documents",
+    "Preview failure preserves CAD success; pending check-in sidecars retry exact original intent",
+    "Backup generations remain on the same drive without automatic pruning"
+  ]
+}

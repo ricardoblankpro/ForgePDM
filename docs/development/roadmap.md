@@ -12,15 +12,19 @@ recent verification. Earlier phase numbering and implementation plans are
 - Standard/purchased parts, Fasteners association, descriptions and mass evidence.
 - Persistent FreeCAD browser, local shortcuts and scoped web administration.
 - Shared Direct/Indented/Flattened reports and customizable TechDraw tables/PDFs.
+- Online SQLite/blob backups, isolated verified restore, Linux scheduling and stale-run status.
+- Shared isometric previews for exact new CAD snapshots in FreeCAD and web browsers.
+- Canonical documentation, portable validation harnesses, release artifact tooling
+  and owner-approved licensing/contact boundaries.
 
 ## Next work, selected by user priority
 
 | Area | Remaining scope |
 |---|---|
-| Contributor/release preparation | Clear current docs, portable validation, stable distribution source, owner-approved licensing/contact, clean startup and platform evidence |
-| Operations | Automated backup/verified restore, production security, wider multiuser/failure acceptance and controlled garbage collection |
+| Contributor/release preparation | Stable Addon Manager distribution source, fresh-profile/clean-start acceptance and broader platform evidence |
+| Operations | Off-device backup policy, retention/alerts, disaster-cutover acceptance, production security, wider multiuser/failure acceptance and controlled garbage collection |
 | Drawings | Sheet splitting, balloon integration, CAD-property columns and publication freshness gates |
-| Browsing | Shared immutable CAD thumbnails; see the [proposal](plans/thumbnails.md) |
+| Browsing | Explicit preview backfill, per-row lazy loading and broader rendering/platform acceptance |
 | Integrations | Broader supplier coverage and explicitly mapped ERPNext synchronization |
 
 Stock/cutting optimization, workflow designers, effectivity/variants, general

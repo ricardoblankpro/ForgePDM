@@ -1,5 +1,6 @@
 """Small standard-library HTTP client for the ForgePDM API."""
 
+import base64
 import hashlib
 import http.client
 import json
@@ -341,10 +342,71 @@ class ForgePDMClient:
 
         validate(path, bind_references(self, references), source_path=path)
 
-    def upload_native(self, path, revision_id, item_id, references):
+    def upload_native(self, path, revision_id, item_id, references, preview=None):
         from .workspace import upload
 
-        return upload(self, path, revision_id, item_id, references)
+        return upload(self, path, revision_id, item_id, references, preview)
+
+    def attach_thumbnail(self, file_id, source_hash, png):
+        result = self._json_request(
+            "POST",
+            "/api/v1/files/" + self._quote(file_id) + "/thumbnail",
+            {
+                "source_content_hash": source_hash,
+                "render_profile": "isometric-v1",
+                "png_base64": base64.b64encode(png).decode("ascii"),
+            },
+            timeout=min(self.timeout, 10),
+        )
+        if (
+            not isinstance(result, dict)
+            or result.get("source_file_id") != file_id
+            or result.get("source_content_hash") != source_hash
+            or result.get("render_profile") != "isometric-v1"
+            or type(result.get("width")) is not int
+            or not 1 <= result["width"] <= 512
+            or type(result.get("height")) is not int
+            or not 1 <= result["height"] <= 512
+            or type(result.get("byte_size")) is not int
+            or not 1 <= result["byte_size"] <= 1024 * 1024
+            or re.fullmatch(r"[0-9a-f]{64}", str(result.get("content_hash", ""))) is None
+        ):
+            raise ForgePDMError(
+                "The preview response describes a different snapshot", code="invalid_response"
+            )
+        return result
+
+    def get_thumbnail(self, file_id, source_hash):
+        request = urllib.request.Request(
+            self.base_url + "/api/v1/files/" + self._quote(file_id) + "/thumbnail",
+            headers={"Authorization": "Bearer " + (self.token or ""), "Accept": "image/png"},
+        )
+        try:
+            self._checkpoint()
+            with urllib.request.urlopen(request, timeout=min(self.timeout, 10)) as response:
+                headers = response.headers
+                raw = response.read(1024 * 1024 + 1)
+                if (
+                    len(raw) > 1024 * 1024
+                    or headers.get("Content-Type", "").split(";")[0] != "image/png"
+                    or headers.get("X-ForgePDM-Source-Hash") != source_hash
+                    or headers.get("X-Content-SHA256") != hashlib.sha256(raw).hexdigest()
+                    or not raw.startswith(b"\x89PNG\r\n\x1a\n")
+                    or len(raw) < 24
+                    or not 1 <= int.from_bytes(raw[16:20], "big") <= 512
+                    or not 1 <= int.from_bytes(raw[20:24], "big") <= 512
+                ):
+                    raise ForgePDMError(
+                        "The preview failed its identity/size check", code="integrity_failed"
+                    )
+                self._checkpoint()
+                return raw
+        except urllib.error.HTTPError as error:
+            if error.code == 404:
+                return None
+            self._raise_http_error(error)
+        except (OSError, http.client.HTTPException) as error:
+            raise ForgePDMError("Preview could not be loaded", code="connection_failed") from error
 
     def retrieve_configuration(self, root, revision_id, dataset_id, file_id):
         from .workspace import retrieve
@@ -666,10 +728,10 @@ class ForgePDMClient:
 
         return abandon(self, path, revision_id, item_id, actor_id)
 
-    def checkin_part(self, path, revision_id, item_id, actor_id, references=()):
+    def checkin_part(self, path, revision_id, item_id, actor_id, references=(), preview=None):
         from .part_checkin import checkin
 
-        return checkin(self, path, revision_id, item_id, actor_id, references)
+        return checkin(self, path, revision_id, item_id, actor_id, references, preview)
 
     def download_file(self, file_id, destination, expected_hash=None, expected_size=None):
         if not self.token:
@@ -773,7 +835,7 @@ class ForgePDMClient:
             "POST", "/api/v1/revisions/{}/checkout/renew".format(self._quote(revision_id))
         )
 
-    def _json_request(self, method, path, payload=None, authenticated=True):
+    def _json_request(self, method, path, payload=None, authenticated=True, *, timeout=None):
         self._checkpoint()
         headers = {"Accept": "application/json"}
         if payload is not None:
@@ -789,7 +851,9 @@ class ForgePDMClient:
             self.base_url + path, data=data, headers=headers, method=method
         )
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+            with urllib.request.urlopen(
+                request, timeout=self.timeout if timeout is None else timeout
+            ) as response:
                 result = self._decode_response(response.status, response.read())
             return result
         except urllib.error.HTTPError as error:

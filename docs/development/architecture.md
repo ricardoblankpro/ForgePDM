@@ -47,6 +47,20 @@ pins, quantities and component mass evidence. Clients select server-generated
 views; one leaf rollup prevents indented parent/child mass double counting.
 Drawings embed frozen report values and SVG until explicitly updated.
 
+Thumbnail derivatives bind one immutable image to an exact native source file.
+The backend validates/re-encodes bounded PNGs through Pillow; clients render and
+display them without importing backend code. Derivative attachment has its own
+[authorization contract](api.md#thumbnail-derivatives) and does not change CAD
+bytes, lifecycle, BOMs or checkout. See
+[ADR-025](../decisions/ADR-025-immutable-isometric-thumbnails.md).
+
+Backup administration runs through the local CLI. SQLite's online backup API
+captures metadata first, then every immutable blob referenced by that snapshot,
+including thumbnail files. Verification and isolated restores do not migrate the
+archive or replace live data. Future blob deletion must coordinate with backup
+readers. [Operations](../operations/backups.md) owns scheduling/recovery rules;
+[ADR-024](../decisions/ADR-024-backup-and-restore-automation.md) records the protocol.
+
 ## Client and runtime boundaries
 
 FreeCAD uses GUI-thread CAD/widget operations and worker HTTP/transfers. Startup

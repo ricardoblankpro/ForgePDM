@@ -52,6 +52,11 @@ backend APIs, offline drawing resources and journal recovery. Document external
 server/supplier connections and tested limitations. Do not advertise untested
 platforms or prototype production readiness as established support.
 
+Run the [backup/restore commands](../operations/backups.md) and retain isolated
+drill evidence. Scheduled structural verification complements application and
+native acceptance; off-device policy and full disaster-cutover acceptance remain
+deployment requirements.
+
 FreeCAD's [publishing guide](https://freecad.github.io/Addon-Academy/Guides/Publishing/Indexed)
 and [quality requirements](https://freecad.github.io/Addon-Academy/Topics/Addon-Index/Index/Qualities.html)
 are the current upstream reference. The [manifest guide](https://freecad.github.io/Addon-Academy/Topics/Structuring/Manifest/)

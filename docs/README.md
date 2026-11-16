@@ -19,9 +19,10 @@ is the single current handoff for delivery versions, recent verification and lim
 ## Operations and development
 
 - [Server setup, configuration, upgrades, backup and recovery](operations/server.md)
+- [Scheduled backups and isolated restore verification](operations/backups.md)
 - [Contributing](../CONTRIBUTING.md) and [test tiers](development/testing.md)
 - [Architecture](development/architecture.md), [domain model](development/domain-model.md) and [API contracts](development/api.md)
-- [Roadmap](development/roadmap.md), [release preparation](development/releasing.md) and [thumbnail proposal](development/plans/thumbnails.md)
+- [Roadmap](development/roadmap.md), [release preparation](development/releasing.md) and [snapshot previews](user/freecad.md#snapshot-previews)
 - [Fastener vocabulary research and provenance](development/references/fastener-options.md)
 
 ## Decisions and evidence

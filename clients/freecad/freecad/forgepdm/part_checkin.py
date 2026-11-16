@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from . import fcstd, workspace as ws
+from . import fcstd, thumbnail_transfer, workspace as ws
 
 JOURNAL = "part-checkin.json"
 
@@ -53,6 +53,8 @@ def _guard_current(value, operation):
     current = json.loads(journal.read_text())
     if current.get("references", []) != operation.get("references", []):
         raise ws.WorkspaceError("Pending CAD references changed; journal was preserved")
+    if current.get("thumbnail") != operation.get("thumbnail"):
+        raise ws.WorkspaceError("Pending preview intent changed; journal was preserved")
     for field in (
         "operation_id",
         "content_hash",
@@ -134,15 +136,31 @@ def _resolve(client, value, operation):
         ws._atomic_json(value["directory"] / ws.MANIFEST, ledger)
         operation["state"] = "acknowledged"
         ws._atomic_json(value["directory"] / JOURNAL, operation)
-    # Only the proven internal snapshot can be removed, after both durable records.
     snapshot = ws._safe_path(value["root"], operation["snapshot_path"])
+    preview_warning = (
+        "CAD saved successfully; its preview could not be associated with this snapshot."
+        if operation.get("thumbnail_requested") and not operation.get("thumbnail")
+        else None
+    )
+    if operation.get("thumbnail") and operation.get("thumbnail_state") != "completed":
+        preview_warning = thumbnail_transfer.send(client, record, snapshot, operation["thumbnail"])
+        if not preview_warning:
+            with ws.locked(value["root"], client.base_url):
+                _guard_current(value, operation)
+                operation["thumbnail_state"] = "completed"
+                ws._atomic_json(value["directory"] / JOURNAL, operation)
+            try:
+                thumbnail_transfer.remove(snapshot)
+            except OSError:
+                pass
+    # Only proven internal sidecars/snapshots may be removed after durable records.
     try:
         snapshot.chmod(0o600)
         snapshot.unlink()
         snapshot.parent.rmdir()
     except OSError:
         pass  # A retained local orphan is safer than losing recovery metadata.
-    return dict(result, local_changes_remain=changed)
+    return dict(result, local_changes_remain=changed, thumbnail_warning=preview_warning)
 
 
 def resume(client, path, revision_id, item_id, actor_id):
@@ -158,7 +176,7 @@ def resume(client, path, revision_id, item_id, actor_id):
     return _resolve(client, value, operation) if operation else None
 
 
-def checkin(client, path, revision_id, item_id, actor_id, references=()):
+def checkin(client, path, revision_id, item_id, actor_id, references=(), preview=None):
     result = resume(client, path, revision_id, item_id, actor_id)
     if result is not None:
         return result
@@ -178,6 +196,7 @@ def checkin(client, path, revision_id, item_id, actor_id, references=()):
         if operation is None:
             bound = ws.bind_references(client, references)
             saved = ws.snapshot(client, path, bound)
+            thumbnail = thumbnail_transfer.prepare(saved, preview)
             serialized = sorted(
                 [
                     {key: value for key, value in ref.items() if key != "target_path"}
@@ -203,6 +222,10 @@ def checkin(client, path, revision_id, item_id, actor_id, references=()):
                 byte_size=saved["byte_size"],
                 snapshot_path=Path(saved["path"]).relative_to(value["root"]).as_posix(),
             )
+            if thumbnail:
+                operation["thumbnail"] = thumbnail
+            if preview is not None:
+                operation["thumbnail_requested"] = True
             ws._atomic_json(value["directory"] / JOURNAL, operation)
     return _resolve(client, value, operation)
 

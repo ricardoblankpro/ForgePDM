@@ -56,3 +56,20 @@ Advanced material specifications/inputs, requirements snapshots and their stored
 records remain supported compatibility surfaces. Their absence from the ordinary
 UI is not authorization to delete their APIs or migration history. API changes
 need service/API tests and explicit compatibility notes.
+
+## Thumbnail derivatives
+
+`POST /api/v1/files/{source_file_id}/thumbnail` attaches one immutable
+`isometric-v1` PNG to an exact native CAD file. JSON fields are
+`source_content_hash`, `render_profile` and `png_base64` (at most 1 MiB decoded).
+Only the enabled uploader or an administrator with current editor access can
+attach. This auxiliary operation needs no checkout and may complete after release;
+CAD writes retain all existing checkout/lifecycle rules. Identical image/source
+intent replays successfully; replacement conflicts. PNG decoding/re-encoding is
+bounded to 512px per side, one frame and limited text metadata.
+
+`GET /api/v1/files/{source_file_id}/thumbnail` inherits the source revision's read
+permission and returns PNG bytes, source/hash identity headers and private/no-store
+policy. Missing or inaccessible images return 404. The image `files` row is not
+an independently downloadable dataset. See
+[ADR-025](../decisions/ADR-025-immutable-isometric-thumbnails.md).

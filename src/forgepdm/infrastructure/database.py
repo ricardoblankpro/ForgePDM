@@ -382,6 +382,22 @@ CREATE TABLE revision_operations (
 );
 """,
     ),
+    (
+        18,
+        """
+CREATE TABLE file_thumbnails (
+    source_file_id TEXT PRIMARY KEY REFERENCES files(id),
+    source_content_hash TEXT NOT NULL,
+    image_file_id TEXT NOT NULL UNIQUE REFERENCES files(id),
+    input_hash TEXT NOT NULL,
+    render_profile TEXT NOT NULL CHECK(render_profile='isometric-v1'),
+    width INTEGER NOT NULL CHECK(width BETWEEN 1 AND 512),
+    height INTEGER NOT NULL CHECK(height BETWEEN 1 AND 512),
+    created_by TEXT NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL
+);
+""",
+    ),
 )
 
 

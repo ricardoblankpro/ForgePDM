@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.20.0 — Shared isometric snapshot previews
+
+- Generate optional 384px isometric PNGs after native save, preserving camera,
+  selection, visibility, animation settings and original file bytes.
+- Attach previews to exact uploaded/check-in files; immutable server associations
+  reject changed intent. Pending check-in previews survive retry and lost responses.
+- Show the selected snapshot's authorized preview in the native browser and web
+  interface. Missing previews never prevent opening CAD. Existing uploads are not
+  automatically opened, saved or backfilled.
+- Requires backend 0.1.2/schema 18 for previews. Prior CAD/recovery contracts remain.
+
 ## 0.19.1 — Repository and contributor cleanup
 
 - Replace obsolete installation/status text with canonical current user,

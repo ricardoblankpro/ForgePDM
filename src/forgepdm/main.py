@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from forgepdm import __version__
 from forgepdm.api.v1 import (
     descriptions,
     drawings,
@@ -14,6 +15,7 @@ from forgepdm.api.v1 import (
     physical_materials,
     reference_mass,
     routes,
+    thumbnails,
     tree_status,
 )
 from forgepdm.application.auth import AuthService
@@ -28,6 +30,7 @@ from forgepdm.application.management import ManagementService
 from forgepdm.application.manifests import ManifestService
 from forgepdm.application.reference_mass import ReferenceMassService
 from forgepdm.application.revisions import RevisionService
+from forgepdm.application.thumbnails import ThumbnailService
 from forgepdm.application.tree_status import TreeStatusService
 from forgepdm.infrastructure.database import Database
 from forgepdm.infrastructure.fabory import FaboryProvider
@@ -45,7 +48,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     storage = FileStorage(storage_root, max_upload_bytes)
     authorization = AuthorizationService(database)
     revisions = RevisionService(database, authorization)
-    app = FastAPI(title="ForgePDM API", version="0.1.0")
+    app = FastAPI(title="ForgePDM API", version=__version__)
     app.state.reference_mass_service = ReferenceMassService(
         database,
         authorization,
@@ -66,6 +69,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     app.state.dataset_service = DatasetService(database, storage, authorization, revisions)
     app.state.drawing_service = DrawingService(database, storage, authorization, revisions)
     app.state.file_storage = storage
+    app.state.thumbnail_service = ThumbnailService(database, storage, authorization)
     app.include_router(routes.router)
     app.include_router(materials.router)
     app.include_router(descriptions.router)
@@ -74,6 +78,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     app.include_router(management.router)
     app.include_router(tree_status.router)
     app.include_router(drawings.router)
+    app.include_router(thumbnails.router)
     app.mount("/app", StaticFiles(directory=Path(__file__).parent / "web", html=True), name="web")
 
     @app.middleware("http")
@@ -82,7 +87,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         if request.url.path == "/app" or request.url.path.startswith("/app/"):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; script-src 'self'; style-src 'self'; "
-                "img-src 'self'; connect-src 'self'; frame-src blob:; object-src 'none'; "
+                "img-src 'self' blob:; connect-src 'self'; frame-src blob:; object-src 'none'; "
                 "base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
             )
             response.headers["X-Content-Type-Options"] = "nosniff"

@@ -2,7 +2,8 @@
 
 The FastAPI backend runs separately from FreeCAD and serves the web workspace.
 The current supported topology is one local service with SQLite and a local
-immutable file store. Production transport/security, automated backup/restore,
+immutable file store. [Automated backups and isolated restore drills](backups.md)
+are available. Production transport/security, off-device backup policy,
 garbage collection and wider multiuser/platform acceptance remain open work.
 Keep this development service on loopback until those deployment gates are met.
 
@@ -59,9 +60,10 @@ fixture reports and logs.
 
 1. Preserve open CAD edits, managed workspaces and leases. A backup is not a
    check-in. Keep local FreeCAD preferences and native material snapshot cards.
-2. Stop the backend and copy a consistent SQLite database together with its
-   matching blob store. Include installed addon files and any SQLite WAL state
-   or use SQLite's backup API. Retain the original matched set for rollback.
+2. Create a verified matched database/blob backup using the
+   [backup commands](backups.md#create-inspect-and-drill). For a manual filesystem
+   copy, stop the backend first and include SQLite WAL state. Preserve installed
+   addon/software artifacts separately and retain the original set for rollback.
 3. Update the source and sync locked dependencies. Inspect the current handoff
    and compatibility notes before starting a migrated database.
 4. Build/replace the addon using [installation](../user/install.md). Keep the
@@ -101,4 +103,6 @@ need explicit inspection rather than guessed recovery.
 
 Restore offline using matching database, blobs and compatible addon/backend
 versions. Restoring only SQLite or running older code against a migrated schema
-is not a supported rollback. Automated restoration drills remain a release gate.
+is not a supported rollback. [Automated isolated restoration drills](backups.md)
+are available; full disaster cutover and wider platform acceptance still require
+recorded evidence before production deployment.

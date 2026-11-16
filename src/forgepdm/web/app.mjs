@@ -3,10 +3,12 @@ import { materialsUI } from "./materials.mjs";
 import { managementUI } from "./management.mjs";
 import { drawingViewer } from "./drawings.mjs";
 import { API } from "./api.mjs";
+import { thumbnailViewer } from "./thumbnails.mjs";
 import { readRoute, routeFor, fileSize, dateLabel, stateLabel } from "./model.mjs";
 
 const $ = selector => document.querySelector(selector);
 const api = new API();
+const previewUI = thumbnailViewer({api, el});
 const state = { user: null, projects: [], items: [], query: "", project: "", offset: 0,
   hasMore: false, item: null, revision: null, revisions: [], tab: "overview",
   cache: {}, expanded: new Set(), bomView: "indented", page: "catalog", historyAll: false };
@@ -74,6 +76,7 @@ function toast(message) {
 }
 function request(path, options = {}) { return api.request(path, { signal: session.signal, ...options }); }
 function resetSession(message = "") {
+  previewUI.reset();
   drawingUI.reset();
   management?.reset();
   session.abort(); session = new AbortController(); api.token = null;
@@ -224,10 +227,12 @@ function navigate(itemId, revisionId) {
 }
 window.addEventListener("hashchange", () => { if (state.user) loadDetail(); });
 function renderEmptyDetail() {
+  previewUI.reset();
   $("#detail").classList.add("detail-placeholder");
   $("#detail").replaceChildren(empty("Your product data, in context", "Select an item to explore its revisions, product structure and associated files.", "assembly"));
 }
 async function loadDetail() {
+  previewUI.reset();
   drawingUI.reset();
   const version = ++detailVersion; tabVersion++;
   const { itemId, revisionId } = readRoute(location.hash);
@@ -254,6 +259,7 @@ async function loadDetail() {
   } catch (error) { if (version === detailVersion) showError($("#detail"), error, loadDetail); }
 }
 function renderDetail() {
+  previewUI.reset();
   drawingUI.reset();
   const { item, revision } = state;
   if (!item || !revision) return;
@@ -320,13 +326,26 @@ function renderOverview(content) {
     `Rev ${r.label}`, badge(r.lifecycle_state), dateLabel(r.created_at),
     r.id === revision.id ? el("span", { class: "small-muted" }, "Viewing") : button("Open →", () => navigate(item.id, r.id), { class: "text-button", "aria-label": `Open revision ${r.label}` })
   ]), "revision-table", "Revision history");
-  content.replaceChildren(el("h3", { class: "section-caption" }, "Revision information"), el("div", { class: "info-card" }, info),
+  content.replaceChildren(...[el("h3", { class: "section-caption" }, "Revision information"), el("div", { class: "info-card" }, info),
     el("div", { class: "section-header" }, el("h3", {}, "Change note")),
     el("p", { class: "description" }, revision.change_note || "No change note recorded."), el("br"),
     item.standard_specification && el("div", { class: "info-card" }, el("h3", { class: "section-caption" }, "Standard specification"), el("dl", { class: "info-grid" }, ...[...Object.entries(item.standard_specification.geometry), ...["material", "grade", "finish"].map(key => [key, item.standard_specification[key] || "Unknown"])].map(([key, value]) => el("div", {}, el("dt", {}, key.replace(/([a-z])([A-Z])/g, "$1 $2")), el("dd", {}, String(value)))))),
     item.description && el("div", { class: "info-card" }, el("h3", { class: "section-caption" }, "Item description"), el("p", { class: "description" }, item.description)),
-    el("div", { class: "section-header" }, el("h3", {}, "Revision history"), el("span", { class: "small-muted" }, `${state.revisions.length} revision${state.revisions.length === 1 ? "" : "s"}`)), table);
+    el("div", { class: "section-header" }, el("h3", {}, "Revision history"), el("span", { class: "small-muted" }, `${state.revisions.length} revision${state.revisions.length === 1 ? "" : "s"}`)), table].filter(value => value != null && value !== false));
   if (state.revisions.length > 8) content.append(button(state.historyAll ? "Show recent revisions" : "Show all revisions", () => { state.historyAll = !state.historyAll; renderOverview(content); }, { class: "quiet" }));
+  const preview = el("section", {class:"thumbnail-preview", "aria-label":"CAD snapshot preview"});
+  content.prepend(preview);
+  loadPreview(preview, revision, item.number);
+}
+
+async function loadPreview(host, revision, label, datasets) {
+  host.textContent = "Loading preview…";
+  try {
+    const data = datasets || state.cache.datasets || await request(`/revisions/${revision.id}/datasets`);
+    if (!host.isConnected || state.revision?.id !== revision.id || !state.user) return;
+    state.cache.datasets = data;
+    previewUI.render(host, data, `${label}, revision ${revision.label}`);
+  } catch { if (host.isConnected) host.textContent = "Preview unavailable"; }
 }
 function dataTable(headers, rows, className = "", label = "") {
   return el("div", { class: "table-scroll", tabindex:"0", "aria-label":`${label || "Data table"} · scroll for more columns` }, el("table", { class: `data-table ${className}`, "aria-label": label },
@@ -380,6 +399,9 @@ function renderDatasets(content, datasets) {
       el("details", {}, el("summary", {}, "File integrity"), el("code", {}, `SHA-256 ${file.content_hash}`)));
   }));
   content.replaceChildren(el("div", { class: "section-header" }, el("h3", {}, `Files for revision ${state.revision.label}`), el("span", { class: "small-muted" }, `${cards.length} file${cards.length === 1 ? "" : "s"}`)), ...cards);
+  const preview = el("section", {class:"thumbnail-preview", "aria-label":"CAD snapshot preview"});
+  content.prepend(preview);
+  loadPreview(preview, state.revision, state.item.number, datasets);
   if (state.item.kind === "assembly" || datasets.some(dataset => dataset.dataset_type === "native_cad")) {
     content.append(el("p", { class: "small-muted" }, "Downloads contain individual files. Use FreeCAD to retrieve a complete assembly with its linked components."));
   }

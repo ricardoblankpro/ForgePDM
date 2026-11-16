@@ -1,0 +1,53 @@
+{
+  "date": "2026-11-16",
+  "backend_version": "0.1.1",
+  "addon_version": "0.19.1",
+  "schema_version": 17,
+  "production_preservation": {
+    "all_table_contents_unchanged": true,
+    "table_count": 39,
+    "all_stored_file_hashes_unchanged": true,
+    "stored_files": 217,
+    "referenced_blobs_backed_up": 214,
+    "unreferenced_files_preserved_in_source": 3
+  },
+  "restore": {
+    "completed": true,
+    "all_restored_table_contents_match_source": true,
+    "all_referenced_blob_hashes_verified": true,
+    "isolated_api_health": "ok",
+    "isolated_api_auth_required": true
+  },
+  "automation": {
+    "hourly_backup_service": "success",
+    "daily_drill_service": "success",
+    "status_ok": true,
+    "latest_drill_seconds": 0.668,
+    "storage": "same local drive; no off-device replication",
+    "automatic_pruning": false,
+    "user_timers_enabled": true
+  },
+  "checks": {
+    "backend_tests": 290,
+    "new_backup_tests": 26,
+    "web_tests": 18,
+    "source_lint_format": "passed",
+    "docs_links_versions": "passed",
+    "addon_manifest_and_archive_links": "passed",
+    "backend_wheel_sdist": "built",
+    "systemd_unit_verify": "passed"
+  },
+  "limitations": [
+    "No workstation/unsaved-CAD backup",
+    "No full disaster-cutover or wider platform acceptance",
+    "No remote alerts or off-device replication",
+    "No automatic retention"
+  ],
+  "runtime": {
+    "freecad": "1.1.4",
+    "mcp_health_check": "ok",
+    "addon": "0.19.1",
+    "backend": "0.1.1",
+    "user_documents_saved_or_modified_by_validation": false
+  }
+}

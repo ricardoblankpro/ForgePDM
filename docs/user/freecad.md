@@ -28,6 +28,28 @@ edit its ledgers manually. Configuration folders accumulate; cleanup is explicit
 Opening the same exact snapshot activates an existing document and preserves its
 unsaved edits. A different snapshot opens separately.
 
+## Snapshot previews
+
+The browser shows an isometric preview of the selected **Uploaded CAD** snapshot.
+Changing revision or upload changes the image; an older selection never borrows
+the newest upload's preview. Missing or unavailable previews show a placeholder
+and do not prevent opening CAD. Changing accounts clears protected images.
+
+New Upload and Check In operations prepare a 384px isometric PNG after saving the
+model. Generation preserves your camera, selection, visibility, animation setting
+and saved file bytes. A dirty linked component prevents a potentially misleading
+preview. Automatic capture currently limits each model/dependency file to 256 MiB
+and uses an existing 3D view. A document without a usable 3D view gets a placeholder;
+this increment does not render drawing sheets separately.
+
+Preview failure does not undo a successful CAD upload/check-in. If a check-in
+preview remains pending, retry **Check In** to recover the same saved image while
+that operation remains current. Newer local edits are never included in that retry.
+Normal Upload reports optional preview failure but has no separate repair command.
+Previously uploaded files are not automatically opened, saved or backfilled.
+Use backend 0.1.2 or later for the thumbnail API; CAD workflows remain compatible
+when an older server cannot accept a preview.
+
 ## Create, edit and publish CAD
 
 1. Save the FreeCAD document. **Create / Upload Current Document** registers a new

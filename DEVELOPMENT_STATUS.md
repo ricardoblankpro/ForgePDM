@@ -1,89 +1,88 @@
 # Development status
 
-This is the current handoff. Earlier implementation chronology and test counts
-are in [the historical log](docs/history/development-log.md), not current setup
-instructions. Start with [README](README.md) and [Contributing](CONTRIBUTING.md).
+This is the current handoff. Start with [README](README.md) and
+[Contributing](CONTRIBUTING.md). Earlier chronology and dated test counts live in
+[history](docs/history/development-log.md); current rules live in the linked guides.
 
 ## Delivery
 
-- Addon: **0.19.1**
-- Backend package: **0.1.0**
-- Database schema: **17**
+- Addon: **0.20.0**
+- Backend package: **0.1.2**
+- Database schema: **18**
 
-The backend, addon and schema are independently versioned. Repository cleanup
-changes documentation, packaging and contributor tooling; PDM rules and supported
-engineering data formats remain unchanged. The owner selected AGPL-3.0-or-later
-for the server and LGPL-2.1-or-later for the Workbench, with
-ricardoblankpro@gmail.com as public maintainer contact. An
-installable Addon Manager distribution source/publication remains a separate step.
+Versions are independent. The backend/server is AGPL-3.0-or-later and the
+Workbench LGPL-2.1-or-later; approved licensing/contact boundaries remain unchanged.
+An installable Addon Manager distribution source/publication is still separate.
 
 ## Current behavior
 
-- FastAPI/SQLite metadata, separate immutable SHA-256 files, password/bearer
-  sessions and project/shared-library permissions.
-- Permanent P/A/S/M codes, exact revisions, exclusive leases, lifecycle and audit.
-- Managed FreeCAD workspaces and exact revision/dataset/file/object manifests.
-- Atomic native part/assembly check-in, fenced writes, replayable revision
-  creation and read-only integrity/recovery diagnostics.
-- Shared S/M catalog, Fasteners association, P/A/M descriptions, optional physical
-  material snapshots and P/S mass evidence.
-- Persistent FreeCAD browser with local Recent/Favorites/My Checkouts; web
-  browsing, description controls and account/project administration.
-- One backend report for Direct/Indented/Flattened BOMs and mass. Root quantities
-  and exact pins are preserved; CAD synchronization stays an explicit reviewed
-  direct-BOM replacement.
-- TechDraw BOMs have editable titles, layouts/custom notes and no generated
-  footer. Direct tables use format 1; non-direct use format 2. Saved tables stay
-  frozen until explicit Update. PDF publication pins an exact uploaded source.
+- FastAPI/SQLite metadata, separate immutable SHA-256 bytes, bearer sessions,
+  project/shared-library permissions, permanent P/A/S/M codes and audit history.
+- Exact revisions and managed FreeCAD dependency manifests/workspaces; exclusive
+  fenced checkout/check-in, lifecycle and recoverable native revision creation.
+- Shared S/M catalog, Fasteners association, descriptions, physical material
+  snapshots, P/S mass evidence and revision-pinned assembly mass.
+- Persistent FreeCAD browser with Recent/Favorites/My Checkouts; web browsing,
+  description controls and account/project administration.
+- Direct/Indented/Flattened BOM reports shared across clients. CAD-to-BOM changes
+  remain explicit reviewed direct replacements; quantities/exact pins are retained.
+- Frozen customizable TechDraw BOMs, format-1 direct/format-2 non-direct tables,
+  and explicit PDF publication pinned to exact uploaded source bytes.
+- Shared 384px isometric previews for new native uploads/check-ins. Each image is
+  an immutable derivative of one exact source file; selected-snapshot images appear
+  in FreeCAD and web. Capture preserves view/document state, rejects unsaved linked
+  geometry and never backfills existing files automatically. Optional image failure
+  does not undo CAD success. See [previews](docs/user/freecad.md#snapshot-previews)
+  and [ADR-025](docs/decisions/ADR-025-immutable-isometric-thumbnails.md).
+- Online SQLite/blob backups, full hash/FK/schema verification, new-directory
+  restore, isolated drills and hourly/daily Linux user timers. Status exposes
+  missing/failed/interrupted/stale runs. Known older schema backups remain readable.
 
 ## Validation and local installation
 
-The CI Qt job explicitly installs Ubuntu EGL/GL/OpenGL libraries and sets
-`QT_QPA_PLATFORM=offscreen`. The initial hosted run lacked `libEGL.so.1` and failed
-during Qt import; backend/docs and addon jobs passed. The correction passes all
-19 Qt tests locally; hosted results are recorded in GitHub Actions.
+2026-11-16: 301 backend tests, 420 addon tests (four optional Qt modules skipped in
+base), 21 real Qt checks and 21 Node checks pass. Lint/format, canonical docs,
+manifest/archive links and backend wheel/sdist checks pass. Installed FreeCAD
+acceptance passes 28 atomic/recovery and 13 thumbnail/render/browser checks;
+real Chrome passes 10 preview and 26 general browsing checks. All mutation fixtures
+are disposable. Camera restoration also covers perspective and render failure.
 
-Repository cleanup passes 264 backend tests, 411 addon tests (four optional Qt
-modules skipped in the base environment), 19 real Qt checks and five Node test
-files. Source/tooling and addon lint/format, documentation targets/anchors/version
-checks, deterministic archive/self-contained docs, wheel/sdist and checksums pass.
-Chrome passes 26 browsing, seven materials and 13 shared-report checks. Relocated
-native harnesses pass 21 drawing/viewer/PDF checks plus the 28-check atomic seed.
-These use disposable fixtures; three open user documents and the session survive.
+Addon 0.20.0 is installed in both local profiles and loaded in FreeCAD 1.1.4;
+backend 0.1.2 runs on loopback with schema 18. A verified schema-17 backup and prior
+addons are retained under `var/backups/before-thumbnails`. The migration preserves
+all prior records (only adds schema row 18) and all 217 physical file hashes;
+existing CAD receives no automatic preview. Current scheduled backup/drill runs
+pass at schema 18, and schema-17 archives still verify. A separate restored
+fixture verifies 16 thumbnail associations and all 32 source/image file records.
+See [installed evidence](docs/validation/thumbnails-installed-2026-11-16.json),
+[native evidence](docs/validation/thumbnails-native-2026-11-16.json) and the
+[validation index](docs/validation/README.md).
 
-Install 0.19.1 into both FreeCAD profiles after consistent SQLite/blob/prior-addon
-backup under `var/backups/before-repository-cleanup-20261115T235426Z`. All 39 table
-contents and 213 stored-file hashes are preserved; integrity/FKs pass. Both
-profiles match the archive; the running FreeCAD package reports 0.19.1. Backend
-APIs/schema are unchanged and the production backend was not restarted. All
-schema/migration definitions compare unchanged with the preceding commit.
-
-See [cleanup evidence](docs/validation/README.md#repository-cleanup) and
-[earlier functional evidence](docs/validation/README.md#shared-bom-functional-baseline).
-The eight canonical user guides are packaged from source; no duplicate manual is
-maintained. Original prototype inputs were removed, old plans/logs archived,
-native harnesses consolidated, and artifact creation automated without publication.
-The explicit backend lint baseline checks E4/E7/E9/F/I; broader policy changes and
-large command/route refactors remain separately reviewed work.
-
-Native acceptance has used Linux FreeCAD 1.1.4 / Python 3.11.14 / Qt 6.8.3.
-Other runtime/platform combinations remain unverified. Never infer current open
-files, checkout/session state or runtime version from an older report.
+Backups use `var/backups/automated`; scratch restores use `var/restore-drills`.
+The hourly backup and daily 03:15 drill user timers remain enabled. See
+[operations](docs/operations/backups.md). Previous cleanup and backup acceptance,
+including data preservation and earlier Qt/browser counts, remains in dated
+[history](docs/history/development-log.md) and the validation index.
 
 ## Current limits and next priorities
 
-- Production security, automated backup/verified restore, automated garbage
-  collection and wider multiuser/platform/clean-start acceptance remain open.
-- TechDraw tables are bounded to 500 rows and one page. Sheet splitting,
-  balloons, CAD-property mappings and automatic stale-publication gates remain.
-- Shared thumbnails, broader supplier coverage, stock/cutting workflows and
-  ERPNext synchronization are unimplemented. Select feature order with the user.
-- Advanced material-input APIs/records remain supported compatibility surfaces,
-  although the ordinary UI uses descriptions. Preserve migrations and old-file
-  retrieval/recovery contracts during cleanup.
+- Backup storage is on the same local drive. Off-device copies, retention, alerts,
+  workstation/unsaved-edit backup and full disaster cutover remain open. No backup
+  generation is automatically pruned; timers require an active user systemd manager.
+- Production security, controlled GC and wider multiuser/platform/clean-start
+  acceptance remain open. Future GC must coordinate with active backup readers.
+- Thumbnails have no automatic backfill, per-row lazy loading, headless service or
+  sheet-preview rendering. Capture caps individual files at 256 MiB and linked
+  documents at 1000; missing/unavailable images never prevent opening CAD.
+- TechDraw tables are bounded to 500 rows and one page. Sheet splitting, balloons,
+  CAD-property mappings and stale-publication gates remain open.
+- Broader supplier coverage, stock/cutting workflows and ERPNext synchronization
+  remain separate increments. No next feature order is assumed.
+- Advanced material records/APIs, migrations, old-file retrieval and local durable
+  recovery journals remain supported compatibility surfaces. Preserve them.
 
-Follow [the roadmap](docs/development/roadmap.md), [release prerequisites](docs/development/releasing.md)
-and [test tiers](docs/development/testing.md). Keep local documents/edits,
-workspaces, credentials, checkouts and engineering data intact. Update this brief
-handoff after significant changes; move chronology to history rather than growing
-another installation diary.
+Native acceptance uses Linux FreeCAD 1.1.4 / Python 3.11.14 / Qt 6.8.3. Other
+platform/runtime combinations are unverified. Never infer present documents,
+sessions or checkout state from earlier evidence. Follow the
+[roadmap](docs/development/roadmap.md), [release guide](docs/development/releasing.md)
+and [test tiers](docs/development/testing.md); preserve documents and engineering data.

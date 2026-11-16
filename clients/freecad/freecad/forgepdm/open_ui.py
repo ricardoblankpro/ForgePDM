@@ -5,7 +5,7 @@ from html import escape
 
 from .jobs import OperationCancelled, Request, WorkflowJob
 from .open_model import snapshot_label, snapshots, validate_workspace
-from .ui import QtCore, QtWidgets
+from .ui import QtCore, QtGui, QtWidgets
 
 
 class SourceTabs(QtWidgets.QTabBar):
@@ -42,6 +42,7 @@ class OpenDialog(QtWidgets.QDialog):
         self.jobs = []
         self.executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="ForgePDM-Search")
         self.search_epoch = self.detail_epoch = self.snapshot_epoch = 0
+        self.preview_epoch, self.preview_key = 0, None
         self.offset = self.revision_offset = 0
         self.item = None
         self.open_when_ready = False
@@ -120,6 +121,13 @@ class OpenDialog(QtWidgets.QDialog):
         self.snapshot = QtWidgets.QComboBox()
         self.snapshot.setObjectName("forgepdm_open_snapshot")
         form.addRow("Uploaded CAD", self.snapshot)
+        self.preview = QtWidgets.QLabel("No preview available")
+        self.preview.setObjectName("forgepdm_snapshot_preview")
+        self.preview.setAlignment(QtCore.Qt.AlignCenter)
+        self.preview.setMinimumHeight(160)
+        self.preview.setMaximumHeight(220)
+        self.preview.setAccessibleName("Isometric preview of the selected uploaded CAD snapshot")
+        form.addRow("Preview", self.preview)
         self.workspace = QtWidgets.QLabel(root or "Choose a workspace once")
         self.workspace.setTextFormat(QtCore.Qt.PlainText)
         self.workspace.setWordWrap(True)
@@ -249,6 +257,7 @@ class OpenDialog(QtWidgets.QDialog):
     def clear_details(self):
         self.detail_epoch += 1
         self.snapshot_epoch += 1
+        self.clear_preview()
         self.item = None
         self.favorite.setEnabled(False)
         self.open_button.setEnabled(False)
@@ -437,6 +446,7 @@ class OpenDialog(QtWidgets.QDialog):
         self.snapshot_epoch += 1
         epoch = self.snapshot_epoch
         self.open_button.setEnabled(False)
+        self.clear_preview()
         self.snapshot.clear()
         revision = self.revision.currentData()
         if not revision:
@@ -495,6 +505,48 @@ class OpenDialog(QtWidgets.QDialog):
         )
         if not available:
             self.open_when_ready = False
+        self.load_preview()
+
+    def clear_preview(self):
+        self.preview_epoch += 1
+        self.preview_key = None
+        self.preview.clear()
+        self.preview.setText("No preview available")
+
+    def load_preview(self):
+        choice = self.snapshot.currentData()
+        if not choice or not hasattr(self.client, "get_thumbnail"):
+            self.clear_preview()
+            return
+        _, record = choice
+        key = (record["id"], record.get("content_hash"))
+        if key == self.preview_key:
+            return
+        self.clear_preview()
+        self.preview_key = key
+        epoch = self.preview_epoch
+        self.preview.setText("Loading preview…")
+
+        def fetch():
+            try:
+                return self.client.get_thumbnail(*key)
+            except Exception as error:
+                if getattr(error, "status", None) == 401:
+                    raise
+                return None
+
+        def loaded(raw):
+            pixmap = QtGui.QPixmap()
+            if raw and pixmap.loadFromData(raw, "PNG"):
+                self.preview.setPixmap(
+                    pixmap.scaled(
+                        220, 220, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation
+                    )
+                )
+            else:
+                self.preview.setText("No preview available")
+
+        self.start("Loading preview…", fetch, (), {}, lambda: epoch == self.preview_epoch, loaded)
 
     def change_root(self):
         try:
@@ -591,6 +643,7 @@ class OpenDialog(QtWidgets.QDialog):
         self.search_epoch += 1
         self.detail_epoch += 1
         self.snapshot_epoch += 1
+        self.clear_preview()
         self.debounce.stop()
         self.open_when_ready = False
         for job, _ in self.jobs:

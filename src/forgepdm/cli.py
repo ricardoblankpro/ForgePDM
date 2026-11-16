@@ -1,6 +1,7 @@
 """Local administration commands for bootstrapping the development database."""
 
 import argparse
+import json
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -37,12 +38,72 @@ def main() -> None:
         "recovery-report",
         help="read-only database/blob integrity and orphan diagnostics; stop uploads first",
     )
+    backup = commands.add_parser(
+        "backup-create", help="create and verify an online SQLite/blob backup"
+    )
+    backup.add_argument(
+        "--destination", type=Path, required=True, help="backup repository directory"
+    )
+    verify = commands.add_parser(
+        "backup-verify", help="verify a completed backup without changing it"
+    )
+    verify.add_argument("backup", type=Path)
+    restore = commands.add_parser(
+        "backup-restore", help="restore into a NEW directory, never live data"
+    )
+    restore.add_argument("backup", type=Path)
+    restore.add_argument("--destination", type=Path, required=True)
+    drill = commands.add_parser(
+        "backup-drill", help="restore and verify in disposable isolated storage"
+    )
+    drill.add_argument("backup", type=Path)
+    drill.add_argument(
+        "--latest", action="store_true", help="select newest completed backup in repository"
+    )
+    drill.add_argument("--scratch-root", type=Path, required=True)
+    status = commands.add_parser(
+        "backup-status", help="report missing, stale or failed backup/drill runs"
+    )
+    status.add_argument("backup_root", type=Path)
+    status.add_argument("--max-age-hours", type=float, default=3)
+    status.add_argument("--max-drill-age-hours", type=float, default=48)
     args = parser.parse_args()
     path = Path(os.environ.get("FORGEPDM_DATABASE", "var/forgepdm.sqlite3"))
     database = Database(path)
-    if args.command == "recovery-report":
-        import json
+    if args.command.startswith("backup-"):
+        from forgepdm.application import backups
+        from forgepdm.infrastructure.storage import FileStorage
 
+        storage = FileStorage(Path(os.environ.get("FORGEPDM_FILE_ROOT", "var/files")))
+        live = {"live_database": path, "live_storage": storage.root}
+        try:
+            if args.command == "backup-create":
+                with backups.recorded_operation(args.destination, "backup", **live) as report:
+                    report.update(backups.create_backup(database, storage, args.destination))
+            elif args.command == "backup-verify":
+                report = backups.verify_backup(args.backup)
+            elif args.command == "backup-restore":
+                report = backups.restore_backup(args.backup, args.destination, **live)
+            elif args.command == "backup-drill":
+                root = args.backup if args.latest else args.backup.parent
+                with backups.recorded_operation(root, "drill", **live) as report:
+                    bundle = backups.latest_backup(args.backup) if args.latest else args.backup
+                    report.update(backups.drill_backup(bundle, args.scratch_root, **live))
+            else:
+                report = backups.backup_status(
+                    args.backup_root,
+                    max_age_hours=args.max_age_hours,
+                    max_drill_age_hours=args.max_drill_age_hours,
+                )
+                print(json.dumps(report, indent=2))
+                if not report["ok"]:
+                    raise SystemExit(1)
+                return
+        except (ValueError, OSError, sqlite3.Error) as error:
+            parser.exit(1, f"Backup operation failed: {error}\n")
+        print(json.dumps(report, indent=2))
+        return
+    if args.command == "recovery-report":
         from forgepdm.application.recovery import recovery_report
         from forgepdm.infrastructure.storage import FileStorage
 

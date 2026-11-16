@@ -1,0 +1,29 @@
+{
+  "addon": "0.20.0",
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "checks": [
+    "camera, saved bytes, dirty state, visibility and subelement selection preserved",
+    "animation setting preserved",
+    "different starting views produce the same isometric pixels",
+    "preview is exactly 384 by 384",
+    "preview source hash is the exact saved file",
+    "perspective camera type and full camera state are restored",
+    "capturing another document preserves the active document and camera",
+    "newer unsaved geometry is never represented as a saved snapshot",
+    "unsaved linked-component geometry also prevents a misleading parent preview",
+    "native browser loads an authorized preview without opening CAD",
+    "native browser offers historical snapshots",
+    "changing snapshot refreshes preview while keeping Open available",
+    "clearing the browser removes protected image pixels"
+  ],
+  "status": "passed"
+}

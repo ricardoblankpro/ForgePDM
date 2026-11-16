@@ -1356,3 +1356,61 @@ uv run --project clients/freecad --extra dev python clients/freecad/tools/addon.
 
 Use the runtime harnesses documented in the validation guide when real FreeCAD
 verification is required. Never store passwords or bearer tokens in this file.
+
+
+## Pre-thumbnail handoff validation — 2026-11-16
+
+The following preserves the preceding backup/cleanup validation record.
+Current delivery and limitations remain in DEVELOPMENT_STATUS.md.
+
+
+Backup automation (2026-11-16) passes 290 backend tests, including 26 new backup
+checks, and 18 Node checks across five files. Lint/format, documentation links,
+addon manifest/archive links and backend wheel/sdist builds pass. Disposable API
+acceptance restores exact historical BOM/manifest/file pins, permissions and all
+table contents. Corruption, missing files, full-disk/interrupted copies, path/link
+hazards, overlapping commands and concurrent WAL writes have regression coverage.
+
+Backend 0.1.1 is installed locally and running on loopback; FreeCAD MCP confirms
+reachability from addon 0.19.1 on FreeCAD 1.1.4. The hourly backup and daily 03:15
+restore-drill user timers are enabled; both services completed successfully.
+Backups live under `var/backups/automated`, with separate scratch storage under
+`var/restore-drills`. Actual-data restoration verifies all 214 referenced blobs;
+all 39 source table contents and 217 physical file hashes remain unchanged.
+The three unreferenced source files are preserved. See
+[backup automation evidence](../validation/backup-automation-installed-2026-11-16.json)
+and [operations](../operations/backups.md). No CAD documents are saved by this workflow.
+
+Earlier repository cleanup evidence (2026-11-15):
+
+The CI Qt job explicitly installs Ubuntu EGL/GL/OpenGL libraries and sets
+`QT_QPA_PLATFORM=offscreen`. The initial hosted run lacked `libEGL.so.1` and failed
+during Qt import; backend/docs and addon jobs passed. The correction passes all
+19 Qt tests locally; hosted results are recorded in GitHub Actions.
+
+Repository cleanup passed 264 backend tests, 411 addon tests (four optional Qt
+modules skipped in the base environment), 19 real Qt checks and five Node test
+files. Source/tooling and addon lint/format, documentation targets/anchors/version
+checks, deterministic archive/self-contained docs, wheel/sdist and checksums pass.
+Chrome passes 26 browsing, seven materials and 13 shared-report checks. Relocated
+native harnesses pass 21 drawing/viewer/PDF checks plus the 28-check atomic seed.
+These use disposable fixtures; three open user documents and the session survive.
+
+The cleanup installed 0.19.1 into both profiles after consistent SQLite/blob/prior-addon
+backup under `var/backups/before-repository-cleanup-20261115T235426Z`. All 39 table
+contents and 213 stored-file hashes are preserved; integrity/FKs pass. Both
+profiles match the archive; the running FreeCAD package reports 0.19.1. Backend
+APIs/schema are unchanged and the production backend was not restarted. All
+schema/migration definitions compare unchanged with the preceding commit.
+
+See [cleanup evidence](../validation/README.md#repository-cleanup) and
+[earlier functional evidence](../validation/README.md#shared-bom-functional-baseline).
+The eight canonical user guides are packaged from source; no duplicate manual is
+maintained. Original prototype inputs were removed, old plans/logs archived,
+native harnesses consolidated, and artifact creation automated without publication.
+The explicit backend lint baseline checks E4/E7/E9/F/I; broader policy changes and
+large command/route refactors remain separately reviewed work.
+
+Native acceptance has used Linux FreeCAD 1.1.4 / Python 3.11.14 / Qt 6.8.3.
+Other runtime/platform combinations remain unverified. Never infer current open
+files, checkout/session state or runtime version from an older report.

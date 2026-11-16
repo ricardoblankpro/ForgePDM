@@ -79,6 +79,47 @@ engineering content. Treat their date/runtime as evidence boundaries. Do not
 update old reports to make them look current. Native/platform acceptance is not
 implied by pytest, schema checks or an archive build.
 
+### Shared thumbnail acceptance
+
+Start a new disposable server in one terminal:
+
+```sh
+uv run --locked python clients/freecad/tools/validation/thumbnail_server.py --case /tmp/forgepdm-thumbnails-case
+```
+
+In the running FreeCAD GUI, load each harness from the repository and run its
+`run(App, Gui, CASE_DIR)` function in this order:
+
+1. `freecad_atomic_checkin_integration.py`: seeds actual native upload/check-in
+   snapshots and tests durable recovery against the disposable server.
+2. `thumbnails_gui.py`: verifies isometric capture, orthographic/perspective
+   camera preservation, selection/visibility/dirty state, linked-component guards
+   and the authorized native browser. It preserves pre-existing documents.
+
+Use `importlib.util.spec_from_file_location` as described above. Both harnesses
+use `/tmp/forgepdm-thumbnails-case/connection.json`; do not replace its paths or
+credentials with production values. They write reports/screenshots inside the case.
+With that fixture populated, use the external Playwright driver from the browser
+setup above:
+
+```sh
+node tests/web/thumbnails-browser.mjs /tmp/forgepdm-thumbnails-case
+```
+
+This checks source-specific image display, upload selection, missing/stale image
+responses, logout cleanup, mobile sizing and CSP. Stop the disposable server when
+finished. The [validation index](../validation/README.md#shared-isometric-thumbnails)
+records installed-runtime evidence separately from unit/Qt results.
+
+### Backup and restore regression
+
+`tests/test_backups.py` covers online WAL snapshots, corruption, path safeguards,
+failed copies, isolated restoration and status/locking. `tests/test_thumbnails.py`
+also verifies thumbnail bytes/associations in a restored backup and compatibility
+with the prior schema. For scheduled drills against an installation, follow
+[operations](../operations/backups.md); a structural drill does not establish
+complete disaster-cutover or GUI/platform acceptance.
+
 ## Documentation and packaging checks
 
 `tools/check_docs.py` checks local Markdown targets/anchors, the current handoff

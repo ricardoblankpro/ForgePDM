@@ -1,0 +1,17 @@
+{
+  "checks": [
+    "overview displays an authorized 384px native isometric image",
+    "snapshot selector exposes historical uploads",
+    "selecting an older upload replaces the preview without changing revision",
+    "files tab displays the same selected-revision preview controls",
+    "a missing preview preserves file downloads",
+    "a delayed preview cannot reappear in another tab",
+    "preview reflows without horizontal page overflow",
+    "logout removes preview and source URLs",
+    "no browser errors",
+    "authorized blob images pass CSP"
+  ],
+  "pageErrors": [],
+  "csp": [],
+  "status": "passed"
+}

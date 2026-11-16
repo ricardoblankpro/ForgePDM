@@ -15,6 +15,8 @@ stored separately.
 - Direct, Indented and Flattened BOM reports in FreeCAD, web and TechDraw.
 - Customizable drawing BOM tables and explicit source-pinned PDF publication.
 - Web browsing, description editing and account/project administration.
+- Shared isometric previews tied to exact uploaded CAD snapshots.
+- Verified SQLite/CAD backups, isolated restore drills and Linux user scheduling.
 
 See [current delivery and limitations](DEVELOPMENT_STATUS.md). This is a local
 pilot: production hardening and Addon Index distribution are still pending.

@@ -29,6 +29,8 @@ architecture](../development/architecture.md) and [user guides](../README.md).
 | 021 | [ADR-021 — Frozen direct engineering BOM tables in TechDraw](ADR-021-drawing-bom-tables.md) |
 | 022 | [ADR-022 — Shared direct, indented and flattened engineering BOM reports](ADR-022-shared-bom-reports.md) |
 | 023 | [ADR-023 — Current documentation and independent addon artifacts](ADR-023-repository-documentation-and-distribution.md) |
+| 024 | [ADR-024 — Consistent online backups and isolated restore drills](ADR-024-backup-and-restore-automation.md) |
+| 025 | [ADR-025 — Immutable isometric previews of exact CAD snapshots](ADR-025-immutable-isometric-thumbnails.md) |
 
 ADR-013 supersedes the ordinary advanced-input UI from ADR-012; its APIs/data
 remain compatible. ADR-019 completes write fencing/revision recovery. ADR-022

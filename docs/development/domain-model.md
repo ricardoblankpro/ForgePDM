@@ -10,6 +10,7 @@ are presentation, never lookup keys for engineering identity.
 | ItemRevision | Exact item revision UUID, sequence/label, lifecycle, change note and attribution |
 | Dataset | Named/typed revision attachment; multiple native/derived uploads can exist on one revision |
 | File | Immutable hash/size/type/original-name/storage-key metadata; bytes may deduplicate independently |
+| FileThumbnail | Immutable source-file → image-file association; exact source hash and render intent |
 | BOMLine | Parent assembly revision → exact component revision, positive Decimal quantity and stored position |
 | Project | Independent organization/access context; reused Items can belong to multiple projects |
 | User | Enabled account, global role and project/library memberships |
@@ -23,8 +24,8 @@ are presentation, never lookup keys for engineering identity.
   raw material. S/M are part-kind Items in a shared library.
 - New items start Working at revision A with an eight-hour owned checkout. Labels
   follow A…Z, AA… from the sequence; configurable label policies are not implemented.
-- Edits need access, Working lifecycle and a live owned lease. Released content
-  is immutable. Working → Released → Obsolete is the lifecycle; changes after
+- Engineering edits need access, Working lifecycle and a live owned lease.
+  Released content is immutable. Working → Released → Obsolete is the lifecycle; changes after
   release use an explicit next Working revision with a required change note.
 - Check-in notes are optional and preserve the existing note when omitted.
   Native check-in atomically publishes exact bytes/evidence/manifest and releases
@@ -38,6 +39,12 @@ are presentation, never lookup keys for engineering identity.
   of BOM quantities. Upload/check-in never implicitly synchronizes the BOM.
 - Project membership is independent of BOM use and item ownership. Removing a
   membership does not delete an Item, revisions or released evidence.
+
+Optional thumbnail derivatives preserve the engineering source. Their separate
+[attachment/read contract](api.md#thumbnail-derivatives) permits completion after
+check-in/release without changing source bytes or reacquiring checkout. An older
+snapshot never borrows an image from a newer upload; missing images do not prevent
+retrieval. See the [user workflow](../user/freecad.md#snapshot-previews).
 
 ## Descriptions and evidence
 
