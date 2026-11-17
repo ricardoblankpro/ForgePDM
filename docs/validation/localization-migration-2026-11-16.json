@@ -1,0 +1,13 @@
+{
+  "scope": "Offline migration of verified schema-18 backup copy; original columns and all preexisting tables hashed before/after",
+  "schema": 19,
+  "preserved_tables": 39,
+  "preserved_items": 26,
+  "preserved_revisions": 30,
+  "preserved_file_records": 221,
+  "source_contexts": 59,
+  "unknown_languages_preserved": true,
+  "integrity": "ok",
+  "foreign_keys": "ok",
+  "old_backup_still_verified": true
+}

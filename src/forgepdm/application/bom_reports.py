@@ -41,11 +41,16 @@ def _quantity(value):
     return amount
 
 
-def bom_report(database, authorization, user, revision_id):
+def bom_report(database, authorization, user, revision_id, language=None):
     with database.connection() as connection, localcontext() as context:
         connection.execute("BEGIN")
         context.prec = 4096
-        return read_in(connection, database, authorization, user, revision_id)
+        report = read_in(connection, database, authorization, user, revision_id)
+        if language is not None:
+            from forgepdm.application.localization import localize_report
+
+            localize_report(connection, report, language)
+        return report
 
 
 def read_in(c, database, authorization, user, revision_id):

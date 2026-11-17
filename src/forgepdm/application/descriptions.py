@@ -140,6 +140,12 @@ class DescriptionService:
                     datetime.now(UTC).isoformat(),
                 ),
             )
+            from forgepdm.application.localization import sync_item
+
+            item_id = c.execute(
+                "SELECT item_id FROM item_revisions WHERE id=?", (revision_id,)
+            ).fetchone()[0]
+            sync_item(c, item_id, user.id)
             return self.read_in(c, revision_id)
 
 

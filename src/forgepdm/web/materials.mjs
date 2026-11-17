@@ -48,7 +48,7 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
       if(!host.isConnected)return;
       const series=item.number[0];
       const editable=revision.lifecycle_state==="working"&&checkout?.user_id===state.user?.id;
-      host.replaceChildren(el("h3",{},series==="P"?"Raw material":"Description"),el("p",{},current.description||"No description assigned."));
+      host.replaceChildren(el("h3",{},series==="P"?"Raw material":"Description"),el("p",{},revision.localized_description?.text||current.description||"No description assigned."),el("p",{},"Original source: "+current.description));
       if(current.physical_material)host.append(el("p",{},`Physical material: ${current.physical_material.name} · ${current.physical_material.density_kg_m3} kg/m³`));
       if(series==="P"){
         const mass=await api.request(`/revisions/${revision.id}/mass`);
@@ -96,11 +96,13 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
   function create(host,navigate) {
     host.classList.add("material-panel");
     const description=field("Material description");
-    host.replaceChildren(el("h3",{},"Register raw material"),description.node,button("Register material",async()=>{
+    const locale=el('select',{'aria-label':'Source language'},el('option',{value:'en'},'English'),el('option',{value:'pt-BR'},'Português (Brasil)'));
+    locale.value=api.language;
+    host.replaceChildren(el("h3",{},"Register raw material"),description.node,el('label',{},'Source language',locale),button("Register material",async()=>{
       const text=description.input.value.trim();
       if(!text){error(host,new Error("Enter a material description."));return;}
       try {
-        const item=await api.request("/items",{method:"POST",body:{kind:"part",number_series:"M",name:text.slice(0,200),description:text}});
+        const item=await api.request("/items",{method:"POST",body:{kind:"part",number_series:"M",name:text.slice(0,200),description:text,source_language:locale.value}});
         navigate(item);
       }catch(e){error(host,e);}
     }));

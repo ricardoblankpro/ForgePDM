@@ -10,6 +10,7 @@ from forgepdm import __version__
 from forgepdm.api.v1 import (
     descriptions,
     drawings,
+    localization,
     management,
     materials,
     physical_materials,
@@ -79,6 +80,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     app.include_router(tree_status.router)
     app.include_router(drawings.router)
     app.include_router(thumbnails.router)
+    app.include_router(localization.router)
     app.mount("/app", StaticFiles(directory=Path(__file__).parent / "web", html=True), name="web")
 
     @app.middleware("http")

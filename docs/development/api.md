@@ -73,3 +73,28 @@ permission and returns PNG bytes, source/hash identity headers and private/no-st
 policy. Missing or inaccessible images return 404. The image `files` row is not
 an independently downloadable dataset. See
 [ADR-025](../decisions/ADR-025-immutable-isometric-thumbnails.md).
+
+## Description localization
+
+`POST /items` accepts optional `source_language` (`en`, `pt-BR`); omitted metadata
+remains `und` for old clients. Legacy response fields and description concurrency
+tokens retain their existing meaning. `GET /languages` returns supported tags.
+
+`GET /items/{id}/localized-texts?revision_id=…&language=pt-BR` returns source contexts,
+source history, translation versions, `can_edit`, optimistic `token`, and optional
+`resolved` presentation (text, fallback, source version and translation ID).
+`GET /revisions/{id}/localized-texts` is a context convenience route.
+
+`POST /localized-texts/{source_id}` accepts `operation` (`draft`, `generate`,
+`approve`, `correct-language`), `expected_token`, optional `language`, `text` and
+`translation_id`. Approval targets a saved current draft. Conflicts return 409;
+invalid language/input 422; permissions 403. `POST /description-proposals` accepts
+`specification` plus `language` and returns draft text, warnings and provenance.
+No mutation is made by requesting a standalone proposal.
+
+`GET /items?language=pt-BR` adds `localized_name`/`localized_description` while
+retaining canonical fields. Search includes approved translations in any language.
+`GET /revisions/{id}/bom-report?language=pt-BR` adds language/provenance and presents
+translated row text; omitted language preserves the original report contract.
+See [review and snapshot semantics](../user/localization.md) and
+[ADR-026](../decisions/ADR-026-versioned-item-description-localization.md).

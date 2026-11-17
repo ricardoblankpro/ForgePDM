@@ -42,7 +42,8 @@ path; flattened notes follow the exact component revision across renumbering.
 Notes do not leak between views. Orphaned entries remain saved for recovery.
 
 The table is a native embedded SVG symbol with frozen report data. Reopen,
-recompute and retrieval do not fetch new server values. Direct/legacy tables use
+recompute and retrieval do not fetch new server values. Localized tables use format 3 and freeze language and translation provenance;
+see [description languages](localization.md). Direct/legacy tables use
 format 1; non-direct tables use format 2 so older addons refuse their update.
 Both remain viewable offline without ForgePDM. Active CAD edit mode, changed
 permissions/lease or stale report evidence rejects insertion/update.

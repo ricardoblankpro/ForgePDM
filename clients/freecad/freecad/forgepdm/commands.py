@@ -502,6 +502,21 @@ def _standard_library_access(client):
     return capability
 
 
+def _source_language(client):
+    if not hasattr(client, "description_proposal"):
+        return True
+    choice = ask_choice(
+        "Description language",
+        "Original language for the new item",
+        ["English (en)", "Português (pt-BR)"],
+        "English (en)",
+    )
+    if choice is None:
+        return False
+    client.creation_language = "pt-BR" if "pt-BR" in choice else "en"
+    return True
+
+
 def _register_standard(client, spec=None, mass_object=None):
     capability = yield from _standard_library_access(client)
     manual = None
@@ -530,6 +545,24 @@ def _register_standard(client, spec=None, mass_object=None):
         description = ask_text("Register Standard Part", "Description (optional)", "")
         if description is None:
             return None
+    if not _source_language(client):
+        return None
+    if spec is not None and hasattr(client, "description_proposal"):
+        try:
+            proposal = yield Request(
+                "Preparing purchasing designation…",
+                client.description_proposal,
+                (spec, client.creation_language),
+            )
+            name = ask_text(
+                "Review source description", "Review/edit generated designation", proposal["text"]
+            )
+            if name is None:
+                return None
+            description = name
+        except ForgePDMError as error:
+            if error.status not in (404, 422):
+                raise
     item = yield Request(
         "Registering standard part…",
         client.create_item,
@@ -809,6 +842,8 @@ class UploadCommand(Command):
         project = None
         new = metadata is None or not metadata.ItemId
         if new:
+            if not _source_language(client):
+                return
             kind = ask_choice(
                 "New ForgePDM Item",
                 "Item kind",
@@ -2331,6 +2366,8 @@ class RegisterRawMaterialCommand(Command):
         from . import physical_materials
 
         client = Session.require_client()
+        if not _source_language(client):
+            return
         yield from _standard_library_access(client)
         yield from _physical_capability(client)
         result = physical_materials.registration_dialog()

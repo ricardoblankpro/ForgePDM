@@ -73,6 +73,10 @@ class Library:
 
 @pytest.fixture
 def case(tmp_path, monkeypatch):
+    from freecad.forgepdm import settings
+
+    monkeypatch.setattr(settings, "description_language", lambda *args: None)
+    monkeypatch.setattr(settings, "save_description_language", lambda *args: None)
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     host = QtWidgets.QMainWindow()
     host.resize(1100, 800)

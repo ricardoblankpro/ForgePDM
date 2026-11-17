@@ -262,7 +262,7 @@ def read_table(obj):
     if not hasattr(obj, "PDMTableData"):
         return None
     data = json.loads(obj.PDMTableData)
-    if data.get("format") not in (1, 2):
+    if data.get("format") not in (1, 2, 3):
         raise ValueError("Unsupported saved drawing BOM format")
     definition = layout(data["layout"])
     if not isinstance(data.get("report"), dict) or not isinstance(data.get("notes"), dict):
@@ -306,7 +306,7 @@ def apply(document, page, target, report, definition, notes, x, y):
     svg = placement(page, target, report, definition, notes, x, y)
     definition = layout(definition)
     data = {
-        "format": 1 if definition["view"] == "direct" else 2,
+        "format": 3 if report.get("language") else 1 if definition["view"] == "direct" else 2,
         "report": report,
         "layout": definition,
         "notes": notes,

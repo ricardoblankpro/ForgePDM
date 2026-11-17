@@ -1414,3 +1414,19 @@ large command/route refactors remain separately reviewed work.
 Native acceptance has used Linux FreeCAD 1.1.4 / Python 3.11.14 / Qt 6.8.3.
 Other runtime/platform combinations remain unverified. Never infer current open
 files, checkout/session state or runtime version from an older report.
+
+
+## 2026-11-16 — Item description localization
+
+Delivered backend 0.2.0/schema 19 and addon 0.21.0. The central service separates
+original history and reviewed translations from engineering identity, retains
+legacy API/CAD contracts and migrates existing languages as unconfirmed. Web and
+FreeCAD support creation language, manual/rule draft review, approval and selected
+language presentation/search/BOMs; localized TechDraw format 3 freezes provenance.
+Migration rehearsal and installed comparison preserve 39 prior tables, 26 items,
+30 revisions and 221 file records/220 unique blob hashes. Native disposable
+acceptance preserves four original documents/session; schema-19 backup/drill and
+schema-18 verification pass. Canonical rules: [description languages](../user/localization.md),
+[API](../development/api.md#description-localization), [ADR-026](../decisions/ADR-026-versioned-item-description-localization.md).
+Dated [evidence](../validation/README.md#multilingual-item-descriptions) separates
+backend, Qt, Chrome and actual installed native scope.

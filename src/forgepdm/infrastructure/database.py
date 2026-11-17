@@ -1,6 +1,7 @@
 """SQLite database adapter and initial schema."""
 
 import sqlite3
+import unicodedata
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -398,6 +399,40 @@ CREATE TABLE file_thumbnails (
 );
 """,
     ),
+    (
+        19,
+        """
+ALTER TABLE items ADD COLUMN source_language TEXT NOT NULL DEFAULT 'und';
+CREATE TABLE localized_text_sources (
+ id TEXT PRIMARY KEY, item_id TEXT NOT NULL REFERENCES items(id),
+ revision_id TEXT REFERENCES item_revisions(id), field TEXT NOT NULL,
+ current_version INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX localized_source_item ON localized_text_sources(item_id,revision_id);
+CREATE UNIQUE INDEX localized_item_slot ON localized_text_sources(item_id,field) WHERE revision_id IS NULL;
+CREATE UNIQUE INDEX localized_revision_slot ON localized_text_sources(revision_id,field) WHERE revision_id IS NOT NULL;
+CREATE TABLE localized_source_versions (
+ source_id TEXT NOT NULL REFERENCES localized_text_sources(id), version INTEGER NOT NULL,
+ language TEXT NOT NULL, text TEXT NOT NULL, created_by TEXT REFERENCES users(id),
+ created_at TEXT NOT NULL, PRIMARY KEY(source_id,version)
+);
+CREATE TABLE localized_translation_versions (
+ id TEXT PRIMARY KEY, source_id TEXT NOT NULL REFERENCES localized_text_sources(id),
+ source_version INTEGER NOT NULL, language TEXT NOT NULL, text TEXT NOT NULL,
+ state TEXT NOT NULL CHECK(state IN ('draft','approved','needs_review')),
+ provenance_json TEXT NOT NULL, created_by TEXT NOT NULL REFERENCES users(id),
+ created_at TEXT NOT NULL, approved_by TEXT REFERENCES users(id), approved_at TEXT,
+ superseded_at TEXT,
+ FOREIGN KEY(source_id,source_version) REFERENCES localized_source_versions(source_id,version)
+);
+CREATE INDEX localized_translation_lookup ON localized_translation_versions(source_id,language,state);
+INSERT INTO localized_text_sources(id,item_id,field) SELECT id||':designation',id,'designation' FROM items;
+INSERT INTO localized_text_sources(id,item_id,field) SELECT id||':master_description',id,'master_description' FROM items;
+INSERT INTO localized_text_sources(id,item_id,revision_id,field) SELECT r.revision_id,i.id,r.revision_id,'description' FROM revision_descriptions r JOIN item_revisions v ON v.id=r.revision_id JOIN items i ON i.id=v.item_id;
+INSERT INTO localized_source_versions SELECT s.id,1,'und',CASE s.field WHEN 'designation' THEN i.name ELSE i.description END,i.created_by,i.created_at FROM localized_text_sources s JOIN items i ON i.id=s.item_id WHERE s.revision_id IS NULL;
+INSERT INTO localized_source_versions SELECT s.id,1,'und',r.description,NULL,datetime('now') FROM localized_text_sources s JOIN revision_descriptions r ON r.revision_id=s.revision_id;
+""",
+    ),
 )
 
 
@@ -410,6 +445,16 @@ class Database:
     def connect(self) -> sqlite3.Connection:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         connection = sqlite3.connect(self.path, timeout=10, isolation_level=None)
+        connection.create_function(
+            "forge_search",
+            1,
+            lambda text: "".join(
+                ch
+                for ch in unicodedata.normalize("NFKD", (text or "").casefold())
+                if not unicodedata.combining(ch)
+            ),
+            deterministic=True,
+        )
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute("PRAGMA journal_mode = WAL")

@@ -409,6 +409,9 @@ class RevisionService:
                 "INSERT INTO revision_descriptions SELECT ?,description,material_revision_id FROM revision_descriptions WHERE revision_id=?",
                 (revision_id, previous_id),
             )
+            from forgepdm.application.localization import carry_revision
+
+            carry_revision(connection, item_id, previous_id, revision_id, user.id)
             connection.execute(
                 "INSERT INTO revision_material_data SELECT ?,specification_json FROM revision_material_data WHERE revision_id=?",
                 (revision_id, previous_id),

@@ -31,7 +31,7 @@ Use an isolated uv environment outside FreeCAD and invoke pytest through that
 Python, so the added binding is visible:
 
 ```sh
-uv run --project clients/freecad --extra dev --locked --with PySide6==6.8.3 python -m pytest clients/freecad/tests/test_bom_dialog.py clients/freecad/tests/test_drawing_bom_ui.py clients/freecad/tests/test_browser_panel.py clients/freecad/tests/test_open_dialog.py -q
+uv run --project clients/freecad --extra dev --locked --with PySide6==6.8.3 python -m pytest clients/freecad/tests/test_bom_dialog.py clients/freecad/tests/test_drawing_bom_ui.py clients/freecad/tests/test_browser_panel.py clients/freecad/tests/test_open_dialog.py clients/freecad/tests/test_localization_ui.py -q
 ```
 
 The base suite skips those modules without PySide6. Do not install the test
@@ -140,3 +140,18 @@ docs and rewrites their links for the installed layout. Packaging tests verify
 self-contained documentation, deterministic output, isolated imports and rejected
 invalid manifests/resources. Public release adds the separate metadata gates in
 [release preparation](releasing.md).
+
+### Multilingual descriptions
+
+`tests/test_localization.py` covers source versions, draft/approval/invalidation,
+released-item permissions, unknown legacy languages, Unicode search/pagination,
+independent material snapshots, proposal compatibility and stable localized BOM
+tokens. The optional real Qt suite also includes `test_localization_ui.py`.
+
+Against a new `tests/web/serve.py` fixture, run
+`node tests/web/localization-browser.mjs CASE_DIR` with the external Playwright
+driver described above. The script creates only disposable items/translations.
+`localization_gui.run(App, Gui, CASE_DIR)` in the native validation folder checks
+the installed HTTP client and a real saved/reopened format-3 TechDraw table. It
+preserves pre-existing documents and the production session. These fixtures do
+not classify real legacy descriptions or translate existing engineering data.

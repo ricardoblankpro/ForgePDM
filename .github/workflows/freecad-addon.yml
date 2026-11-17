@@ -49,4 +49,4 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.11"
-      - run: uv run --project clients/freecad --extra dev --locked --with PySide6==6.8.3 python -m pytest clients/freecad/tests/test_bom_dialog.py clients/freecad/tests/test_drawing_bom_ui.py clients/freecad/tests/test_browser_panel.py clients/freecad/tests/test_open_dialog.py -q
+      - run: uv run --project clients/freecad --extra dev --locked --with PySide6==6.8.3 python -m pytest clients/freecad/tests/test_bom_dialog.py clients/freecad/tests/test_drawing_bom_ui.py clients/freecad/tests/test_browser_panel.py clients/freecad/tests/test_open_dialog.py clients/freecad/tests/test_localization_ui.py -q

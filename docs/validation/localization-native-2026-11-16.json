@@ -1,0 +1,14 @@
+{
+  "addon": "0.21.0",
+  "freecad": "1.1.4",
+  "scope": "Installed native HTTP client and actual TechDraw with disposable backend/CAD fixture",
+  "checks": [
+    "Installed HTTP client creates Portuguese source and approves searchable English translation",
+    "Native original-description token remains unchanged",
+    "Installed BOM client requests selected language and receives exact-pin provenance",
+    "Real TechDraw table embeds format-3 language and review provenance",
+    "Saved FCStd table survives reopen and language change without text refresh",
+    "Existing documents, file hashes, dirty states, active document and authenticated session preserved"
+  ],
+  "preexisting_documents": 4
+}

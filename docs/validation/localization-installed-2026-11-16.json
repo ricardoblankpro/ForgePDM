@@ -1,0 +1,31 @@
+{
+  "backend": "0.2.0",
+  "addon": "0.21.0",
+  "schema": 19,
+  "preserved_original_tables": 39,
+  "verified_file_records": 221,
+  "verified_unique_blobs": 220,
+  "legacy_languages": "und",
+  "production_translations_created": 0,
+  "schema19_backup_and_drill_verified": true,
+  "schema18_backup_verified": true,
+  "addon_profiles": [
+    "default",
+    "v1-1"
+  ],
+  "native_runtime": "FreeCAD 1.1.4; four open documents and session preserved",
+  "scope": "Read-only installed database/blob preservation comparison to pre-deployment backup; new metadata only",
+  "addon_archive_sha256": "65d30b421ced56e1333db9e5092432c33745d4ba1a0e9f4909acfffcfa6ce28a",
+  "installed_archive_contents_verified": true,
+  "checks": {
+    "backend_tests": 312,
+    "addon_tests": 426,
+    "addon_optional_qt_modules_skipped": 5,
+    "real_qt_checks": 23,
+    "node_checks": 21,
+    "chrome_general_checks": 26,
+    "chrome_localization_checks": 11,
+    "native_checks": 6,
+    "docs_lint_packaging": "pass"
+  }
+}

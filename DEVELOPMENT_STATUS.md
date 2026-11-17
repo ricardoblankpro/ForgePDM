@@ -6,9 +6,9 @@ This is the current handoff. Start with [README](README.md) and
 
 ## Delivery
 
-- Addon: **0.20.1**
-- Backend package: **0.1.2**
-- Database schema: **18**
+- Addon: **0.21.0**
+- Backend package: **0.2.0**
+- Database schema: **19**
 
 Versions are independent. The backend/server is AGPL-3.0-or-later and the
 Workbench LGPL-2.1-or-later; approved licensing/contact boundaries remain unchanged.
@@ -20,13 +20,16 @@ An installable Addon Manager distribution source/publication is still separate.
   project/shared-library permissions, permanent P/A/S/M codes and audit history.
 - Exact revisions and managed FreeCAD dependency manifests/workspaces; exclusive
   fenced checkout/check-in, lifecycle and recoverable native revision creation.
+- Reviewed en/pt-BR description localization with source history, original fallback,
+  Unicode search, local fastener proposals and separate translation approval. Legacy
+  originals remain `und` until confirmed. See [languages](docs/user/localization.md).
 - Shared S/M catalog, Fasteners association, descriptions, physical material
   snapshots, P/S mass evidence and revision-pinned assembly mass.
 - Persistent FreeCAD browser with Recent/Favorites/My Checkouts; web browsing,
   description controls and account/project administration.
 - Direct/Indented/Flattened BOM reports shared across clients. CAD-to-BOM changes
   remain explicit reviewed direct replacements; quantities/exact pins are retained.
-- Frozen customizable TechDraw BOMs, format-1 direct/format-2 non-direct tables,
+- Frozen customizable TechDraw BOMs, format-1 direct/format-2 non-direct/format-3 localized tables,
   and explicit PDF publication pinned to exact uploaded source bytes.
 - Shared 384px isometric previews for new native uploads/check-ins. Each image is
   an immutable derivative of one exact source file; selected-snapshot images appear
@@ -40,28 +43,27 @@ An installable Addon Manager distribution source/publication is still separate.
 
 ## Validation and local installation
 
-2026-11-16: 301 backend tests, 422 addon tests (four optional Qt modules skipped in
-base), 21 real Qt checks and 21 Node checks pass. Lint/format, canonical docs,
-manifest/archive links and backend wheel/sdist checks pass. Installed FreeCAD
-acceptance passes 28 atomic/recovery and 13 thumbnail/render/browser checks;
-real Chrome passes 10 preview and 26 general browsing checks. All mutation fixtures
-are disposable. Camera restoration also covers perspective and render failure.
+2026-11-16 localization: 312 backend tests, 426 addon tests (five optional Qt
+modules skipped), 23 real Qt checks, and 21 Node checks pass. Real Chrome passes
+26 general browsing and 11 localization checks. Installed native acceptance
+checks Portuguese creation/English approval, search, unchanged CAD-description
+tokens, localized BOM provenance and real format-3 TechDraw save/reopen. Original
+four document paths/hashes/dirty states and the authenticated session are retained.
 
-Addon 0.20.1 is installed in both local profiles and loaded in FreeCAD 1.1.4;
-backend 0.1.2 runs on loopback with schema 18. A verified schema-17 backup and prior
-addons are retained under `var/backups/before-thumbnails`. The migration preserves
-all prior records (only adds schema row 18) and all 217 physical file hashes;
-existing CAD receives no automatic preview. Current scheduled backup/drill runs
-pass at schema 18, and schema-17 archives still verify. A separate restored
-fixture verifies 16 thumbnail associations and all 32 source/image file records.
-The 0.20.1 patch resolves retained pre-update native command instances before
-workflow execution. A read-only actual-button probe verifies current Upload and
-Check In routing and preserves four open documents/session. Existing missing
-previews are not backfilled. See
-[handler-fix evidence](docs/validation/thumbnail-checkin-handler-2026-11-16.json).
-See [installed evidence](docs/validation/thumbnails-installed-2026-11-16.json),
-[native evidence](docs/validation/thumbnails-native-2026-11-16.json) and the
-[validation index](docs/validation/README.md).
+Addon 0.21.0 is installed in both local profiles and loaded in FreeCAD 1.1.4;
+backend 0.2.0 runs on loopback with schema 19. A schema-18 backup is retained under
+`var/backups/before-localization`, with an additional immediate deployment backup
+and prior addon profiles. Migration rehearsal and installed comparison preserve
+all 39 original tables/columns, 26 items, 30 revisions, 221 file records and 220
+unique blob hashes. Only language metadata/source history and schema version are
+added; all real legacy languages remain `und`. No production translations were
+created by acceptance. Schema-19 backup and isolated restore drill pass; prior
+schema-18 archives still verify. See [migration evidence](docs/validation/localization-migration-2026-11-16.json),
+[installed evidence](docs/validation/localization-installed-2026-11-16.json),
+[native evidence](docs/validation/localization-native-2026-11-16.json),
+[Chrome evidence](docs/validation/localization-web-2026-11-16.json) and
+[ADR-026](docs/decisions/ADR-026-versioned-item-description-localization.md).
+Earlier thumbnail/recovery evidence remains in the [validation index](docs/validation/README.md).
 
 Backups use `var/backups/automated`; scratch restores use `var/restore-drills`.
 The hourly backup and daily 03:15 drill user timers remain enabled. See
@@ -70,6 +72,11 @@ including data preservation and earlier Qt/browser counts, remains in dated
 [history](docs/history/development-log.md) and the validation index.
 
 ## Current limits and next priorities
+
+- Localization covers descriptions, with en/pt-BR shipped choices. No interface
+  translation, automatic language detection, bulk legacy classification, external
+  provider or source promotion is included. Self-approval is permitted; larger
+  catalogs may need indexed search. Refresh open presentations after approval.
 
 - Backup storage is on the same local drive. Off-device copies, retention, alerts,
   workstation/unsaved-edit backup and full disaster cutover remain open. No backup

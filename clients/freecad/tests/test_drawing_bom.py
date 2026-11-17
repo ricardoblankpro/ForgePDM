@@ -154,3 +154,32 @@ def test_flat_drawing_rejects_unresolved_structure_and_view_mismatch():
         bom.render(value, {**bom.DEFAULT, "view": "flattened"}, {})
     with pytest.raises(ValueError, match="do not match"):
         bom.render(value, bom.DEFAULT, {})
+
+
+@pytest.mark.parametrize("version", [1, 2, 3])
+def test_saved_drawing_language_is_frozen_and_legacy_formats_remain_readable(version):
+    import json
+    from types import SimpleNamespace
+
+    value = report()
+    if version == 3:
+        value.update(language="pt-BR", token="frozen")
+        value["lines"][0].update(
+            description="Chapa de aço",
+            localization={"description": {"translation_id": "approved-id", "source_version": 2}},
+        )
+    obj = SimpleNamespace(
+        PDMTableData=json.dumps(
+            {"format": version, "layout": bom.DEFAULT, "report": value, "notes": {}}
+        )
+    )
+    before = obj.PDMTableData
+    restored = bom.read_table(obj)
+    svg, _, _ = bom.render(restored["report"], restored["layout"], restored["notes"])
+    assert obj.PDMTableData == before
+    if version == 3:
+        assert restored["report"]["language"] == "pt-BR" and "Chapa de aço" in svg
+        assert (
+            restored["report"]["lines"][0]["localization"]["description"]["translation_id"]
+            == "approved-id"
+        )

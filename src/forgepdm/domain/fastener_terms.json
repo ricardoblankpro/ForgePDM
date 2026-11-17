@@ -1,0 +1,401 @@
+{
+  "version": 1,
+  "norms": {
+    "ISO4014": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "ISO4015": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "ISO4016": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "ISO4017": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "ISO4018": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "ISO8676": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "ISO8765": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "DIN931": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "DIN933": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "DIN961": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "DIN571": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "ASMEB18.2.1.6": [
+      "SCREW",
+      "HEX HEAD"
+    ],
+    "ISO4162": [
+      "SCREW",
+      "HEX FLANGE HEAD"
+    ],
+    "ISO15071": [
+      "SCREW",
+      "HEX FLANGE HEAD"
+    ],
+    "ISO15072": [
+      "SCREW",
+      "HEX FLANGE HEAD"
+    ],
+    "EN1662": [
+      "SCREW",
+      "HEX FLANGE HEAD"
+    ],
+    "EN1665": [
+      "SCREW",
+      "HEX FLANGE HEAD"
+    ],
+    "ASMEB18.2.1.8": [
+      "SCREW",
+      "HEX FLANGE HEAD"
+    ],
+    "ISO4762": [
+      "SCREW",
+      "SOCKET HEAD"
+    ],
+    "ISO14579": [
+      "SCREW",
+      "SOCKET HEAD"
+    ],
+    "DIN6912": [
+      "SCREW",
+      "SOCKET HEAD"
+    ],
+    "DIN7984": [
+      "SCREW",
+      "SOCKET HEAD"
+    ],
+    "ASMEB18.3.1A": [
+      "SCREW",
+      "SOCKET HEAD"
+    ],
+    "ASMEB18.3.1G": [
+      "SCREW",
+      "SOCKET HEAD"
+    ],
+    "ISO7380-1": [
+      "SCREW",
+      "BUTTON HEAD"
+    ],
+    "ISO7380-2": [
+      "SCREW",
+      "BUTTON HEAD"
+    ],
+    "ISO7380": [
+      "SCREW",
+      "BUTTON HEAD"
+    ],
+    "ASMEB18.3.3A": [
+      "SCREW",
+      "BUTTON HEAD"
+    ],
+    "ASMEB18.3.3B": [
+      "SCREW",
+      "BUTTON HEAD"
+    ],
+    "ISO10642": [
+      "SCREW",
+      "COUNTERSUNK HEAD"
+    ],
+    "ISO14581": [
+      "SCREW",
+      "COUNTERSUNK HEAD"
+    ],
+    "ISO14582": [
+      "SCREW",
+      "COUNTERSUNK HEAD"
+    ],
+    "ISO2009": [
+      "SCREW",
+      "COUNTERSUNK HEAD"
+    ],
+    "ISO7046": [
+      "SCREW",
+      "COUNTERSUNK HEAD"
+    ],
+    "DIN7991": [
+      "SCREW",
+      "COUNTERSUNK HEAD"
+    ],
+    "ASMEB18.3.2": [
+      "SCREW",
+      "COUNTERSUNK HEAD"
+    ],
+    "ISO1580": [
+      "SCREW",
+      "PAN HEAD"
+    ],
+    "ISO7045": [
+      "SCREW",
+      "PAN HEAD"
+    ],
+    "ISO14583": [
+      "SCREW",
+      "PAN HEAD"
+    ],
+    "DIN7985": [
+      "SCREW",
+      "PAN HEAD"
+    ],
+    "ISO1207": [
+      "SCREW",
+      "CHEESE HEAD"
+    ],
+    "ISO14580": [
+      "SCREW",
+      "CHEESE HEAD"
+    ],
+    "DIN84": [
+      "SCREW",
+      "CHEESE HEAD"
+    ],
+    "ISO2010": [
+      "SCREW",
+      "RAISED COUNTERSUNK HEAD"
+    ],
+    "ISO7047": [
+      "SCREW",
+      "RAISED COUNTERSUNK HEAD"
+    ],
+    "ISO14584": [
+      "SCREW",
+      "RAISED COUNTERSUNK HEAD"
+    ],
+    "ISO4026": [
+      "SCREW",
+      "SET"
+    ],
+    "ISO4027": [
+      "SCREW",
+      "SET"
+    ],
+    "ISO4028": [
+      "SCREW",
+      "SET"
+    ],
+    "ISO4029": [
+      "SCREW",
+      "SET"
+    ],
+    "ISO4766": [
+      "SCREW",
+      "SET"
+    ],
+    "DIN913": [
+      "SCREW",
+      "SET"
+    ],
+    "DIN914": [
+      "SCREW",
+      "SET"
+    ],
+    "DIN915": [
+      "SCREW",
+      "SET"
+    ],
+    "DIN916": [
+      "SCREW",
+      "SET"
+    ],
+    "ISO7379": [
+      "SCREW",
+      "SHOULDER"
+    ],
+    "ASMEB18.3.4": [
+      "SCREW",
+      "SHOULDER"
+    ],
+    "ISO4032": [
+      "NUT",
+      "HEX"
+    ],
+    "ISO8673": [
+      "NUT",
+      "HEX"
+    ],
+    "DIN934": [
+      "NUT",
+      "HEX"
+    ],
+    "ISO4033": [
+      "NUT",
+      "HEX HIGH"
+    ],
+    "ISO8674": [
+      "NUT",
+      "HEX HIGH"
+    ],
+    "ISO4035": [
+      "NUT",
+      "HEX THIN"
+    ],
+    "ISO4036": [
+      "NUT",
+      "HEX THIN"
+    ],
+    "ISO8675": [
+      "NUT",
+      "HEX THIN"
+    ],
+    "DIN439": [
+      "NUT",
+      "HEX THIN"
+    ],
+    "ISO4161": [
+      "NUT",
+      "HEX FLANGE"
+    ],
+    "DIN6923": [
+      "NUT",
+      "HEX FLANGE"
+    ],
+    "ISO7040": [
+      "NUT",
+      "HEX LOCK"
+    ],
+    "ISO7042": [
+      "NUT",
+      "HEX LOCK"
+    ],
+    "ISO10511": [
+      "NUT",
+      "HEX LOCK"
+    ],
+    "DIN985": [
+      "NUT",
+      "HEX LOCK"
+    ],
+    "DIN982": [
+      "NUT",
+      "HEX LOCK"
+    ],
+    "DIN980": [
+      "NUT",
+      "HEX LOCK"
+    ],
+    "DIN1587": [
+      "NUT",
+      "CAP"
+    ],
+    "DIN557": [
+      "NUT",
+      "SQUARE"
+    ],
+    "DIN562": [
+      "NUT",
+      "SQUARE"
+    ],
+    "DIN315": [
+      "NUT",
+      "WING"
+    ],
+    "ISO7089": [
+      "WASHER",
+      "FLAT"
+    ],
+    "ISO7090": [
+      "WASHER",
+      "FLAT"
+    ],
+    "ISO7091": [
+      "WASHER",
+      "FLAT"
+    ],
+    "ISO7092": [
+      "WASHER",
+      "FLAT"
+    ],
+    "ISO7093-1": [
+      "WASHER",
+      "FLAT"
+    ],
+    "ISO7093-2": [
+      "WASHER",
+      "FLAT"
+    ],
+    "ISO7094": [
+      "WASHER",
+      "FLAT"
+    ],
+    "DIN125": [
+      "WASHER",
+      "FLAT"
+    ],
+    "DIN126": [
+      "WASHER",
+      "FLAT"
+    ],
+    "DIN433": [
+      "WASHER",
+      "FLAT"
+    ],
+    "DIN9021": [
+      "WASHER",
+      "FLAT"
+    ],
+    "DIN7349": [
+      "WASHER",
+      "FLAT"
+    ],
+    "DIN127": [
+      "WASHER",
+      "SPRING"
+    ],
+    "DIN128": [
+      "WASHER",
+      "SPRING"
+    ],
+    "DIN137": [
+      "WASHER",
+      "SPRING"
+    ],
+    "DIN6797": [
+      "WASHER",
+      "TOOTHED"
+    ],
+    "DIN6798": [
+      "WASHER",
+      "TOOTHED"
+    ],
+    "DIN6796": [
+      "WASHER",
+      "BELLEVILLE"
+    ],
+    "DIN975": [
+      "THREADED ROD",
+      "FULL THREAD"
+    ],
+    "DIN976": [
+      "THREADED ROD",
+      "FULL THREAD"
+    ],
+    "DIN976-1": [
+      "THREADED ROD",
+      "FULL THREAD"
+    ]
+  }
+}

@@ -39,3 +39,11 @@ def workspace_root(server_url=None, actor_id=None):
 
 def save_workspace(root, server_url=None, actor_id=None):
     _workspace_parameters(server_url, actor_id).SetString("WorkspaceRoot", str(root))
+
+
+def description_language(server, actor):
+    return _workspace_parameters(server, actor).GetString("DescriptionLanguage", "") or None
+
+
+def save_description_language(server, actor, language):
+    _workspace_parameters(server, actor).SetString("DescriptionLanguage", language or "")

@@ -90,7 +90,17 @@ def get_file_storage(request: Request) -> FileStorage:
     return request.app.state.file_storage
 
 
+def optional_language(language: str | None = None):
+    from forgepdm.application.localization import language as validate
+
+    try:
+        return validate(language) if language is not None else None
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
 class CreateItemRequest(BaseModel):
+    source_language: str | None = None
     number_series: Literal["P", "A", "S", "M"] | None = None
     standard_specification: dict | None = None
     physical_material: dict | None = None
@@ -237,6 +247,7 @@ def create_item(
             user, project_id, number_series=payload.number_series
         )
         item = service.create_item(
+            source_language=payload.source_language,
             kind=payload.kind,
             number_series=payload.number_series,
             standard_specification=payload.standard_specification,
@@ -321,6 +332,7 @@ def standard_matches(
 
 @router.get("/items")
 def search_items(
+    language: str | None = Depends(optional_language),
     number_series: Literal["P", "A", "S", "M"] | None = None,
     q: str = Query(default="", max_length=200),
     project_id: UUID | None = None,
@@ -331,6 +343,7 @@ def search_items(
 ):
     return catalog.search_items(
         user,
+        language=language,
         query=q,
         number_series=number_series,
         project_id=str(project_id) if project_id else None,
@@ -640,7 +653,12 @@ def _revision_creation_response(revision, checkout):
 
 
 @router.get("/revisions/{revision_id}/bom-report")
-def engineering_bom_report(revision_id: UUID, request: Request, user: User = Depends(current_user)):
+def engineering_bom_report(
+    revision_id: UUID,
+    request: Request,
+    language: str | None = Depends(optional_language),
+    user: User = Depends(current_user),
+):
     from forgepdm.application.bom_reports import bom_report
 
     try:
@@ -649,6 +667,7 @@ def engineering_bom_report(revision_id: UUID, request: Request, user: User = Dep
             request.app.state.authorization_service,
             user,
             str(revision_id),
+            language=language,
         )
     except NotFound as error:
         raise HTTPException(404, str(error)) from error

@@ -9,6 +9,7 @@ is the single current handoff for delivery versions, recent verification and lim
 |---|---|
 | [Install the FreeCAD addon](user/install.md) | Requirements, package layout and connection |
 | [FreeCAD workflow](user/freecad.md) | Browser, workspaces, checkout, check-in, release, revisions and tree labels |
+| [Description languages](user/localization.md) | Source language, translations, approval and frozen documents |
 | [Components](user/components.md) | Shared library, purchased models and Fasteners association |
 | [Materials and component mass](user/materials.md) | P/A/M descriptions, physical materials and S mass sources |
 | [BOMs and assembly mass](user/bom.md) | Direct/Indented/Flattened views, quantities and reviewed CAD synchronization |

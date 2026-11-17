@@ -190,6 +190,8 @@ class ForgePDMClient:
 
     def search_items(self, query="", limit=50, offset=0, number_series=None):
         params = {"q": query, "limit": limit, "offset": offset}
+        if getattr(self, "description_language", None):
+            params["language"] = self.description_language
         if number_series:
             params["number_series"] = number_series
         query = urllib.parse.urlencode(params)
@@ -445,8 +447,16 @@ class ForgePDMClient:
         number_series=None,
         standard_specification=None,
         physical_material=None,
+        source_language=None,
     ):
         payload = {"kind": kind, "name": name, "description": description}
+        locale = (
+            source_language
+            or getattr(self, "creation_language", None)
+            or getattr(self, "description_language", None)
+        )
+        if locale:
+            payload["source_language"] = locale
         if physical_material is not None:
             payload["physical_material"] = physical_material
         if number_series:
@@ -457,12 +467,25 @@ class ForgePDMClient:
             payload["project_id"] = project_id
         return self._json_request("POST", "/api/v1/items", payload)
 
+    def description_proposal(self, specification, language):
+        return self._json_request(
+            "POST",
+            "/api/v1/description-proposals",
+            {"specification": specification, "language": language},
+        )
+
     def get_item(self, item_id):
         return self._json_request("GET", "/api/v1/items/" + self._quote(item_id))
 
     def bom_report(self, revision_id):
         return self._json_request(
-            "GET", "/api/v1/revisions/{}/bom-report".format(self._quote(revision_id))
+            "GET",
+            "/api/v1/revisions/{}/bom-report".format(self._quote(revision_id))
+            + (
+                "?language=" + self._quote(self.description_language)
+                if getattr(self, "description_language", None)
+                else ""
+            ),
         )
 
     def drawing_bom(self, revision_id):

@@ -72,7 +72,32 @@ class OpenDialog(QtWidgets.QDialog):
         sources.addWidget(self.favorite)
         sources.addWidget(self.clear_recent)
         sources.addWidget(self.refresh)
+        self.description_language = QtWidgets.QComboBox()
+        for label, value in [
+            ("Original descriptions", None),
+            ("English descriptions", "en"),
+            ("Descrições em português", "pt-BR"),
+        ]:
+            self.description_language.addItem(label, value)
+        if actor_id:
+            from . import settings
+
+            try:
+                preferred = settings.description_language(client.base_url, actor_id)
+                self.description_language.setCurrentIndex(
+                    max(0, self.description_language.findData(preferred))
+                )
+                client.description_language = preferred
+            except (AttributeError, RuntimeError):
+                pass
+        self.description_language.currentIndexChanged.connect(self.language_changed)
+        locale_row = QtWidgets.QHBoxLayout()
+        locale_row.addWidget(self.description_language)
+        translations = QtWidgets.QPushButton("Translations…")
+        translations.clicked.connect(self.edit_translations)
+        locale_row.addWidget(translations)
         layout.addLayout(sources)
+        layout.addLayout(locale_row)
         search_row = QtWidgets.QHBoxLayout()
         self.query = QtWidgets.QLineEdit()
         self.query.setObjectName("forgepdm_open_search")
@@ -189,6 +214,21 @@ class OpenDialog(QtWidgets.QDialog):
         self.query.setFocus()
         if on_open is None:
             QtCore.QTimer.singleShot(0, self.search)
+
+    def language_changed(self, *_):
+        self.client.description_language = self.description_language.currentData()
+        if self.actor_id:
+            from . import settings
+
+            settings.save_description_language(
+                self.client.base_url, self.actor_id, self.client.description_language
+            )
+        self.changed()
+
+    def edit_translations(self):
+        from .localization_ui import edit
+
+        edit(self, self)
 
     def eventFilter(self, watched, event):
         if (
@@ -331,7 +371,10 @@ class OpenDialog(QtWidgets.QDialog):
                 self.results,
                 [
                     record["number"],
-                    record.get("revision_description") or record.get("description", ""),
+                    (record.get("localized_description") or {}).get("text")
+                    or (record.get("localized_name") or {}).get("text")
+                    or record.get("revision_description")
+                    or record.get("description", ""),
                     record["revision_label"],
                     record["lifecycle_state"]
                     + (" · expired checkout" if record.get("checkout_status") == "expired" else ""),
@@ -640,6 +683,11 @@ class OpenDialog(QtWidgets.QDialog):
                 self.status.setText(str(error))
 
     def pause(self, clear=False):
+        if hasattr(self, "_localization_dialog"):
+            try:
+                self._localization_dialog.close()
+            except RuntimeError:
+                pass
         self.search_epoch += 1
         self.detail_epoch += 1
         self.snapshot_epoch += 1

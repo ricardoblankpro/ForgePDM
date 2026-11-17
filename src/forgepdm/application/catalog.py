@@ -55,11 +55,25 @@ class CatalogService:
         return result
 
     def search_items(
-        self, user: User, *, query="", project_id=None, number_series=None, limit=50, offset=0
+        self,
+        user: User,
+        *,
+        query="",
+        project_id=None,
+        number_series=None,
+        limit=50,
+        offset=0,
+        language=None,
     ):
         self._bounds(limit, offset)
         if number_series not in (None, "P", "A", "S", "M"):
             raise ValueError("invalid numbering series")
+        if language is not None:
+            from forgepdm.application.localization import localized_catalog
+
+            return localized_catalog(
+                self, user, query, project_id, number_series, limit, offset, language
+            )
         query = query.strip()
         if len(query) > 200:
             raise ValueError("search text must contain at most 200 characters")
@@ -78,9 +92,10 @@ class CatalogService:
                 "(SELECT 1 FROM project_memberships member WHERE member.project_id=p.id "
                 "AND member.user_id=?)))) "
                 "AND (? IS NULL OR i.number_series=?) "
-                "AND (?='' OR instr(lower(i.number),lower(?))>0 "
-                "OR instr(lower(i.name),lower(?))>0 OR instr(lower(i.description),lower(?))>0 "
-                "OR instr(lower(COALESCE(rd.description,'')),lower(?))>0) "
+                "AND (?='' OR instr(forge_search(i.number),forge_search(?))>0 "
+                "OR instr(forge_search(i.name),forge_search(?))>0 OR instr(forge_search(i.description),forge_search(?))>0 "
+                "OR instr(forge_search(COALESCE(rd.description,'')),forge_search(?))>0 "
+                "OR EXISTS (SELECT 1 FROM localized_translation_versions lt JOIN localized_text_sources ls ON ls.id=lt.source_id WHERE ls.item_id=i.id AND (ls.revision_id IS NULL OR ls.revision_id=r.id) AND lt.source_version=ls.current_version AND lt.state='approved' AND lt.superseded_at IS NULL AND instr(forge_search(lt.text),forge_search(?))>0)) "
                 "ORDER BY i.number, i.id LIMIT ? OFFSET ?",
                 (
                     user.role,
@@ -91,6 +106,7 @@ class CatalogService:
                     user.id,
                     number_series,
                     number_series,
+                    query,
                     query,
                     query,
                     query,

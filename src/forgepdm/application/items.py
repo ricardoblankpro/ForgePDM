@@ -34,7 +34,11 @@ class ItemService:
         number_series: str | None = None,
         standard_specification: dict | None = None,
         physical_material: dict | None = None,
+        source_language: str | None = None,
     ) -> Item:
+        from forgepdm.application.localization import language, sync_item
+
+        source_language = language(source_language, unknown=True)
         series = number_series if number_series is not None else kind.number_prefix
         if (kind.value, series) not in {
             ("part", "P"),
@@ -130,6 +134,9 @@ class ItemService:
                     "INSERT INTO material_physical_links VALUES (?,?)",
                     (revision_id, encode_physical(physical_material)),
                 )
+            connection.execute(
+                "UPDATE items SET source_language=? WHERE id=?", (source_language, item_id)
+            )
             if series == "M":
                 connection.execute(
                     "INSERT INTO revision_descriptions(revision_id,description) VALUES (?,?)",
@@ -140,6 +147,7 @@ class ItemService:
                 "VALUES (?, ?, ?, ?, ?)",
                 (checkout_id, revision_id, created_by, now, checkout_expires_at),
             )
+            sync_item(connection, item_id, created_by, source_language)
             connection.execute(
                 "INSERT INTO audit_events(id, actor_id, event_type, entity_type, entity_id, occurred_at, details_json) "
                 "VALUES (?, ?, 'item.created', 'Item', ?, ?, ?)",

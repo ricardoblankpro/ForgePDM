@@ -3,9 +3,11 @@ export class APIError extends Error {
   constructor(message, status) { super(message); this.status = status; }
 }
 export class API {
-  constructor() { this.token = null; this.onExpired = () => {}; }
+  constructor() { this.language = "en"; this.token = null; this.onExpired = () => {}; }
   async request(path, options = {}) {
     const { method = "GET", body, signal, binary = false } = options;
+    if (method === "GET" && (/^\/items(?:\?|$)/.test(path) || path.endsWith("/bom-report"))) path += `${path.includes("?") ? "&" : "?"}language=${encodeURIComponent(this.language)}`;
+    if (method === "POST" && path === "/items" && body && !body.source_language) body.source_language = this.language;
     const token = this.token;
     const headers = { Accept: binary ? "application/octet-stream" : "application/json" };
     if (token) headers.Authorization = `Bearer ${token}`;

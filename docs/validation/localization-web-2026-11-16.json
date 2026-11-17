@@ -1,0 +1,18 @@
+{
+  "checks": [
+    "original Portuguese source is retained",
+    "draft remains original fallback",
+    "approval resolves English text",
+    "editing keeps approved text visible",
+    "language switch displays original",
+    "language switch displays approval",
+    "legacy CAD token is unchanged",
+    "translation creates no engineering revision",
+    "cross-language search returns one identity",
+    "viewer editor is read only",
+    "no browser errors"
+  ],
+  "errors": [],
+  "browser": "156.0.8078.47",
+  "scope": "Disposable HTTP/SQLite fixture only"
+}

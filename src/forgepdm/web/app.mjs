@@ -2,12 +2,16 @@ import { bomViews, reportRows, reportMass, reportSummary } from "./bom-report.mj
 import { materialsUI } from "./materials.mjs";
 import { managementUI } from "./management.mjs";
 import { drawingViewer } from "./drawings.mjs";
+import { localizationUI } from "./localization.mjs";
 import { API } from "./api.mjs";
 import { thumbnailViewer } from "./thumbnails.mjs";
 import { readRoute, routeFor, fileSize, dateLabel, stateLabel } from "./model.mjs";
 
 const $ = selector => document.querySelector(selector);
 const api = new API();
+const localeUI = localizationUI({api,el,button});
+const languagePicker = el('select', {'aria-label':'Description language',onChange:()=>{api.language=languagePicker.value;state.cache={};loadItems();if(state.item)loadDetail();}}, el('option',{value:'en'},'English descriptions'),el('option',{value:'pt-BR'},'Descrições em português'));
+document.querySelector('#search-form').append(languagePicker);
 const previewUI = thumbnailViewer({api, el});
 const state = { user: null, projects: [], items: [], query: "", project: "", offset: 0,
   hasMore: false, item: null, revision: null, revisions: [], tab: "overview",
@@ -76,6 +80,7 @@ function toast(message) {
 }
 function request(path, options = {}) { return api.request(path, { signal: session.signal, ...options }); }
 function resetSession(message = "") {
+  api.language = 'en'; languagePicker.value = 'en';
   previewUI.reset();
   drawingUI.reset();
   management?.reset();
@@ -214,9 +219,9 @@ function renderItems() {
   $("#items-list").replaceChildren(...state.items.map(item => button([
     el("span", { class: `type-icon ${item.kind}` }, icon(item.kind)),
     el("span", { class: "item-row-copy" }, el("span", { class: "item-number" }, item.number),
-      el("span", { class: "item-row-title" }, item.revision_description || item.name),
+      el("span", { class: "item-row-title" }, (item.revision_description && item.localized_description?.text) || item.localized_name?.text || item.revision_description || item.name),
       el("span", { class: "item-row-bottom" }, `Revision ${item.revision_label}`, badge(item.lifecycle_state)))
-  ], () => navigate(item.id), { class: `item-row${active === item.id ? " selected" : ""}`, "aria-current": active === item.id ? "true" : null, "aria-label": `${item.number}, ${item.revision_description || item.name}, revision ${item.revision_label}` })));
+  ], () => navigate(item.id), { class: `item-row${active === item.id ? " selected" : ""}`, "aria-current": active === item.id ? "true" : null, "aria-label": `${item.number}, ${item.localized_description?.text || item.localized_name?.text || item.revision_description || item.name}, revision ${item.revision_label}` })));
   if (!state.items.length) $("#items-list").append(el("div", { class: "list-empty" }, "No items found. Try another search or project."));
 }
 function navigate(itemId, revisionId) {
@@ -252,6 +257,11 @@ async function loadDetail() {
     if (version !== detailVersion || !state.user) return;
     if (revision.item_id !== item.id) throw new Error("The requested revision does not belong to this item.");
     if (!revisions.some(r => r.id === revision.id)) throw new Error("The selected revision is unavailable.");
+    const localized = await request(`/items/${item.id}/localized-texts?revision_id=${revision.id}&language=${encodeURIComponent(api.language)}`);
+    if (version !== detailVersion || !state.user) return;
+    item.localized_name = localized.find(s=>s.field==='designation')?.resolved;
+    const revisionText = localized.find(s=>s.field==='description')?.resolved;
+    revision.localized_description = revisionText?.text ? revisionText : null;
     state.item = item; state.revision = revision; state.revisions = revisions;
     state.tab = "overview";
     document.title = `${item.number} · Revision ${revision.label} · ForgePDM`;
@@ -270,12 +280,12 @@ function renderDetail() {
     el("div", { class: "item-kicker" }, `${item.kind} / Item details`),
     el("div", { class: "detail-title-line" }, el("h2", {}, item.number),
       el("div", { class: "revision-picker" }, el("label", { for: "revision-picker" }, "Viewing"), picker)),
-    el("p", { class: "detail-name" }, revision.description_record?.description || item.name));
+    el("p", { class: "detail-name" }, revision.localized_description?.text || item.localized_name?.text || revision.description_record?.description || item.name));
   const notice = revision.id !== item.current_revision_id ? el("div", { class: "revision-note" },
     `Viewing recorded revision ${revision.label}. Current revision ${item.current_revision.label} is available. `,
     button(`View ${item.current_revision.label} →`, () => navigate(item.id, item.current_revision_id), { class: "text-button" })) : null;
   const tabs = el("div", { class: "tabs", role: "tablist", "aria-label": "Item information" });
-  for (const [key, label] of [["overview", "Overview"], ["materials", "Description"], ["bom", "Bill of materials"], ["drawings", "Drawings"], ["datasets", "Files & datasets"], ["where-used", "Where used"]]) {
+  for (const [key, label] of [["overview", "Overview"], ["materials", "Description"], ["translations", "Translations"], ["bom", "Bill of materials"], ["drawings", "Drawings"], ["datasets", "Files & datasets"], ["where-used", "Where used"]]) {
     tabs.append(button(label, () => { state.tab = key; renderDetail(); }, {
       class: `tab${state.tab === key ? " active" : ""}`, role: "tab", id: `tab-${key}`,
       "aria-selected": String(state.tab === key), "aria-controls": "tab-content", tabindex: state.tab === key ? "0" : "-1",
@@ -296,6 +306,7 @@ async function loadTab(content) {
   const version = ++tabVersion;
   const revision = state.revision;
   const tab = state.tab;
+  if (tab === "translations") return localeUI.render(content, state.item, revision);
   if (tab === "materials") return materialUI.render(content, state.item, revision);
   if (tab === "overview") { renderOverview(content); return; }
   if (tab === "bom" && state.item.kind !== "assembly") {

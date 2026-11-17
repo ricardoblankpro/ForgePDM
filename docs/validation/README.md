@@ -55,3 +55,13 @@ Their naming convention includes feature, execution scope and date. Native tests
 fake/offscreen tests, installation checks and production read-only observations
 are separate evidence categories. The [historical development log](../history/development-log.md)
 links each delivered increment to its exact reports.
+
+## Multilingual item descriptions
+
+- [Schema-18 backup migration rehearsal](localization-migration-2026-11-16.json)
+- [Installed versions and original data/blob preservation](localization-installed-2026-11-16.json)
+- [Installed native client and frozen TechDraw](localization-native-2026-11-16.json)
+- [Real Chrome translation review](localization-web-2026-11-16.json)
+
+Mutation acceptance uses disposable records and CAD files. The installed database
+keeps all legacy source languages unconfirmed; none was guessed or translated.

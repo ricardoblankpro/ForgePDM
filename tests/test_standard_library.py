@@ -254,7 +254,7 @@ def test_migration_moves_s_ownership_without_merging_or_repinning(tmp_path):
             == "LIB-STANDARD"
         )
         assert [
-            tuple(r) for r in connection.execute("SELECT * FROM items ORDER BY id")
+            tuple(r)[:-1] for r in connection.execute("SELECT * FROM items ORDER BY id")
         ] == before_items
         assert [
             tuple(r) for r in connection.execute("SELECT * FROM item_revisions ORDER BY id")

@@ -10,6 +10,7 @@ recent verification. Earlier phase numbering and implementation plans are
 - Immutable file storage and exact CAD dependency manifests/workspaces.
 - Fenced checkout/check-in, lifecycle, recoverable revision creation and diagnostics.
 - Standard/purchased parts, Fasteners association, descriptions and mass evidence.
+- Reviewed en/pt-BR item descriptions, original fallback, multilingual search and frozen localized BOMs.
 - Persistent FreeCAD browser, local shortcuts and scoped web administration.
 - Shared Direct/Indented/Flattened reports and customizable TechDraw tables/PDFs.
 - Online SQLite/blob backups, isolated verified restore, Linux scheduling and stale-run status.

@@ -314,3 +314,21 @@ def test_old_server_cannot_silently_drop_atomic_manifest(api):
         client.upload_part_checkin("/tmp/snapshot.FCStd", operation)
     assert len(calls) == 1
     assert calls[0][0].endswith("/checkin-native-with-references")
+
+
+def test_description_language_is_additive_and_creation_language_is_independent(api, monkeypatch):
+    client = api.ForgePDMClient("http://localhost:8000")
+    calls = []
+    monkeypatch.setattr(client, "_json_request", lambda *args: calls.append(args) or {})
+    client.description_language = "pt-BR"
+    client.bom_report("exact-A")
+    assert calls[-1][1] == "/api/v1/revisions/exact-A/bom-report?language=pt-BR"
+    client.search_items("aço")
+    assert "language=pt-BR" in calls[-1][1]
+    client.creation_language = "en"
+    client.create_item("assembly", "Assembly")
+    assert calls[-1][2]["source_language"] == "en"
+    client.create_item("assembly", "Conjunto", source_language="pt-BR")
+    assert calls[-1][2]["source_language"] == "pt-BR"
+    client.description_proposal({"geometry": {}}, "en")
+    assert calls[-1][0:2] == ("POST", "/api/v1/description-proposals")

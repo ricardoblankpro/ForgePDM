@@ -3,6 +3,8 @@
 The ordinary workflow uses descriptions, with optional physical material links.
 Stock dimensions, consumption and manufacturing-readiness fields are not required.
 
+For source languages, translations and review, see [description languages](localization.md).
+
 ## Descriptions and physical materials
 
 - **M:** Register Raw Material creates a shared-library description such as
