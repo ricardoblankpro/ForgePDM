@@ -95,6 +95,39 @@ def test_successful_addon_save_clears_gui_modified_flag(commands, monkeypatch, t
     assert not gui_document.Modified
 
 
+def test_retained_command_callback_resolves_current_implementation_and_keeps_state(
+    commands, monkeypatch
+):
+    stale = commands.CheckInCommand()
+    stale.local_state = object()
+    original_state = stale.local_state
+    original_action = stale.action
+    current = type(
+        "CheckInCommand",
+        (commands.Command,),
+        {
+            "__module__": commands.__name__,
+            "action": lambda self: self.local_state,
+        },
+    )
+    monkeypatch.setattr(commands, "CheckInCommand", current)
+    resolved = commands._current_action(original_action)
+    assert resolved.__self__ is stale and type(stale) is current
+    assert resolved() is original_state
+    assert resolved.__func__ is current.action
+
+
+def test_command_resolution_preserves_current_instances_and_unbound_workflows(commands):
+    current = commands.CheckInCommand()
+    action = current.action
+    assert commands._current_action(action) is action
+
+    def function():
+        return "unbound workflow"
+
+    assert commands._current_action(function) is function
+
+
 def test_failed_addon_save_preserves_gui_modified_flag(commands, monkeypatch, tmp_path):
     path = tmp_path / "saved.FCStd"
     path.write_bytes(b"saved")

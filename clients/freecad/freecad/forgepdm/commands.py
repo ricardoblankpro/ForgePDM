@@ -136,10 +136,33 @@ def _require_metadata(document):
     return obj
 
 
+def _current_action(action):
+    """FreeCAD can retain a Python command instance across a live module reload."""
+    owner = getattr(action, "__self__", None)
+    previous = type(owner)
+    current = globals().get(previous.__name__)
+    if (
+        previous.__module__ == __name__
+        and isinstance(current, type)
+        and issubclass(current, Command)
+        and current is not previous
+    ):
+        # Retain instance attributes and the existing toolbar/menu registration.
+        # Re-adding the same command ID does not replace every retained callback.
+        try:
+            owner.__class__ = current
+        except TypeError as error:
+            raise RuntimeError(
+                "Save your work and restart FreeCAD to finish updating ForgePDM"
+            ) from error
+        return getattr(owner, action.__name__)
+    return action
+
+
 def _run(action):
     from .tasks import run
 
-    return run(action())
+    return run(_current_action(action)())
 
 
 def _guard_document(name, revision_id=None):

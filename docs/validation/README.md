@@ -28,6 +28,7 @@ replication, full disaster cutover, workstation backup or wider platform support
 - [Installed atomic check-in and lost-response regression](thumbnails-atomic-native-2026-11-16.json)
 - [Real Chrome snapshot previews](thumbnails-web-2026-11-16.json)
 - [General Chrome browsing regression](thumbnails-web-regression-2026-11-16.json)
+- [Retained Check In handler fix and read-only registered-button probe](thumbnail-checkin-handler-2026-11-16.json)
 
 Native/browser mutation tests use disposable data. They cover new snapshots,
 preserved document/view state and exact preview source identity. Existing

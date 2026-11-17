@@ -1,0 +1,19 @@
+{
+  "addon": "0.20.1",
+  "mode": "read_only",
+  "checks": [
+    "ForgePDM_Upload resolves current action before execution",
+    "ForgePDM_CheckIn resolves current action before execution",
+    "no workflow body executed",
+    "documents/files/dirty state/selection preserved",
+    "session identity preserved"
+  ],
+  "documents_preserved": 4,
+  "status": "passed",
+  "cause": "FreeCAD retained pre-update command instances; the registered Check In workflow omitted preview preparation while new class instances included it.",
+  "correction": "Resolve the current command class before running a retained callback, preserving instance attributes and command IDs.",
+  "addon_unit_tests_passed": 422,
+  "base_optional_qt_modules_skipped": 4,
+  "backend_schema_changed": false,
+  "existing_missing_previews_backfilled": false
+}

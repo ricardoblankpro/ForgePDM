@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.20.1 — Refresh retained native command handlers
+
+- Resolve the current command implementation before starting a workflow when
+  FreeCAD retains a toolbar/menu callback across a live module reload. Preserve
+  instance state, documents and session; do not start an outdated Check In flow
+  that omits the new preview payload.
+- Test retained callbacks and the actual registered Check In entry point,
+  separately from directly constructing a command class.
+
 ## 0.20.0 — Shared isometric snapshot previews
 
 - Generate optional 384px isometric PNGs after native save, preserving camera,

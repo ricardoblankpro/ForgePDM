@@ -17,6 +17,7 @@ keep passwords and tokens out of reports. See [test and issue guidance](../../CO
 | Flattened drawing is blocked | Complete stored BOMs for empty subassemblies, then refresh. A partial structure cannot generate a complete flattened drawing. |
 | Existing drawing still has an old title/footer or quantities | Explicitly update the table through Drawing BOM. Loading an old snapshot preserves frozen contents. |
 | Upload/check-in/revision/PDF response was lost | Retry the same command to recover its durable operation. Preserve local journals and newer edits; inspect server state before starting another intent. |
+| First upload has a preview but later check-ins do not after a live addon update | Use addon 0.20.1 or later. It refreshes retained native command handlers before workflow execution. A normal addon replacement still recommends restarting FreeCAD after saving work; module reload alone did not refresh older callbacks. Existing missing images are not automatically backfilled. |
 
 A read-only `forgepdm recovery-report` checks database/blob integrity and identifies
 incomplete/unreferenced candidates. It never deletes data. Use the [operations

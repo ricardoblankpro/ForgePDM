@@ -120,6 +120,17 @@ with the prior schema. For scheduled drills against an installation, follow
 [operations](../operations/backups.md); a structural drill does not establish
 complete disaster-cutover or GUI/platform acceptance.
 
+### Retained native command callbacks
+
+After a development live reload, directly constructing a new command class does
+not prove that FreeCAD's existing toolbar/menu callback uses that implementation.
+`registered_command_gui.run(App, Gui, CASE_DIR)` probes the actual Upload and
+Check In command IDs. It intercepts and closes their workflow generators before
+execution, verifies the current implementation and preserves open documents and
+session identity. It requires an idle authenticated session with a managed active
+document so those registered actions are available. The 0.20.1 dispatch regression
+also covers retained-instance state and ordinary/unbound workflows in unit tests.
+
 ## Documentation and packaging checks
 
 `tools/check_docs.py` checks local Markdown targets/anchors, the current handoff

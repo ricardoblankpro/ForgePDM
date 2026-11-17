@@ -6,7 +6,7 @@ This is the current handoff. Start with [README](README.md) and
 
 ## Delivery
 
-- Addon: **0.20.0**
+- Addon: **0.20.1**
 - Backend package: **0.1.2**
 - Database schema: **18**
 
@@ -40,20 +40,25 @@ An installable Addon Manager distribution source/publication is still separate.
 
 ## Validation and local installation
 
-2026-11-16: 301 backend tests, 420 addon tests (four optional Qt modules skipped in
+2026-11-16: 301 backend tests, 422 addon tests (four optional Qt modules skipped in
 base), 21 real Qt checks and 21 Node checks pass. Lint/format, canonical docs,
 manifest/archive links and backend wheel/sdist checks pass. Installed FreeCAD
 acceptance passes 28 atomic/recovery and 13 thumbnail/render/browser checks;
 real Chrome passes 10 preview and 26 general browsing checks. All mutation fixtures
 are disposable. Camera restoration also covers perspective and render failure.
 
-Addon 0.20.0 is installed in both local profiles and loaded in FreeCAD 1.1.4;
+Addon 0.20.1 is installed in both local profiles and loaded in FreeCAD 1.1.4;
 backend 0.1.2 runs on loopback with schema 18. A verified schema-17 backup and prior
 addons are retained under `var/backups/before-thumbnails`. The migration preserves
 all prior records (only adds schema row 18) and all 217 physical file hashes;
 existing CAD receives no automatic preview. Current scheduled backup/drill runs
 pass at schema 18, and schema-17 archives still verify. A separate restored
 fixture verifies 16 thumbnail associations and all 32 source/image file records.
+The 0.20.1 patch resolves retained pre-update native command instances before
+workflow execution. A read-only actual-button probe verifies current Upload and
+Check In routing and preserves four open documents/session. Existing missing
+previews are not backfilled. See
+[handler-fix evidence](docs/validation/thumbnail-checkin-handler-2026-11-16.json).
 See [installed evidence](docs/validation/thumbnails-installed-2026-11-16.json),
 [native evidence](docs/validation/thumbnails-native-2026-11-16.json) and the
 [validation index](docs/validation/README.md).
