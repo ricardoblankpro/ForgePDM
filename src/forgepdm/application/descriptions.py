@@ -32,7 +32,22 @@ class DescriptionService:
         ).fetchone()
         binding = json.loads(physical[0]) if physical else None
         hash_value = {**value, "physical_material": binding} if binding is not None else value
-        return {**value, "physical_material": binding, "token": token(hash_value)}
+        series = c.execute(
+            "SELECT i.number_series FROM items i JOIN item_revisions r ON r.item_id=i.id WHERE r.id=?",
+            (revision_id,),
+        ).fetchone()[0]
+        structured = c.execute(
+            "SELECT 1 FROM standard_specifications s JOIN item_revisions r ON r.item_id=s.item_id WHERE r.id=?",
+            (revision_id,),
+        ).fetchone()
+        origin = (
+            "material"
+            if value["material_revision_id"]
+            else "structured"
+            if series == "S" and structured
+            else "manual"
+        )
+        return {**value, "physical_material": binding, "token": token(hash_value), "origin": origin}
 
     def read(self, user, revision_id):
         with self.database.connection() as c:
@@ -67,6 +82,15 @@ class DescriptionService:
             if current["token"] != expected_token:
                 raise Conflict("description changed; reload or reconcile before saving")
             binding = None
+            if parent == "S":
+                structured = c.execute(
+                    "SELECT 1 FROM standard_specifications s JOIN item_revisions r ON r.item_id=s.item_id WHERE r.id=?",
+                    (revision_id,),
+                ).fetchone()
+                if structured and description != current["description"]:
+                    raise Conflict(
+                        "structured descriptions are fixed by the purchasing specification"
+                    )
             if parent == "P":
                 if material_revision_id:
                     self.authorization.require_read_revision(user, material_revision_id, c)
@@ -103,9 +127,8 @@ class DescriptionService:
                         binding = current.get("physical_material")
                     if native_physical is not None and native_physical != binding:
                         raise Conflict("physical material link changed; select the material again")
-                elif description:
-                    raise ValueError("parts select M materials; clear both fields to unassign")
-            elif parent in ("A", "M"):
+
+            elif parent in ("A", "M", "S"):
                 if material_revision_id is not None:
                     raise ValueError("assemblies and catalog materials use description text")
                 if parent == "M" and not description:

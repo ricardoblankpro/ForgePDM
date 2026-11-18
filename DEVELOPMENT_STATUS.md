@@ -6,9 +6,9 @@ This is the current handoff. Start with [README](README.md) and
 
 ## Delivery
 
-- Addon: **0.21.0**
-- Backend package: **0.2.0**
-- Database schema: **19**
+- Addon: **0.22.0**
+- Backend package: **0.3.0**
+- Database schema: **20**
 
 Versions are independent. The backend/server is AGPL-3.0-or-later and the
 Workbench LGPL-2.1-or-later; approved licensing/contact boundaries remain unchanged.
@@ -28,6 +28,7 @@ An installable Addon Manager distribution source/publication is still separate.
   vocabulary. Family names do not infer nylon, tip shape or serrations; unknown
   material/finish text is preserved with draft warnings. See
   [terminology and remaining limits](docs/development/references/fastener-pt-BR.md).
+- One canonical description/translation editor per revision: assigned material or manual P text, manual A, fixed structured S or manual generic S, and revisioned M text. Legacy item text remains available as history. See [ADR-027](docs/decisions/ADR-027-single-revision-description.md).
 - Shared S/M catalog, Fasteners association, descriptions, physical material
   snapshots, P/S mass evidence and revision-pinned assembly mass.
 - Persistent FreeCAD browser with Recent/Favorites/My Checkouts; web browsing,
@@ -48,6 +49,23 @@ An installable Addon Manager distribution source/publication is still separate.
 
 ## Validation and local installation
 
+2026-11-18 unified descriptions: backend **0.3.0** / schema **20** runs on
+loopback; addon **0.22.0** is installed and verified in both profiles and loaded
+in FreeCAD 1.1.4. 550 backend, 426 addon (five optional modules skipped), 23 real Qt,
+21 Node, 11 localization Chrome and 13 unified-description Chrome checks pass.
+Native acceptance verifies an installed HTTP client and real P description
+save/reopen using disposable data. No document/session was open before acceptance;
+that state was preserved. Lint, formatting, documentation and packaging checks pass.
+
+A verified schema-19 backup and addon copies are retained under
+`var/backups/before-unified-description`. Isolated and installed migration checks
+preserve all original engineering tables, localization history, 27 items,
+31 revisions, 229 file records and 225 unique blob hashes. All blob hashes,
+SQLite integrity and foreign keys verify. Historical shared text backfill records
+its origin; stale CAD copies may need explicit description reconciliation.
+Existing native files, frozen tables and PDFs are untouched. See
+[installed/migration evidence](docs/validation/unified-descriptions-2026-11-18.json).
+
 2026-11-18 Fasteners proposal increment: 543 backend tests pass, including 242
 localization cases and per-standard pt-BR/English contract checks. All 297 English
 proposals recorded before the change remain identical. Backend/tooling lint,
@@ -63,8 +81,8 @@ checks Portuguese creation/English approval, search, unchanged CAD-description
 tokens, localized BOM provenance and real format-3 TechDraw save/reopen. Original
 four document paths/hashes/dirty states and the authenticated session are retained.
 
-Addon 0.21.0 is installed in both local profiles and loaded in FreeCAD 1.1.4;
-backend 0.2.0 runs on loopback with schema 19. A schema-18 backup is retained under
+On 2026-11-16 addon 0.21.0 was installed in both profiles and loaded in FreeCAD 1.1.4;
+backend 0.2.0 ran on loopback with schema 19. A schema-18 backup is retained under
 `var/backups/before-localization`, with an additional immediate deployment backup
 and prior addon profiles. Migration rehearsal and installed comparison preserve
 all 39 original tables/columns, 26 items, 30 revisions, 221 file records and 220

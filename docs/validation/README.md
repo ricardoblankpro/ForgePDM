@@ -5,6 +5,10 @@ They do not certify later behavior or untested platforms. Keep original files,
 including reports reused as regressions, and never add credentials/private CAD.
 See [test tiers](../development/testing.md) and [current handoff](../../DEVELOPMENT_STATUS.md).
 
+## Unified revision descriptions
+
+- [Schema-20 migration, installed data preservation and acceptance](unified-descriptions-2026-11-18.json)
+
 ## Fasteners pt-BR proposal vocabulary
 
 - [Before/after coverage and deterministic generation checks](fastener-pt-BR-2026-11-18.json)

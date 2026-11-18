@@ -22,13 +22,13 @@ def test_report_pins_direct_lines_descriptions_and_unknown_mass(backend):
     )
     with b.database.transaction() as c:
         c.execute(
-            "INSERT INTO revision_descriptions VALUES (?,?,NULL)",
+            "INSERT OR REPLACE INTO revision_descriptions VALUES (?,?,NULL)",
             (child.current_revision_id, "STEEL <3 mm>"),
         )
     report = drawing_bom(b.database, b.authorization, b.users["editor"], parent.current_revision_id)
     assert [line["position"] for line in report["lines"]] == [7, 9]
     assert report["lines"][0]["description"] == "STEEL <3 mm>"
-    assert report["lines"][0]["material"] == "STEEL <3 mm>"
+    assert report["lines"][0]["material"] == ""  # Manual text is not an M assignment.
     assert report["lines"][0]["unit_mass"] is None
     assert report["lines"][1]["total_mass"] is None
     assert (

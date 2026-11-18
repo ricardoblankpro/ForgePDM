@@ -24,6 +24,13 @@ def edit(parent, view):
     status = QtWidgets.QLabel()
     status.setWordWrap(True)
     layout.addWidget(status)
+    history = QtWidgets.QPlainTextEdit()
+    history.setReadOnly(True)
+    history.setVisible(False)
+    toggle = QtWidgets.QCheckBox("Show historical item text")
+    toggle.toggled.connect(history.setVisible)
+    layout.addWidget(toggle)
+    layout.addWidget(history)
     records = []
     buttons = []
 
@@ -49,7 +56,21 @@ def edit(parent, view):
         if isinstance(values, dict) and "error" in values:
             status.setText(values["error"])
             return
-        records[:] = values
+        lines = []
+        for row in values:
+            if row["field"] == "description":
+                continue
+            lines.append(
+                "Previous item name"
+                if row["field"] == "designation"
+                else "Previous general description"
+            )
+            lines.extend(v["language"] + ": " + (v["text"] or "(empty)") for v in row["history"])
+            lines.extend(
+                t["language"] + " · " + t["state"] + ": " + t["text"] for t in row["translations"]
+            )
+        history.setPlainText("\n".join(lines))
+        records[:] = [s for s in values if s["field"] == "description"]
         sources.blockSignals(True)
         sources.clear()
         for row in records:

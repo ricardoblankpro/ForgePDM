@@ -59,6 +59,17 @@ class ItemService:
         name = name.strip()
         if not name:
             raise ValueError("name must not be empty")
+        canonical_description = description.strip() or name
+        if spec is not None:
+            from forgepdm.domain.description_generation import generate
+
+            try:
+                canonical_description = generate(
+                    spec, source_language if source_language != "und" else "en"
+                )["text"]
+            except ValueError:
+                # Preserve support for legacy/unmapped specification registrations.
+                pass
         now = datetime.now(timezone.utc).isoformat()
         checkout_id = str(uuid4())
         checkout_expires_at = (datetime.fromisoformat(now) + CHECKOUT_DURATION).isoformat()
@@ -137,11 +148,10 @@ class ItemService:
             connection.execute(
                 "UPDATE items SET source_language=? WHERE id=?", (source_language, item_id)
             )
-            if series == "M":
-                connection.execute(
-                    "INSERT INTO revision_descriptions(revision_id,description) VALUES (?,?)",
-                    (revision_id, description.strip() or name),
-                )
+            connection.execute(
+                "INSERT INTO revision_descriptions(revision_id,description) VALUES (?,?)",
+                (revision_id, canonical_description),
+            )
             connection.execute(
                 "INSERT INTO checkouts(id, revision_id, user_id, acquired_at, expires_at) "
                 "VALUES (?, ?, ?, ?, ?)",

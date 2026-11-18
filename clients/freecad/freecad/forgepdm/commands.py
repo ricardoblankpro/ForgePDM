@@ -554,12 +554,15 @@ def _register_standard(client, spec=None, mass_object=None):
                 client.description_proposal,
                 (spec, client.creation_language),
             )
-            name = ask_text(
-                "Review source description", "Review/edit generated designation", proposal["text"]
+            decision = ask_choice(
+                "Review purchasing description",
+                proposal["text"],
+                ["Register", "Cancel"],
+                "Register",
             )
-            if name is None:
+            if decision != "Register":
                 return None
-            description = name
+            name = description = proposal["text"]
         except ForgePDMError as error:
             if error.status not in (404, 422):
                 raise
@@ -2247,7 +2250,7 @@ def _format_bom(lines, depth=0, updates=None):
 
 
 def _prepare_description(client, document, metadata):
-    if not getattr(metadata, "ItemNumber", "").startswith(("P", "A")):
+    if not getattr(metadata, "ItemNumber", "").startswith(("P", "A", "S")):
         return
     from . import descriptions
 
@@ -2264,7 +2267,7 @@ def _prepare_description(client, document, metadata):
 
 
 class AssignMaterialsCommand(Command):
-    number_series = ("P", "A")
+    number_series = ("P", "A", "S")
     icon_name = "assign-material"
     menu_text = "Assign Material / Set Description…"
     tooltip = "Select an M material for a part or enter an assembly description"
@@ -2275,7 +2278,7 @@ class AssignMaterialsCommand(Command):
         document = FreeCAD.ActiveDocument
         metadata = _metadata(document) if document else None
         series = getattr(metadata, "ItemNumber", "")[:1]
-        if series in ("P", "A"):
+        if series in ("P", "A", "S"):
             resources["MenuText"] = translate(
                 "ForgePDM", "Assign Material…" if series == "P" else "Set Description…"
             )
@@ -2291,13 +2294,22 @@ class AssignMaterialsCommand(Command):
         yield from _authorize_tree_labels(client, document)
         name, revision_id = document.Name, metadata.RevisionId
         series = metadata.ItemNumber[:1]
-        if series not in ("P", "A"):
-            raise ValueError("Select a managed P part or A assembly")
+        if series not in ("P", "A", "S"):
+            raise ValueError("Select a managed P, A or S item")
         current = yield Request("Reading description…", client.get_description, (revision_id,))
         description, material_id = current["description"], current["material_revision_id"]
         physical = None
-        if series == "A":
-            description = ask_text("Assembly description", "Description", description)
+        if series in ("A", "S"):
+            if series == "S" and current.get("origin") == "structured":
+                information("ForgePDM", "Description is fixed by the purchasing specification.")
+                return
+            if series == "S" and "origin" not in current:
+                raise ValueError("Update the backend to edit purchased descriptions")
+            description = ask_text(
+                "Assembly description" if series == "A" else "Purchasing description",
+                "Description",
+                description,
+            )
             if description is None:
                 return
             material_id = None
@@ -2305,12 +2317,25 @@ class AssignMaterialsCommand(Command):
             choice = ask_choice(
                 "Part material",
                 "Action",
-                ["Select material", "Clear material", "Cancel"],
+                ["Select material", "Clear material", "Enter component description", "Cancel"],
                 "Select material",
             )
             if not choice or choice == "Cancel":
                 return
-            if choice == "Clear material":
+            if choice == "Enter component description":
+                capability = yield Request(
+                    "Checking description support…", client.standard_capabilities
+                )
+                if capability.get("description_model_version", 0) < 2:
+                    raise ValueError("Update the backend to use manual component descriptions")
+                if material_id:
+                    raise ValueError(
+                        "Clear the material assignment before entering a manual description"
+                    )
+                description = ask_text("Component description", "Description", description)
+                if description is None:
+                    return
+            elif choice == "Clear material":
                 description, material_id = "", None
             else:
                 record = yield from _select_record(

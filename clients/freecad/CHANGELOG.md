@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.0 — One revision description
+
+- One description and translation editor per revision, with legacy text retained as history.
+- Allow manual P component descriptions without material; material assignment remains explicit.
+- Requires backend description model 2 / schema 20 for the unified workflow.
+
 ## 0.20.1 — Refresh retained native command handlers
 
 - Resolve the current command implementation before starting a workflow when

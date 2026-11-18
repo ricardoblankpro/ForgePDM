@@ -433,6 +433,10 @@ INSERT INTO localized_source_versions SELECT s.id,1,'und',CASE s.field WHEN 'des
 INSERT INTO localized_source_versions SELECT s.id,1,'und',r.description,NULL,datetime('now') FROM localized_text_sources s JOIN revision_descriptions r ON r.revision_id=s.revision_id;
 """,
     ),
+    (
+        20,
+        "CREATE TABLE description_consolidation (revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id), previous_json TEXT, origin TEXT NOT NULL);",
+    ),
 )
 
 
@@ -502,6 +506,10 @@ class Database:
                         for statement in sql.split(";"):
                             if statement.strip():
                                 connection.execute(statement)
+                        if version == 20:
+                            from forgepdm.application.description_consolidation import consolidate
+
+                            consolidate(connection)
                         connection.execute(
                             "INSERT INTO schema_version(version, applied_at) VALUES (?, datetime('now'))",
                             (version,),

@@ -10,45 +10,48 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
   }
   async function render(host,item,revision) {
     host.classList.add("material-panel");
+    let standardMassPanel=null;
     try {
       if(item.number.startsWith("S")) {
+        const massHost=el("div");standardMassPanel=massHost;
         const path=`/revisions/${revision.id}/reference-mass`;
         const [mass,checkout]=await Promise.all([api.request(path),api.request(`/revisions/${revision.id}/checkout`)]);
         if(!host.isConnected)return;
         const label={supplier_reference:"Supplier reference",cad_estimate:"Estimated from CAD",manual:"Manual entry"}[mass.status];
-        host.replaceChildren(el("h3",{},"Standard part mass"),el("p",{},mass.mass_kg!=null?`${formatMass(mass.mass_kg, 3)} g per piece`:`Mass unavailable: ${mass.reason}`));
-        if(label)host.append(el("p",{},label));
-        if(mass.status==="supplier_reference")host.append(el("p",{},`${mass.supplier} · ${mass.source_article} · retrieved ${mass.retrieved_at.slice(0,10)}`),el("a",{href:mass.source_url,target:"_blank",rel:"noopener noreferrer"},"Supplier source"));
-        if(mass.status==="cad_estimate")host.append(el("p",{},`Reference density: ${mass.density_reference.density_kg_m3} kg/m³ (${mass.density_reference.name}); ${mass.thread_mode} threads. Actual fastener mass may differ.`));
-        if(mass.status==="manual"&&mass.note)host.append(el("p",{},mass.note));
+        massHost.replaceChildren(el("h3",{},"Standard part mass"),el("p",{},mass.mass_kg!=null?`${formatMass(mass.mass_kg, 3)} g per piece`:`Mass unavailable: ${mass.reason}`));
+        if(label)massHost.append(el("p",{},label));
+        if(mass.status==="supplier_reference")massHost.append(el("p",{},`${mass.supplier} · ${mass.source_article} · retrieved ${mass.retrieved_at.slice(0,10)}`),el("a",{href:mass.source_url,target:"_blank",rel:"noopener noreferrer"},"Supplier source"));
+        if(mass.status==="cad_estimate")massHost.append(el("p",{},`Reference density: ${mass.density_reference.density_kg_m3} kg/m³ (${mass.density_reference.name}); ${mass.thread_mode} threads. Actual fastener mass may differ.`));
+        if(mass.status==="manual"&&mass.note)massHost.append(el("p",{},mass.note));
         const editable=revision.lifecycle_state==="working"&&checkout?.user_id===state.user?.id;
         if(editable) {
-          if(mass.status!=="supplier_reference")host.append(button("Find reference mass",async()=>{try{await api.request(path+"/lookup",{method:"POST",body:{}});await render(host,item,revision);}catch(e){error(host,e);}}));
+          if(mass.status!=="supplier_reference")massHost.append(button("Find reference mass",async()=>{try{await api.request(path+"/lookup",{method:"POST",body:{}});await render(host,item,revision);}catch(e){error(host,e);}}));
           if(mass.status!=="supplier_reference") {
             const value=field("Mass per piece (g)",mass.status==="manual"?(mass.source_mass||String(Number(mass.mass_kg)*1000)):"");
             const note=field("Mass note (optional)",mass.note||"");
             value.input.inputMode="decimal";value.input.maxLength=100;note.input.maxLength=500;
-            host.append(el("details",{},el("summary",{},"Enter mass manually"),value.node,note.node,button("Save manual mass",async()=>{
+            massHost.append(el("details",{},el("summary",{},"Enter mass manually"),value.node,note.node,button("Save manual mass",async()=>{
               try{if(!value.input.value.trim())throw new Error("Enter mass per piece in grams.");await api.request(path+"/fallback",{method:"PUT",body:{method:"manual",mass_g:value.input.value.trim(),note:note.input.value,expected_token:mass.token}});await render(host,item,revision);}catch(e){error(host,e);}
             })));
-            if(!mass.mass_kg)host.append(el("p",{},"FreeCAD can estimate mass from a recognized selected material when you upload or associate a fastener."));
+            if(!mass.mass_kg)massHost.append(el("p",{},"FreeCAD can estimate mass from a recognized selected material when you upload or associate a fastener."));
           }
         } else if(revision.lifecycle_state==="working") {
-          host.append(el("p",{},"Acquire a Working checkout to save mass."),button("Acquire checkout",async()=>{try{await api.request(`/revisions/${revision.id}/checkout`,{method:"POST"});await render(host,item,revision);}catch(e){error(host,e);}}));
-        } else if(revision.lifecycle_state==="released")host.append(el("p",{},"Create a new S revision to change mass."));
+          massHost.append(el("p",{},"Acquire a Working checkout to save mass."),button("Acquire checkout",async()=>{try{await api.request(`/revisions/${revision.id}/checkout`,{method:"POST"});await render(host,item,revision);}catch(e){error(host,e);}}));
+        } else if(revision.lifecycle_state==="released")massHost.append(el("p",{},"Create a new S revision to change mass."));
         if(state.user?.role==="admin") {
           const upload=el("input",{type:"file",accept:".csv,text/csv"});
-          host.append(el("label",{},"Import supplier reference CSV",upload));
-          upload.addEventListener("change",async()=>{try{const file=upload.files[0];if(!file)return;if(file.size>1024*1024)throw new Error("CSV must be at most 1 MiB");const result=await api.request("/reference-masses/import",{method:"POST",body:{csv_text:await file.text()}});host.append(el("p",{},`Imported ${result.imported} reference records. Use Find reference mass on a checked-out S revision to adopt one.`));}catch(e){error(host,e);}});
+          massHost.append(el("label",{},"Import supplier reference CSV",upload));
+          upload.addEventListener("change",async()=>{try{const file=upload.files[0];if(!file)return;if(file.size>1024*1024)throw new Error("CSV must be at most 1 MiB");const result=await api.request("/reference-masses/import",{method:"POST",body:{csv_text:await file.text()}});massHost.append(el("p",{},`Imported ${result.imported} reference records. Use Find reference mass on a checked-out S revision to adopt one.`));}catch(e){error(host,e);}});
         }
-        return;
       }
       const path=`/revisions/${revision.id}/description`;
       const [current,checkout]=await Promise.all([api.request(path),api.request(`/revisions/${revision.id}/checkout`)]);
       if(!host.isConnected)return;
       const series=item.number[0];
       const editable=revision.lifecycle_state==="working"&&checkout?.user_id===state.user?.id;
-      host.replaceChildren(el("h3",{},series==="P"?"Raw material":"Description"),el("p",{},revision.localized_description?.text||current.description||"No description assigned."),el("p",{},"Original source: "+current.description));
+      host.replaceChildren(el("h3",{},"Description"),el("p",{},current.description ? (revision.localized_description?.text||current.description) : "No description assigned."),el("p",{},"Original source: "+current.description));
+      if(standardMassPanel)host.append(standardMassPanel);
+      host.append(el("p",{},"Source: "+(current.origin||"manual")));
       if(current.physical_material)host.append(el("p",{},`Physical material: ${current.physical_material.name} · ${current.physical_material.density_kg_m3} kg/m³`));
       if(series==="P"){
         const mass=await api.request(`/revisions/${revision.id}/mass`);
@@ -63,7 +66,7 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
         host.append(button("Refresh mass",()=>render(host,item,revision)));
       }
       if(series==="M"&&!current.physical_material)host.append(el("p",{},"For automatic part mass, use Link Physical Material in FreeCAD."));
-      if(!["P","A","M"].includes(series))return;
+      if(!["P","A","M","S"].includes(series))return;
       if(!editable) {
         host.append(el("p",{},revision.lifecycle_state==="working"?"Acquire a checkout to edit.":"Create a new revision to change this description."));
         if(revision.lifecycle_state==="working")host.append(button("Acquire checkout",async()=>{try{await api.request(`/revisions/${revision.id}/checkout`,{method:"POST"});await render(host,item,revision);}catch(e){error(host,e);}}));
@@ -72,6 +75,11 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
       }
       async function save(description,material_revision_id=null) {
         try{const saved=await api.request(path,{method:"PUT",body:{description,material_revision_id,expected_token:current.token}});descriptionSaved?.(revision,saved);await render(host,item,revision);}catch(e){error(host,e);}
+      }
+      if(series==="S"&&item.standard_specification){host.append(el("p",{},"Description fixed by purchasing specification."));return;}
+      if(series==="P"&&!current.material_revision_id){
+        const manual=field("Component description",current.description);
+        host.append(manual.node,button("Save description",()=>save(manual.input.value)));
       }
       if(series==="P") {
         const query=field("Find raw material");
@@ -87,7 +95,7 @@ export function materialsUI({api, el, button: makeButton, state, descriptionSave
           }catch(e){error(host,e);}
         }),results,button("Clear material",()=>save("")));
       } else {
-        const description=field(series==="A"?"Assembly description":"Material description",current.description);
+        const description=field(series==="A"?"Assembly description":series==="S"?"Purchasing description":"Material description",current.description);
         host.append(description.node,button("Save description",()=>save(description.input.value)));
       }
       host.append(button("Check in",async()=>{try{await api.request(`/revisions/${revision.id}/checkin/fenced`,{method:"POST",body:{expected_checkout_id:checkout.id,expected_checkout_version:checkout.version}});await render(host,item,revision);}catch(e){error(host,e);}}));

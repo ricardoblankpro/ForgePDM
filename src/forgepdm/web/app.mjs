@@ -23,11 +23,11 @@ let tabVersion = 0;
 let toastTimer;
 let management;
 const materialUI = materialsUI({api, el, button, state, descriptionSaved(revision,record) {
-  if(state.revision?.id===revision.id)state.revision.description_record=record;
-  for(const item of state.items)if(item.current_revision_id===revision.id)item.revision_description=record.description;
+  if(state.revision?.id===revision.id){state.revision.description_record=record;state.revision.localized_description=null;}
+  for(const item of state.items)if(item.current_revision_id===revision.id){item.revision_description=record.description;item.localized_description={text:record.description};}
   renderItems();
   const title=document.querySelector(".detail-name");
-  if(title&&state.revision?.id===revision.id)title.textContent=record.description||state.item.name;
+  if(title&&state.revision?.id===revision.id)title.textContent=record.description||"No description assigned.";
 }});
 document.querySelector("#new-material").addEventListener("click", async()=>{
   const host=document.querySelector("#detail");
@@ -219,7 +219,7 @@ function renderItems() {
   $("#items-list").replaceChildren(...state.items.map(item => button([
     el("span", { class: `type-icon ${item.kind}` }, icon(item.kind)),
     el("span", { class: "item-row-copy" }, el("span", { class: "item-number" }, item.number),
-      el("span", { class: "item-row-title" }, (item.revision_description && item.localized_description?.text) || item.localized_name?.text || item.revision_description || item.name),
+      el("span", { class: "item-row-title" }, item.localized_description ? (item.localized_description.text || "No description assigned.") : item.revision_description || item.name),
       el("span", { class: "item-row-bottom" }, `Revision ${item.revision_label}`, badge(item.lifecycle_state)))
   ], () => navigate(item.id), { class: `item-row${active === item.id ? " selected" : ""}`, "aria-current": active === item.id ? "true" : null, "aria-label": `${item.number}, ${item.localized_description?.text || item.localized_name?.text || item.revision_description || item.name}, revision ${item.revision_label}` })));
   if (!state.items.length) $("#items-list").append(el("div", { class: "list-empty" }, "No items found. Try another search or project."));
@@ -261,7 +261,7 @@ async function loadDetail() {
     if (version !== detailVersion || !state.user) return;
     item.localized_name = localized.find(s=>s.field==='designation')?.resolved;
     const revisionText = localized.find(s=>s.field==='description')?.resolved;
-    revision.localized_description = revisionText?.text ? revisionText : null;
+    revision.localized_description = revisionText || null;
     state.item = item; state.revision = revision; state.revisions = revisions;
     state.tab = "overview";
     document.title = `${item.number} · Revision ${revision.label} · ForgePDM`;
@@ -280,7 +280,7 @@ function renderDetail() {
     el("div", { class: "item-kicker" }, `${item.kind} / Item details`),
     el("div", { class: "detail-title-line" }, el("h2", {}, item.number),
       el("div", { class: "revision-picker" }, el("label", { for: "revision-picker" }, "Viewing"), picker)),
-    el("p", { class: "detail-name" }, revision.localized_description?.text || item.localized_name?.text || revision.description_record?.description || item.name));
+    el("p", { class: "detail-name" }, revision.localized_description ? (revision.localized_description.text || "No description assigned.") : revision.description_record?.description || item.name));
   const notice = revision.id !== item.current_revision_id ? el("div", { class: "revision-note" },
     `Viewing recorded revision ${revision.label}. Current revision ${item.current_revision.label} is available. `,
     button(`View ${item.current_revision.label} →`, () => navigate(item.id, item.current_revision_id), { class: "text-button" })) : null;
@@ -341,7 +341,7 @@ function renderOverview(content) {
     el("div", { class: "section-header" }, el("h3", {}, "Change note")),
     el("p", { class: "description" }, revision.change_note || "No change note recorded."), el("br"),
     item.standard_specification && el("div", { class: "info-card" }, el("h3", { class: "section-caption" }, "Standard specification"), el("dl", { class: "info-grid" }, ...[...Object.entries(item.standard_specification.geometry), ...["material", "grade", "finish"].map(key => [key, item.standard_specification[key] || "Unknown"])].map(([key, value]) => el("div", {}, el("dt", {}, key.replace(/([a-z])([A-Z])/g, "$1 $2")), el("dd", {}, String(value)))))),
-    item.description && el("div", { class: "info-card" }, el("h3", { class: "section-caption" }, "Item description"), el("p", { class: "description" }, item.description)),
+
     el("div", { class: "section-header" }, el("h3", {}, "Revision history"), el("span", { class: "small-muted" }, `${state.revisions.length} revision${state.revisions.length === 1 ? "" : "s"}`)), table].filter(value => value != null && value !== false));
   if (state.revisions.length > 8) content.append(button(state.historyAll ? "Show recent revisions" : "Show all revisions", () => { state.historyAll = !state.historyAll; renderOverview(content); }, { class: "quiet" }));
   const preview = el("section", {class:"thumbnail-preview", "aria-label":"CAD snapshot preview"});

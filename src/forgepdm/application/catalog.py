@@ -79,7 +79,7 @@ class CatalogService:
             raise ValueError("search text must contain at most 200 characters")
         with self.database.connection() as connection:
             rows = connection.execute(
-                "SELECT i.id, i.number, i.number_series, i.kind, i.name, i.description, i.current_revision_id, "
+                "SELECT i.id, i.number, i.number_series, i.kind, COALESCE(rd.description,i.name) AS name, COALESCE(rd.description,i.description) AS description, i.current_revision_id, "
                 "r.label AS revision_label, r.lifecycle_state, rd.description AS revision_description FROM items i "
                 "JOIN item_revisions r ON r.id=i.current_revision_id "
                 "LEFT JOIN revision_descriptions rd ON rd.revision_id=r.id "
@@ -141,7 +141,7 @@ class CatalogService:
             self.authorization.require_read_revision(user, revision_id, connection)
             row = connection.execute(
                 "SELECT r.id, r.item_id, r.label, r.sequence, r.lifecycle_state, r.change_note, "
-                "r.created_at, i.number AS item_number, i.name AS item_name, i.kind AS item_kind "
+                "r.created_at, i.number AS item_number, COALESCE((SELECT description FROM revision_descriptions WHERE revision_id=r.id),i.name) AS item_name, i.kind AS item_kind "
                 "FROM item_revisions r JOIN items i ON i.id=r.item_id WHERE r.id=?",
                 (revision_id,),
             ).fetchone()

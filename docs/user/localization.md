@@ -8,7 +8,7 @@ translates item text; interface labels remain in their existing language.
 
 FreeCAD asks for the source language during new-item, Fasteners and raw-material
 registration. The web raw-material form has a Source language selector. The
-original designation and description remain the canonical engineering text.
+original revision description remains the canonical engineering text; legacy item names and summaries remain available as history.
 Older clients can continue creating items without a language.
 
 Choose **English descriptions** or **Descrições em português** in the FreeCAD
@@ -23,8 +23,7 @@ language, ignoring case and accents. Drafts are excluded.
 ## Add and review translations
 
 Open an item/revision and choose **Translations…** in the FreeCAD browser or the
-**Translations** tab on the web. Select the text context (designation, master
-summary or revision description) and the target language. In the web editor,
+**Translations** tab on the web. Select the target language for the revision description. Historical item text is available read-only. In the web editor,
 the catalog's Description language is the target language.
 
 1. Check the original text and source language. Legacy records use `und`
@@ -42,9 +41,7 @@ the catalog's Description language is the target language.
 
 Approval does not require a CAD checkout or create an engineering revision,
 including when translating a Released revision. Existing original-description
-editing still requires its normal Working/checkout permissions. Each text
-context has its own source language and review history. The designation language
-is also recorded as the item's source-language metadata.
+editing still requires its normal Working/checkout permissions. Each revision description has its own source language and review history. Legacy item text retains its original history.
 
 A missing translation falls back to the original. A new draft keeps the previous
 approved version visible. Editing original text or correcting its source language

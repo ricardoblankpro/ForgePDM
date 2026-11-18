@@ -17,7 +17,7 @@ def test_translation_editor_respects_server_permissions_and_current_draft(can_ed
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     record = {
         "id": "source",
-        "field": "designation",
+        "field": "description",
         "source": {"language": "pt-BR", "text": "Conjunto"},
         "translations": [],
         "token": "old",

@@ -12,7 +12,7 @@ def test_migrations_are_repeatable_and_item_creation_is_atomic(backend):
             row["version"]
             for row in connection.execute("SELECT version FROM schema_version ORDER BY version")
         ]
-    assert versions == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    assert versions == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 
     first = create_item(backend, kind="part")
     second = create_item(backend, kind="assembly", name="Test Assembly")
@@ -113,10 +113,21 @@ def test_standard_numbering(backend):
     import pytest
 
     from forgepdm.domain.entities import ItemKind
-    service = __import__('forgepdm.application.items', fromlist=['ItemService']).ItemService(backend.database)
-    actor = backend.users['admin'].id
-    for expected in ('S000001', 'S000002'):
-        item = service.create_item(kind=ItemKind.PART, name='Bolt', description='', created_by=actor, number_series='S')
+
+    service = __import__("forgepdm.application.items", fromlist=["ItemService"]).ItemService(
+        backend.database
+    )
+    actor = backend.users["admin"].id
+    for expected in ("S000001", "S000002"):
+        item = service.create_item(
+            kind=ItemKind.PART, name="Bolt", description="", created_by=actor, number_series="S"
+        )
         assert item.number == expected
     with pytest.raises(ValueError):
-        service.create_item(kind=ItemKind.ASSEMBLY, name='Invalid', description='', created_by=actor, number_series='S')
+        service.create_item(
+            kind=ItemKind.ASSEMBLY,
+            name="Invalid",
+            description="",
+            created_by=actor,
+            number_series="S",
+        )

@@ -284,7 +284,7 @@ class ManagementService:
         CatalogService._bounds(limit, offset)
         with self.database.connection() as connection:
             rows = connection.execute(
-                "SELECT c.id,c.acquired_at,c.expires_at,c.version,c.revision_id,r.label AS revision_label,i.id AS item_id,i.number AS item_number,i.name AS item_name,CASE WHEN c.expires_at>? THEN 'active' ELSE 'expired' END AS status FROM checkouts c JOIN item_revisions r ON r.id=c.revision_id JOIN items i ON i.id=r.item_id WHERE c.user_id=? AND c.released_at IS NULL AND (?='admin' OR EXISTS (SELECT 1 FROM project_items pi JOIN project_memberships pm ON pm.project_id=pi.project_id WHERE pi.item_id=i.id AND pm.user_id=?)) ORDER BY c.expires_at,c.id LIMIT ? OFFSET ?",
+                "SELECT c.id,c.acquired_at,c.expires_at,c.version,c.revision_id,r.label AS revision_label,i.id AS item_id,i.number AS item_number,COALESCE((SELECT description FROM revision_descriptions WHERE revision_id=r.id),i.name) AS item_name,CASE WHEN c.expires_at>? THEN 'active' ELSE 'expired' END AS status FROM checkouts c JOIN item_revisions r ON r.id=c.revision_id JOIN items i ON i.id=r.item_id WHERE c.user_id=? AND c.released_at IS NULL AND (?='admin' OR EXISTS (SELECT 1 FROM project_items pi JOIN project_memberships pm ON pm.project_id=pi.project_id WHERE pi.item_id=i.id AND pm.user_id=?)) ORDER BY c.expires_at,c.id LIMIT ? OFFSET ?",
                 (now(), actor.id, actor.role, actor.id, limit + 1, offset),
             ).fetchall()
         return CatalogService._page(rows, limit, offset)

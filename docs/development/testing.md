@@ -148,6 +148,8 @@ released-item permissions, unknown legacy languages, Unicode search/pagination,
 independent material snapshots, proposal compatibility and stable localized BOM
 tokens. The optional real Qt suite also includes `test_localization_ui.py`.
 
+`tests/test_unified_descriptions.py` covers canonical text for all four series, manual P assignment/clearing, fixed structured S text and attributed migration of legacy approvals. `tests/web/unified-descriptions-browser.mjs CASE_DIR` checks all four editors against a disposable fixture using the same external Playwright setup.
+
 Against a new `tests/web/serve.py` fixture, run
 `node tests/web/localization-browser.mjs CASE_DIR` with the external Playwright
 driver described above. The script creates only disposable items/translations.

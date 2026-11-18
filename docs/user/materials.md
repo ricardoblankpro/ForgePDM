@@ -10,10 +10,11 @@ For source languages, translations and review, see [description languages](local
 - **M:** Register Raw Material creates a shared-library description such as
   `STEEL PLATE S235, 6 MM`. Curators/admins register/edit; readers select. A
   description-only material can be released without a technical specification.
-- **P:** In an owned Working copy, use **Assign Material / Set Description…** to
+- **P:** Without material, enter a manual component description. Clearing material clears the description and enables manual entry. In an owned Working copy, use **Assign Material / Set Description…** to
   select an exact usable M revision and freeze its description. Clear removes
   the assignment. Upload/Check In publishes native changes. The web Description
   tab also supports assignment under checkout.
+- **S:** Structured Fasteners have one description generated from their specification. Generic purchased items retain one editable purchasing description.
 - **A:** The same command edits free text, for example `General mounting`.
   Assemblies do not select M records.
 

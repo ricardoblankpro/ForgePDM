@@ -193,7 +193,7 @@ class BOMService:
         ancestry = ancestry | {parent_revision_id}
         rows = connection.execute(
             "SELECT b.id AS line_id, b.parent_revision_id, b.component_revision_id, b.quantity, b.position, "
-            "i.id AS item_id, i.number AS item_number, i.kind AS item_kind, i.name AS item_name, "
+            "i.id AS item_id, i.number AS item_number, i.kind AS item_kind, COALESCE((SELECT description FROM revision_descriptions WHERE revision_id=r.id),i.name) AS item_name, "
             "r.label AS revision_label, r.lifecycle_state "
             "FROM bom_lines b JOIN item_revisions r ON r.id = b.component_revision_id "
             "JOIN items i ON i.id = r.item_id WHERE b.parent_revision_id = ? ORDER BY b.position",
@@ -237,7 +237,7 @@ class BOMService:
             rows = connection.execute(
                 "SELECT b.id AS line_id, b.parent_revision_id, b.component_revision_id, b.quantity, b.position, "
                 "parent_item.id AS parent_item_id, parent_item.number AS parent_item_number, "
-                "parent_item.name AS parent_item_name, parent_item_revision.label AS parent_revision_label "
+                "COALESCE((SELECT description FROM revision_descriptions WHERE revision_id=parent_item_revision.id),parent_item.name) AS parent_item_name, parent_item_revision.label AS parent_revision_label "
                 "FROM bom_lines b "
                 "JOIN item_revisions component_revision ON component_revision.id = b.component_revision_id "
                 "JOIN item_revisions parent_item_revision ON parent_item_revision.id = b.parent_revision_id "

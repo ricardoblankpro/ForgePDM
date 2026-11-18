@@ -63,7 +63,7 @@ def read_in(c, database, authorization, user, revision_id):
             authorization.require_read_revision(user, rid, c)
             row = c.execute(
                 "SELECT i.id AS item_id,i.number AS item_number,i.kind AS item_kind,"
-                "i.name AS item_name,i.number_series,i.description AS fallback_description,"
+                "COALESCE((SELECT description FROM revision_descriptions WHERE revision_id=r.id),i.name) AS item_name,i.number_series,i.description AS fallback_description,"
                 "r.label AS revision_label,r.lifecycle_state FROM item_revisions r "
                 "JOIN items i ON i.id=r.item_id WHERE r.id=?",
                 (rid,),
@@ -83,8 +83,11 @@ def read_in(c, database, authorization, user, revision_id):
                 )
             }
             metadata[rid].update(
-                description=text or row["fallback_description"],
-                material=text if row["number_series"] == "P" else "",
+                description=text,
+                material=text
+                if row["number_series"] == "P"
+                and DescriptionService.read_in(c, rid)["material_revision_id"]
+                else "",
                 number_series=row["number_series"],
             )
         return metadata[rid]

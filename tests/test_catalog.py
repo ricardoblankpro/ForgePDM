@@ -145,4 +145,5 @@ def test_catalog_exposes_and_searches_current_revision_description(backend):
     result = catalog(backend).search_items(user, query="mounting")["items"]
     assert [row["id"] for row in result] == [assembly.id]
     assert result[0]["revision_description"] == "General mounting"
-    assert result[0]["name"] == "model"
+    assert result[0]["name"] == "General mounting"
+    assert backend.items.get_item(assembly.id)[0].name == "model"  # Historical name retained.

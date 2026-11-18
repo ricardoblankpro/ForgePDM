@@ -9,7 +9,9 @@ export function localizationUI({api,el,button}) {
    const sources=await api.request(`/items/${item.id}/localized-texts?revision_id=${revision.id}`);
    if(generation!==epoch||!host.isConnected)return;
    host.replaceChildren();
-   for(const source of sources) {
+   const legacy=sources.filter(s=>s.field!=='description');
+   if(legacy.length)host.append(el('details',{},el('summary',{},'Historical item text'),...legacy.map(s=>el('div',{},el('p',{},s.field==='designation'?'Previous item name':'Previous general description'),...s.history.map(v=>el('p',{},`${v.language}: ${v.text||'(empty)'}`)),...s.translations.map(t=>el('p',{},`${t.language} · ${t.state}: ${t.text}`))))));
+   for(const source of sources.filter(s=>s.field==='description')) {
     const section=el('section',{}), text=el('textarea',{'aria-label':`${source.field} translation`,maxlength:1000});
     const active=source.translations.filter(t=>t.language===language&&!t.superseded_at);
     text.value=active.at(-1)?.text||'';

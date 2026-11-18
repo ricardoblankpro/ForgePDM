@@ -119,12 +119,7 @@ def resolve(c, item_id, revision_id, field, requested):
 
 
 def description(c, item_id, revision_id, requested):
-    value = resolve(c, item_id, revision_id, "description", requested)
-    return (
-        value
-        if value and value["text"]
-        else resolve(c, item_id, None, "master_description", requested)
-    )
+    return resolve(c, item_id, revision_id, "description", requested)
 
 
 class LocalizationService:
@@ -251,7 +246,11 @@ class LocalizationService:
                         "SELECT specification_json FROM standard_specifications WHERE item_id=?",
                         (current["item_id"],),
                     ).fetchone()
-                    if spec and current["field"] in ("designation", "master_description"):
+                    if spec and current["field"] in (
+                        "description",
+                        "designation",
+                        "master_description",
+                    ):
                         proposal = generate(json.loads(spec[0]), locale)
                     else:
                         material = c.execute(
@@ -343,7 +342,12 @@ class LocalizationService:
                     ),
                 ),
             )
-            return self.read_in(c, user, sid)
+            result = self.read_in(c, user, sid)
+            if current["revision_id"] is None:
+                from forgepdm.application.description_consolidation import mirror_legacy_change
+
+                mirror_legacy_change(c, result)
+            return result
 
 
 def carry_revision(c, item_id, old_revision, new_revision, actor):
@@ -409,9 +413,8 @@ def localized_catalog(catalog, user, query, project, series, limit, offset, requ
         c.execute("BEGIN")
         for record in records:
             catalog.authorization.require_read_revision(user, record["current_revision_id"], c)
-            name = resolve(c, record["id"], None, "designation", requested)
             desc = description(c, record["id"], record["current_revision_id"], requested)
-            matches.append({**record, "localized_name": name, "localized_description": desc})
+            matches.append({**record, "localized_name": desc, "localized_description": desc})
     return {
         "items": matches,
         "limit": limit,
@@ -428,7 +431,7 @@ def localize_report(c, report, requested):
             item_id, rid = row["item_id"], row["component_revision_id"]
             if rid not in cache:
                 cache[rid] = (
-                    resolve(c, item_id, None, "designation", requested),
+                    description(c, item_id, rid, requested),
                     description(c, item_id, rid, requested),
                 )
             name, desc = cache[rid]
@@ -437,7 +440,7 @@ def localize_report(c, report, requested):
                 row["item_name"] = name["text"]
             if desc:
                 row["description"] = desc["text"]
-            if row.get("number_series") == "P" and desc:
+            if row.get("number_series") == "P" and row.get("material") and desc:
                 row["material"] = desc["text"]
     report["language"] = requested
     report["token"] = hashlib.sha256(

@@ -371,10 +371,9 @@ class OpenDialog(QtWidgets.QDialog):
                 self.results,
                 [
                     record["number"],
-                    (record.get("localized_description") or {}).get("text")
-                    or (record.get("localized_name") or {}).get("text")
-                    or record.get("revision_description")
-                    or record.get("description", ""),
+                    (record["localized_description"]["text"] or "No description assigned.")
+                    if record.get("localized_description") is not None
+                    else record.get("revision_description") or record.get("description", ""),
                     record["revision_label"],
                     record["lifecycle_state"]
                     + (" · expired checkout" if record.get("checkout_status") == "expired" else ""),

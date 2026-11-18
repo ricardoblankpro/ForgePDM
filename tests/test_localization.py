@@ -24,7 +24,11 @@ def setup(b, locale="pt-BR"):
 
 
 def source(svc, b, item):
-    return next(s for s in svc.list(b.users["editor"], item.id) if s["field"] == "designation")
+    return next(
+        s
+        for s in svc.list(b.users["editor"], item.id, item.current_revision_id)
+        if s["field"] == "description"
+    )
 
 
 def test_manual_approval_draft_edit_and_source_correction(backend):
@@ -33,7 +37,7 @@ def test_manual_approval_draft_edit_and_source_correction(backend):
     s = source(svc, b, item)
     draft = svc.change(b.users["editor"], s["id"], "draft", s["token"], "en", "Assembly")
     with b.database.connection() as c:
-        assert resolve(c, item.id, None, "designation", "en")["text"] == "Conjunto"
+        assert resolve(c, item.id, item.current_revision_id, "description", "en")["text"] == "Aço"
     approved = svc.change(
         b.users["editor"],
         s["id"],
@@ -42,13 +46,17 @@ def test_manual_approval_draft_edit_and_source_correction(backend):
         translation_id=draft["translations"][-1]["id"],
     )
     with b.database.connection() as c:
-        assert resolve(c, item.id, None, "designation", "en")["text"] == "Assembly"
+        assert (
+            resolve(c, item.id, item.current_revision_id, "description", "en")["text"] == "Assembly"
+        )
     updated = svc.change(b.users["editor"], s["id"], "draft", approved["token"], "en", "Module")
     with b.database.connection() as c:
-        assert resolve(c, item.id, None, "designation", "en")["text"] == "Assembly"
+        assert (
+            resolve(c, item.id, item.current_revision_id, "description", "en")["text"] == "Assembly"
+        )
     corrected = svc.change(b.users["editor"], s["id"], "correct-language", updated["token"], "en")
     assert all(t["state"] == "needs_review" for t in corrected["translations"])
-    assert corrected["history"][0]["text"] == "Conjunto"
+    assert corrected["history"][0]["text"] == "Aço"
     with b.database.connection() as c:
         assert (
             c.execute("SELECT COUNT(*) FROM item_revisions WHERE item_id=?", (item.id,)).fetchone()[
@@ -186,10 +194,12 @@ def test_api_locale_fields_and_legacy_description_token(backend, monkeypatch):
         assert response.status_code == 201, response.text
         item = response.json()
         path = f"/api/v1/items/{item['id']}/localized-texts"
-        records = client.get(path, params={"language": "en"}).json()
+        records = client.get(
+            path, params={"language": "en", "revision_id": item["current_revision_id"]}
+        ).json()
         assert records[0]["source"]["language"] == "pt-BR"
         before = client.get(f"/api/v1/revisions/{item['current_revision_id']}/description").json()
-        s = next(r for r in records if r["field"] == "designation")
+        s = next(r for r in records if r["field"] == "description")
         draft = client.post(
             "/api/v1/localized-texts/" + s["id"],
             json={
@@ -630,7 +640,10 @@ def test_fastener_vocabulary_upgrade_keeps_approved_text_until_explicit_approval
         )
     draft = source(svc, b, item)
     with b.database.connection() as c:
-        assert resolve(c, item.id, None, "designation", "pt-BR")["text"] == "Bolt"
+        assert (
+            resolve(c, item.id, item.current_revision_id, "description", "pt-BR")["text"]
+            == generation.generate(fastener_spec(), "en")["text"]
+        )
     approved = svc.change(user, s["id"], "approve", draft["token"], translation_id=saved["id"])
     vocabulary = json.loads(json.dumps(PT_BR_TERMS))
     vocabulary["version"] += 1
@@ -643,10 +656,16 @@ def test_fastener_vocabulary_upgrade_keeps_approved_text_until_explicit_approval
     assert "CABEÇA HEXAGONAL" in newer["text"]
     assert json.loads(newer["provenance_json"])["vocabulary_version"] == vocabulary["version"]
     with b.database.connection() as c:
-        assert resolve(c, item.id, None, "designation", "pt-BR")["text"] == saved["text"]
+        assert (
+            resolve(c, item.id, item.current_revision_id, "description", "pt-BR")["text"]
+            == saved["text"]
+        )
     svc.change(user, s["id"], "approve", updated["token"], translation_id=newer["id"])
     with b.database.connection() as c:
-        assert resolve(c, item.id, None, "designation", "pt-BR")["text"] == newer["text"]
+        assert (
+            resolve(c, item.id, item.current_revision_id, "description", "pt-BR")["text"]
+            == newer["text"]
+        )
         assert (
             json.loads(
                 c.execute(

@@ -33,6 +33,8 @@ architecture](../development/architecture.md) and [user guides](../README.md).
 | 025 | [ADR-025 — Immutable isometric previews of exact CAD snapshots](ADR-025-immutable-isometric-thumbnails.md) |
 | 026 | [ADR-026 — Versioned item description localization](ADR-026-versioned-item-description-localization.md) |
 
+| 027 | [ADR-027 — One description per revision](ADR-027-single-revision-description.md) |
+
 ADR-013 supersedes the ordinary advanced-input UI from ADR-012; its APIs/data
 remain compatible. ADR-019 completes write fencing/revision recovery. ADR-022
 extends the original direct drawing report to shared views. ADR-023 records
