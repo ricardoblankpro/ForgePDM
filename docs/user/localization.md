@@ -70,3 +70,18 @@ There is no automatic language detection, bulk legacy classification, AI service
 external translation dependency or automatic approval. More languages/providers
 can be added through the central backend service after terminology and review
 policy are defined.
+
+## Fasteners proposal coverage
+
+The local pt-BR vocabulary covers every type/family in the shared standard map
+and the current controlled material/finish choices. Family names remain general:
+an autotravante nut does not imply a nylon insert, and a flange does not imply
+serrations. Standard-specific details may need manual review. Engineering codes,
+dimensions and mechanical classes keep their canonical values; known material
+identifiers such as PA66 and INCONEL 718 remain identifiers.
+
+Unknown material/finish terms retain their original spelling with a warning in
+the draft provenance. Missing purchasing properties are explicitly unspecified;
+an unknown standard requires manual translation. Vocabulary updates affect new
+proposals only. Existing approved text remains visible until another draft is
+reviewed and explicitly approved.

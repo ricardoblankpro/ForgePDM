@@ -1,0 +1,151 @@
+{
+  "date": "2026-11-18",
+  "scope": "Local deterministic Fasteners proposal generation only; isolated tests, no production translations or GitHub publication",
+  "baseline_commit": "cb9320482d6341b7f49c84e47d2a8008ce8bc904",
+  "shared_map_version": 1,
+  "standard_entries": 99,
+  "before": {
+    "types": {
+      "translated": 4,
+      "total": 4,
+      "covered_standard_entries": 99
+    },
+    "families": {
+      "translated": 6,
+      "total": 23,
+      "covered_standard_entries": 45
+    },
+    "materials": {
+      "covered": 2,
+      "total": 62
+    },
+    "finishes": {
+      "covered": 3,
+      "total": 37
+    },
+    "missing_types": [],
+    "missing_families": [
+      "BELLEVILLE",
+      "CAP",
+      "CHEESE HEAD",
+      "FULL THREAD",
+      "HEX FLANGE",
+      "HEX FLANGE HEAD",
+      "HEX HIGH",
+      "HEX LOCK",
+      "HEX THIN",
+      "PAN HEAD",
+      "RAISED COUNTERSUNK HEAD",
+      "SET",
+      "SHOULDER",
+      "SPRING",
+      "SQUARE",
+      "TOOTHED",
+      "WING"
+    ],
+    "entries_missing_type_or_family": [
+      "ISO4162",
+      "ISO15071",
+      "ISO15072",
+      "EN1662",
+      "EN1665",
+      "ASMEB18.2.1.8",
+      "ISO1580",
+      "ISO7045",
+      "ISO14583",
+      "DIN7985",
+      "ISO1207",
+      "ISO14580",
+      "DIN84",
+      "ISO2010",
+      "ISO7047",
+      "ISO14584",
+      "ISO4026",
+      "ISO4027",
+      "ISO4028",
+      "ISO4029",
+      "ISO4766",
+      "DIN913",
+      "DIN914",
+      "DIN915",
+      "DIN916",
+      "ISO7379",
+      "ASMEB18.3.4",
+      "ISO4033",
+      "ISO8674",
+      "ISO4035",
+      "ISO4036",
+      "ISO8675",
+      "DIN439",
+      "ISO4161",
+      "DIN6923",
+      "ISO7040",
+      "ISO7042",
+      "ISO10511",
+      "DIN985",
+      "DIN982",
+      "DIN980",
+      "DIN1587",
+      "DIN557",
+      "DIN562",
+      "DIN315",
+      "DIN127",
+      "DIN128",
+      "DIN137",
+      "DIN6797",
+      "DIN6798",
+      "DIN6796",
+      "DIN975",
+      "DIN976",
+      "DIN976-1"
+    ]
+  },
+  "after": {
+    "types": {
+      "translated": 4,
+      "total": 4,
+      "covered_standard_entries": 99
+    },
+    "families": {
+      "translated": 23,
+      "total": 23,
+      "covered_standard_entries": 99
+    },
+    "materials": {
+      "covered": 62,
+      "total": 62
+    },
+    "finishes": {
+      "covered": 37,
+      "total": 37
+    },
+    "missing_types": [],
+    "missing_families": [],
+    "entries_missing_type_or_family": []
+  },
+  "english_identical_proposals": 297,
+  "english_compared_proposals": 297,
+  "tests": {
+    "localization": {
+      "passed": 242,
+      "command": "uv run --group dev --locked pytest tests/test_localization.py -q"
+    },
+    "backend": {
+      "passed": 543,
+      "command": "uv run --group dev --locked pytest tests -q"
+    },
+    "lint_and_format": "passed for src, tools, tests/test_repository_docs.py and tests/test_localization.py",
+    "documentation": "tools/check_docs.py passed",
+    "wheel": "uv build --wheel; resource included and isolated DIN980 pt-BR import/generation passed"
+  },
+  "remaining_description_limits": [
+    "Unknown standards require manual translation, including registration families not present in the standard map",
+    "Unknown/free-text materials and finishes preserve input spelling and warn in draft provenance",
+    "Null purchasing properties and missing diameter/custom dimensions are explicit gaps",
+    "Family translations do not expand norm-specific insert material, tip shape, drive, flange subtype, serrations, washer geometry or other omitted details",
+    "Mechanical identifiers and W/SL/SW/OD/K/T dimension identifiers stay canonical",
+    "Lexical coverage does not certify full normative description or engineering conformity",
+    "Legacy free-text finish zinc remains untranslated because its coating process is unspecified"
+  ],
+  "terminology_reference": "../development/references/fastener-pt-BR.md"
+}

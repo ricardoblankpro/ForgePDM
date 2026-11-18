@@ -23,6 +23,11 @@ An installable Addon Manager distribution source/publication is still separate.
 - Reviewed en/pt-BR description localization with source history, original fallback,
   Unicode search, local fastener proposals and separate translation approval. Legacy
   originals remain `und` until confirmed. See [languages](docs/user/localization.md).
+  Fasteners pt-BR proposals now cover all 99 mapped standards (4 types/23 families),
+  62 controlled materials and 37 finishes through a separately versioned local
+  vocabulary. Family names do not infer nylon, tip shape or serrations; unknown
+  material/finish text is preserved with draft warnings. See
+  [terminology and remaining limits](docs/development/references/fastener-pt-BR.md).
 - Shared S/M catalog, Fasteners association, descriptions, physical material
   snapshots, P/S mass evidence and revision-pinned assembly mass.
 - Persistent FreeCAD browser with Recent/Favorites/My Checkouts; web browsing,
@@ -42,6 +47,14 @@ An installable Addon Manager distribution source/publication is still separate.
   missing/failed/interrupted/stale runs. Known older schema backups remain readable.
 
 ## Validation and local installation
+
+2026-11-18 Fasteners proposal increment: 543 backend tests pass, including 242
+localization cases and per-standard pt-BR/English contract checks. All 297 English
+proposals recorded before the change remain identical. Backend/tooling lint,
+format, documentation links and an isolated wheel import/generation pass. The
+shared standard map, schema and review service are unchanged; old provenance and
+approved text are regression-tested. No production translations were created. See
+[coverage evidence](docs/validation/fastener-pt-BR-2026-11-18.json).
 
 2026-11-16 localization: 312 backend tests, 426 addon tests (five optional Qt
 modules skipped), 23 real Qt checks, and 21 Node checks pass. Real Chrome passes

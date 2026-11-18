@@ -5,6 +5,16 @@ They do not certify later behavior or untested platforms. Keep original files,
 including reports reused as regressions, and never add credentials/private CAD.
 See [test tiers](../development/testing.md) and [current handoff](../../DEVELOPMENT_STATUS.md).
 
+## Fasteners pt-BR proposal vocabulary
+
+- [Before/after coverage and deterministic generation checks](fastener-pt-BR-2026-11-18.json)
+- [Terminology sources and description limits](../development/references/fastener-pt-BR.md)
+
+This covers the mapped types/families and controlled purchasing terms, English
+compatibility and preservation of approved text. It is local backend/package
+evidence; full standard descriptions and native GUI/platform acceptance are
+separate scopes.
+
 ## Shared BOM functional baseline
 
 - [Backend/web browser acceptance](shared-bom-browser-2026-11-15.json)

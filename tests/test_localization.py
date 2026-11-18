@@ -1,10 +1,14 @@
 """Locale presentation never changes identity, engineering revisions or CAD tokens."""
 
+import json
+from pathlib import Path
+
 import pytest
 
 from forgepdm.application.catalog import CatalogService
 from forgepdm.application.localization import LocalizationService, resolve
 from forgepdm.domain.entities import Conflict, Forbidden, ItemKind, LifecycleState
+from forgepdm.domain.standard_parts import specification
 
 
 def setup(b, locale="pt-BR"):
@@ -383,3 +387,277 @@ def test_read_permissions_tokens_and_search_pagination(backend):
         c.execute("DELETE FROM project_items WHERE item_id=?", (item.id,))
     with pytest.raises(Forbidden):
         svc.list(b.users["viewer"], item.id)
+
+
+# The shared registry stays independent of every language vocabulary.
+FASTENER_DOMAIN = Path(__file__).parents[1] / "src/forgepdm/domain"
+FASTENER_NORMS = json.loads((FASTENER_DOMAIN / "fastener_terms.json").read_text())["norms"]
+PT_BR_TERMS = json.loads(
+    (FASTENER_DOMAIN / "fastener_locales/pt-BR.json").read_text(encoding="utf-8")
+)
+
+
+def fastener_spec(norm="ISO4017", **changes):
+    return {
+        "geometry": {"Type": norm, "Diameter": "M8", "PitchCustom": "1.25", "Length": "20"},
+        "material": "steel",
+        "grade": "8.8",
+        "finish": "plain",
+        **changes,
+    }
+
+
+@pytest.mark.parametrize("norm,pair", FASTENER_NORMS.items(), ids=FASTENER_NORMS)
+def test_every_fastener_standard_has_portuguese_type_and_family(norm, pair):
+    from forgepdm.domain.description_generation import generate
+
+    kind, family = pair
+    assert PT_BR_TERMS["types"][kind]
+    assert PT_BR_TERMS["families"][family]
+    proposal = generate(fastener_spec(norm), "pt-BR")
+    assert proposal["text"].startswith(PT_BR_TERMS["types"][kind] + " AÇO ")
+    assert PT_BR_TERMS["families"][family] + " " + norm in proposal["text"]
+    assert proposal["warnings"] == []
+    assert proposal["state"] == "draft"
+
+
+@pytest.mark.parametrize(
+    "norm,kind,family,diameter,pitch,length,grade",
+    [
+        ("ISO4017", "PARAFUSO", "CABEÇA SEXTAVADA", "M8", "1.25", "20", "8.8"),
+        ("DIN914", "PARAFUSO", "SEM CABEÇA", "M6", "0.75", "12", "45H"),
+        ("DIN985", "PORCA", "SEXTAVADA AUTOTRAVANTE", "M10", "1.5", None, "10"),
+        ("ISO7089", "ARRUELA", "LISA", "8", None, None, "200HV"),
+        ("DIN976-1", "BARRA ROSCADA", "COM ROSCA TOTAL", "M12", "1.75", "1000", "10.9"),
+    ],
+)
+def test_portuguese_fastener_engineering_tokens(norm, kind, family, diameter, pitch, length, grade):
+    import copy
+
+    from forgepdm.domain.description_generation import generate
+
+    geometry = {"Type": norm, "Diameter": diameter}
+    if pitch:
+        geometry["PitchCustom"] = pitch
+    if length:
+        geometry["Length"] = length
+    spec = fastener_spec(norm, geometry=geometry, grade=grade)
+    before = copy.deepcopy(spec)
+    dimensions = "X".join(t for t in (diameter, pitch, length) if t)
+    assert generate(spec, "pt-BR")["text"] == (
+        f"{kind} AÇO {family} {norm} {dimensions} {grade} SEM REVESTIMENTO"
+    )
+    assert spec == before
+
+
+@pytest.mark.parametrize(
+    "norm,expected,forbidden",
+    [
+        ("DIN980", "SEXTAVADA AUTOTRAVANTE", "NYLON"),
+        ("ISO7042", "SEXTAVADA AUTOTRAVANTE", "NYLON"),
+        ("DIN985", "SEXTAVADA AUTOTRAVANTE", "NYLON"),
+        ("ISO7040", "SEXTAVADA AUTOTRAVANTE", "NYLON"),
+        ("DIN913", "SEM CABEÇA", "PONTA CÔNICA"),
+        ("DIN914", "SEM CABEÇA", "PONTA PLANA"),
+        ("DIN915", "SEM CABEÇA", "PONTA CÔNCAVA"),
+        ("DIN916", "SEM CABEÇA", "PONTA PLANA"),
+        ("ISO4766", "SEM CABEÇA", "SEXTAVADO INTERNO"),
+        ("ISO14579", "CABEÇA CILÍNDRICA COM ENCAIXE INTERNO", "SEXTAVADO INTERNO"),
+        ("DIN6923", "SEXTAVADA COM FLANGE", "SERRILHADA"),
+        ("ISO4162", "CABEÇA SEXTAVADA COM FLANGE", "SERRILHADA"),
+        ("ISO7380-1", "CABEÇA ABAULADA", "COM FLANGE"),
+        ("DIN137", "ELÁSTICA", "HELICOIDAL"),
+    ],
+)
+def test_portuguese_families_do_not_invent_standard_details(norm, expected, forbidden):
+    from forgepdm.domain.description_generation import generate
+
+    text = generate(fastener_spec(norm), "pt-BR")["text"]
+    assert expected in text
+    assert forbidden not in text
+
+
+@pytest.mark.parametrize("field,section", [("material", "materials"), ("finish", "finishes")])
+def test_all_current_fastener_options_have_local_terms(field, section, monkeypatch):
+    from forgepdm.domain.description_generation import generate
+
+    monkeypatch.syspath_prepend(str(Path(__file__).parents[1] / "clients/freecad"))
+    from freecad.forgepdm.standard_options import FINISHES, MATERIALS
+
+    options = MATERIALS if field == "material" else FINISHES
+    for option in options:
+        if option["value"] is None:
+            continue
+        value = option["value"]
+        assert value.upper() in PT_BR_TERMS[section], value
+        proposal = generate(fastener_spec(**{field: value}), "pt-BR")
+        assert not proposal["warnings"], value
+        assert PT_BR_TERMS[section][value.upper()] in proposal["text"]
+
+
+@pytest.mark.parametrize(
+    "field,raw",
+    [("material", "Unlisted Alloy Cu-X"), ("finish", "zinc plated Mystery™")],
+)
+def test_unknown_fastener_vocabulary_retains_original_and_warns(field, raw):
+    from forgepdm.domain.description_generation import generate
+
+    proposal = generate(fastener_spec(**{field: raw}), "pt-BR")
+    assert raw in proposal["text"]
+    assert any(raw in warning for warning in proposal["warnings"])
+    assert proposal["provenance"]["warnings"] == proposal["warnings"]
+    assert proposal["state"] == "draft"
+
+
+@pytest.mark.parametrize("field", ["material", "finish"])
+def test_missing_fastener_vocabulary_entry_is_explicit(field, tmp_path, monkeypatch):
+    from forgepdm.domain import description_generation as generation
+
+    vocabulary = json.loads(json.dumps(PT_BR_TERMS))
+    section, key, raw = (
+        ("materials", "STEEL", "steel") if field == "material" else ("finishes", "PLAIN", "plain")
+    )
+    del vocabulary[section][key]
+    path = tmp_path / "pt-BR.json"
+    path.write_text(json.dumps(vocabulary), encoding="utf-8")
+    monkeypatch.setitem(generation.VOCABULARIES, "pt-BR", str(path))
+    proposal = generation.generate(fastener_spec(), "pt-BR")
+    assert raw in proposal["text"]
+    assert proposal["warnings"] == [f"{section}: {raw}"]
+
+
+@pytest.mark.parametrize("field", ["material", "grade", "finish"])
+def test_unspecified_fastener_property_is_not_plain_or_not_applicable(field):
+    from forgepdm.domain.description_generation import generate
+
+    proposal = generate(fastener_spec(**{field: None}), "pt-BR")
+    assert "NÃO ESPECIFICADO" in proposal["text"]
+    assert proposal["warnings"] == [f"{field}: unspecified property"]
+
+
+@pytest.mark.parametrize("locale", ["pt-BR", "en"])
+def test_unknown_fastener_standard_requires_manual_translation(locale):
+    from forgepdm.domain.description_generation import generate
+
+    with pytest.raises(ValueError, match="unknown standard; enter a manual translation"):
+        generate(fastener_spec("UNLISTED123"), locale)
+
+
+def test_portuguese_custom_dimensions_descriptors_and_not_applicable():
+    from forgepdm.domain.description_generation import generate
+
+    spec = fastener_spec(
+        geometry={
+            "Type": "ISO4017",
+            "Diameter": "custom",
+            "DiameterCustom": "8.5",
+            "PitchCustom": "1.25",
+            "Length": "custom",
+            "LengthCustom": "25.5",
+            "LeftHanded": True,
+            "Blind": True,
+            "Width": "10",
+            "ScrewLength": "15",
+            "SlotWidth": "2",
+            "ExternalDiam": "20",
+            "KeySize": "4",
+            "Tcode": "30",
+        },
+        grade="not applicable",
+    )
+    proposal = generate(spec, "pt-BR")
+    assert (
+        "M8.5X1.25X25.5 W10 SL15 SW2 OD20 K4 T30 ROSCA À ESQUERDA CEGO NÃO APLICÁVEL"
+        in proposal["text"]
+    )
+    assert not proposal["warnings"]
+    assert "BLIND" not in proposal["text"]
+    spec["geometry"].update(Blind=False, LeftHanded=False)
+    text = generate(spec, "pt-BR")["text"]
+    assert "CEGO" not in text and "ROSCA À ESQUERDA" not in text
+
+
+def test_portuguese_unknown_descriptor_and_missing_dimension_warn():
+    from forgepdm.domain.description_generation import generate
+
+    proposal = generate(fastener_spec(geometry={"Type": "ISO4017", "Blind": "Unknown"}), "pt-BR")
+    assert "DIMENSÃO NÃO ESPECIFICADA" in proposal["text"]
+    assert "Blind=Unknown" in proposal["text"]
+    assert proposal["warnings"] == ["Diameter: unspecified property", "Blind: Unknown"]
+
+
+@pytest.mark.parametrize("norm,pair", FASTENER_NORMS.items(), ids=FASTENER_NORMS)
+def test_every_english_fastener_proposal_retains_catalog_contract(norm, pair, monkeypatch):
+    from forgepdm.domain.description_generation import generate
+
+    monkeypatch.syspath_prepend(str(Path(__file__).parents[1] / "clients/freecad"))
+    from freecad.forgepdm.standard_options import NORMS, catalog_text
+
+    assert list(NORMS[norm]) == pair
+    for purchasing in [
+        {},
+        {"material": None, "grade": None, "finish": None},
+        {"material": "Special Alloy", "finish": "Custom Finish"},
+    ]:
+        spec = fastener_spec(norm, **purchasing)
+        spec["geometry"].update(Blind=True, LeftHanded=True, Width="10")
+        assert generate(spec, "en")["text"] == catalog_text(spec, *pair)[0]
+
+
+def test_fastener_vocabulary_upgrade_keeps_approved_text_until_explicit_approval(
+    backend, tmp_path, monkeypatch
+):
+    from test_standard_parts import register
+
+    from forgepdm.domain import description_generation as generation
+
+    b = backend
+    item = register(b, fastener_spec(), source_language="en")
+    svc = LocalizationService(b.database, b.authorization)
+    user = b.users["editor"]
+    s = source(svc, b, item)
+    draft = svc.change(user, s["id"], "generate", s["token"], "pt-BR")
+    saved = draft["translations"][-1]
+    provenance = json.loads(saved["provenance_json"])
+    assert provenance["vocabulary_version"] == PT_BR_TERMS["version"]
+    assert provenance["version"] == 1  # The shared standard map is unchanged.
+    # Existing stored proposals predate the separate vocabulary metadata.
+    legacy_provenance = {k: v for k, v in provenance.items() if not k.startswith("vocabulary_")}
+    with b.database.transaction() as c:
+        c.execute(
+            "UPDATE localized_translation_versions SET provenance_json=? WHERE id=?",
+            (json.dumps(legacy_provenance), saved["id"]),
+        )
+    draft = source(svc, b, item)
+    with b.database.connection() as c:
+        assert resolve(c, item.id, None, "designation", "pt-BR")["text"] == "Bolt"
+    approved = svc.change(user, s["id"], "approve", draft["token"], translation_id=saved["id"])
+    vocabulary = json.loads(json.dumps(PT_BR_TERMS))
+    vocabulary["version"] += 1
+    vocabulary["families"]["HEX HEAD"] = "CABEÇA HEXAGONAL"
+    path = tmp_path / "pt-BR.json"
+    path.write_text(json.dumps(vocabulary), encoding="utf-8")
+    monkeypatch.setitem(generation.VOCABULARIES, "pt-BR", str(path))
+    updated = svc.change(user, s["id"], "generate", approved["token"], "pt-BR")
+    newer = next(t for t in updated["translations"] if t["state"] == "draft")
+    assert "CABEÇA HEXAGONAL" in newer["text"]
+    assert json.loads(newer["provenance_json"])["vocabulary_version"] == vocabulary["version"]
+    with b.database.connection() as c:
+        assert resolve(c, item.id, None, "designation", "pt-BR")["text"] == saved["text"]
+    svc.change(user, s["id"], "approve", updated["token"], translation_id=newer["id"])
+    with b.database.connection() as c:
+        assert resolve(c, item.id, None, "designation", "pt-BR")["text"] == newer["text"]
+        assert (
+            json.loads(
+                c.execute(
+                    "SELECT provenance_json FROM localized_translation_versions WHERE id=?",
+                    (saved["id"],),
+                ).fetchone()[0]
+            )
+            == legacy_provenance
+        )
+        assert c.execute(
+            "SELECT specification_json FROM standard_specifications WHERE item_id=?", (item.id,)
+        ).fetchone()[0] == json.dumps(
+            specification(fastener_spec()), sort_keys=True, separators=(",", ":"), ensure_ascii=True
+        )
