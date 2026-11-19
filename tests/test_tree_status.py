@@ -140,3 +140,85 @@ def test_api_requires_auth_validates_bounds_and_disables_caching(backend, monkey
         response = client.post(endpoint, headers=headers, json=body)
         assert response.status_code == 200 and response.headers["cache-control"] == "no-store"
         assert response.json()["items"][0]["available"]
+        localized = client.post(endpoint + "?language=pt-BR", headers=headers, json=body)
+        assert localized.status_code == 200 and localized.json()["language"] == "pt-BR"
+        assert localized.json()["items"][0]["localized_description"]["fallback"]
+        assert (
+            client.post(endpoint + "?language=unknown", headers=headers, json=body).status_code
+            == 422
+        )
+
+
+def test_localized_status_matches_bom_resolution_without_changing_original(backend):
+    from test_standard_parts import register
+
+    from forgepdm.application.bom_reports import bom_report
+    from forgepdm.application.descriptions import DescriptionService
+    from forgepdm.application.localization import LocalizationService
+
+    b = backend
+    item = register(b, source_language="en")
+    user = b.users["editor"]
+    svc = LocalizationService(b.database, b.authorization)
+    source = next(
+        s for s in svc.list(user, item.id, item.current_revision_id) if s["field"] == "description"
+    )
+    original = DescriptionService(b.database, b.authorization, b.revisions).read(
+        user, item.current_revision_id
+    )
+    draft = svc.change(
+        user, source["id"], "draft", source["token"], "pt-BR", "PARAFUSO SEXTAVADO M8X20 8.8"
+    )
+    row = service(b).revisions(user, [item.current_revision_id], "pt-BR")["items"][0]
+    assert row["localized_description"]["text"] == original["description"]
+    assert row["localized_description"]["fallback"]
+    svc.change(
+        user,
+        source["id"],
+        "approve",
+        draft["token"],
+        translation_id=draft["translations"][-1]["id"],
+    )
+    assembly = create_item(b, kind="assembly")
+    b.bom.replace_bom(
+        user,
+        assembly.current_revision_id,
+        [{"component_revision_id": item.current_revision_id, "quantity": "2", "position": 1}],
+    )
+    row = service(b).revisions(user, [item.current_revision_id], "pt-BR")["items"][0]
+    report = bom_report(b.database, b.authorization, user, assembly.current_revision_id, "pt-BR")
+    assert (
+        row["localized_description"]["text"]
+        == report["views"]["direct"][0]["description"]
+        == "PARAFUSO SEXTAVADO M8X20 8.8"
+    )
+    assert (
+        row["description"] == original["description"]
+        and row["description_token"] == original["token"]
+    )
+    assert (
+        "localized_description"
+        not in service(b).revisions(user, [item.current_revision_id])["items"][0]
+    )
+    current = svc.list(user, item.id, item.current_revision_id)
+    s = next(s for s in current if s["field"] == "description")
+    svc.change(user, s["id"], "correct-language", s["token"], "pt-BR")
+    row = service(b).revisions(user, [item.current_revision_id], "en")["items"][0]
+    assert row["localized_description"]["text"] == original["description"]
+
+
+def test_localized_status_preserves_unavailable_identity_boundary(backend):
+    private = backend.items.create_item(
+        kind=ItemKind.PART,
+        name="secret",
+        description="Confidential",
+        created_by=backend.users["admin"].id,
+    )
+    missing = str(uuid4())
+    result = service(backend).revisions(
+        backend.users["viewer"], [private.current_revision_id, missing], "pt-BR"
+    )
+    assert result["language"] == "pt-BR"
+    assert result["items"] == [
+        {"revision_id": rid, "available": False} for rid in [private.current_revision_id, missing]
+    ]

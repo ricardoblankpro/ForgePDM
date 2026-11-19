@@ -5,6 +5,10 @@ They do not certify later behavior or untested platforms. Keep original files,
 including reports reused as regressions, and never add credentials/private CAD.
 See [test tiers](../development/testing.md) and [current handoff](../../DEVELOPMENT_STATUS.md).
 
+## Native tree Fasteners descriptions
+
+- [Localized rows, full-text hover and installed native data preservation](tree-descriptions-2026-11-18.json)
+
 ## Web translation editor
 
 - [UX, Chrome regressions and installed data preservation](translation-editor-2026-11-18.json)

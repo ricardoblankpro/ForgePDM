@@ -146,3 +146,98 @@ def test_session_switch_notifies_status_without_importing_gui(monkeypatch):
         assert len(notifications) == 2
     finally:
         Session.client, Session.user = previous
+
+
+def test_fastener_reads_are_deduplicated_exact_and_language_is_frozen(monkeypatch):
+    monkeypatch.setattr(
+        pdm_status.workspace, "binding", lambda *a, **k: (_ for _ in ()).throw(ValueError())
+    )
+    client = SimpleNamespace(
+        base_url="http://server", description_language="pt-BR", _checkpoint=lambda: None
+    )
+    calls = []
+
+    def query(ids, language=None):
+        calls.append((ids, language))
+        client.description_language = "en"
+        return dict(checked_at="now", items=[])
+
+    client.revision_status = query
+    targets = [
+        dict(
+            key="assembly",
+            revision_id="assembly-A",
+            item_id="assembly",
+            path="",
+            dirty=True,
+            fasteners={str(i): dict(revision_id="standard-A" + str(i // 2)) for i in range(402)},
+        )
+    ]
+    result = pdm_status.fetch(client, targets, {})
+    assert [len(ids) for ids, _ in calls] == [200, 2]
+    assert all(language == "pt-BR" for _, language in calls)
+    assert calls[0][0][0] == "assembly-A" and calls[0][0][1] == "standard-A0"
+    assert result["language"] == "pt-BR" and list(result["local"]) == ["assembly"]
+
+
+def description_fixture():
+    target = dict(
+        revision_id="assembly-A", description="Assembly", description_token="original", dirty=True
+    )
+    occurrence = dict(
+        revision_id="standard-A", description="Type: ISO4017; Diameter: M8; Length: 20"
+    )
+    snapshot = dict(
+        language="pt-BR",
+        remote={
+            "assembly-A": dict(
+                available=True,
+                description="Assembly",
+                description_token="original",
+                localized_description=dict(original_text="Assembly", text="Conjunto"),
+            ),
+            "standard-A": dict(
+                available=True,
+                description="SCREW ISO4017 M8X20",
+                localized_description=dict(
+                    original_text="SCREW ISO4017 M8X20", text="PARAFUSO ISO4017 M8X20"
+                ),
+            ),
+            "standard-B": dict(available=True, description="WRONG NEW REVISION"),
+        },
+    )
+    return target, occurrence, snapshot
+
+
+def test_fastener_uses_its_own_revision_and_never_the_assembly_description():
+    target, occurrence, snapshot = description_fixture()
+    assert (
+        pdm_status.description_text(target, snapshot, "pt-BR", occurrence)
+        == "PARAFUSO ISO4017 M8X20"
+    )
+    assert pdm_status.description_text(target, snapshot, None, occurrence) == "SCREW ISO4017 M8X20"
+    assert pdm_status.description_text(target, snapshot, "en", occurrence) == "SCREW ISO4017 M8X20"
+
+
+def test_unassociated_or_inaccessible_fastener_uses_only_local_geometry():
+    target, occurrence, snapshot = description_fixture()
+    snapshot["remote"]["standard-A"] = dict(available=False)
+    assert (
+        pdm_status.description_text(target, snapshot, "pt-BR", occurrence)
+        == occurrence["description"]
+    )
+    occurrence["revision_id"] = None
+    assert (
+        pdm_status.description_text(target, snapshot, "pt-BR", occurrence)
+        == occurrence["description"]
+    )
+
+
+def test_local_description_edits_are_preserved_but_geometry_edits_allow_translation():
+    target, _, snapshot = description_fixture()
+    assert pdm_status.description_text(target, snapshot, "pt-BR") == "Conjunto"
+    target["description"] = "Unsaved new assembly description"
+    assert pdm_status.description_text(target, snapshot, "pt-BR") == target["description"]
+    target["dirty"] = False
+    snapshot["remote"]["assembly-A"]["description_token"] = "new-source"
+    assert pdm_status.description_text(target, snapshot, "pt-BR") == "Conjunto"

@@ -9,7 +9,7 @@ from uuid import UUID
 import FreeCAD as App
 import FreeCADGui as Gui
 
-from . import cad, pdm_status, descriptions
+from . import cad, pdm_status, descriptions, fasteners
 from .api import ForgePDMError
 from .jobs import Context, Request
 from .session import Session
@@ -59,7 +59,18 @@ def collect(client):
                 dirty=cad.document_modified(document),
                 foreign=getattr(metadata, "ServerUrl", client.base_url).rstrip("/")
                 != client.base_url,
+                fasteners={},
             )
+            for obj in fasteners.objects(document):
+                try:
+                    association = fasteners.association(obj)
+                    fallback = fasteners.describe(fasteners.extract(obj))
+                except fasteners.WorkspaceError:
+                    association, fallback = None, obj.Label
+                targets[key]["fasteners"][obj.Name] = dict(
+                    revision_id=association["revision_id"] if association else None,
+                    description=fallback,
+                )
         return key
 
     containers = {"PartDesign::Body", "App::Part", "Assembly::AssemblyObject"}
@@ -72,7 +83,8 @@ def collect(client):
                 source = linked_object(obj)
                 key = target(source.Document) if source is not None else None
             elif root and (
-                obj.TypeId in containers
+                obj.Name in targets[root]["fasteners"]
+                or obj.TypeId in containers
                 or (
                     obj.isDerivedFrom("Part::Feature")
                     and not any(parent.TypeId in containers for parent in obj.InList)
@@ -240,6 +252,7 @@ class Column:
                         item = iterator.value()
                         if tree.headerItem().data(DESCRIPTION_COLUMN, QtCore.Qt.UserRole) == MARKER:
                             item.setText(DESCRIPTION_COLUMN, "")
+                            item.setToolTip(DESCRIPTION_COLUMN, "")
                         for role in (
                             QtCore.Qt.DisplayRole,
                             QtCore.Qt.DecorationRole,
@@ -282,9 +295,10 @@ class Column:
                 continue
             blocker = QtCore.QSignalBlocker(tree)
 
-            def draw(item, key, reason=None):
+            def draw(item, key, reason=None, obj=None):
                 nonlocal count
                 item.setText(DESCRIPTION_COLUMN, "")
+                item.setToolTip(DESCRIPTION_COLUMN, "")
                 if key is None and reason is None:
                     item.setData(COLUMN, QtCore.Qt.DisplayRole, None)
                     item.setData(COLUMN, QtCore.Qt.DecorationRole, None)
@@ -301,15 +315,19 @@ class Column:
                     remote, reason = None, "Local item/revision identity differs from the server."
                 if target.get("foreign"):
                     remote, reason = None, "Document belongs to another server."
-                description = target.get("description")
-                if (
-                    remote
-                    and not target.get("dirty")
-                    and target.get("description_token") != remote.get("description_token")
-                ):
-                    description = remote.get("description", description)
+                source = linked_object(obj) if obj is not None else None
+                occurrence = target.get("fasteners", {}).get(source.Name) if source else None
+                description = pdm_status.description_text(
+                    target, snapshot, getattr(client, "description_language", None), occurrence
+                )
                 if not reason and not target.get("foreign"):
                     item.setText(DESCRIPTION_COLUMN, description or "")
+                    item.setToolTip(
+                        DESCRIPTION_COLUMN,
+                        "<qt>" + escape(description).replace("\n", "<br>") + "</qt>"
+                        if description
+                        else "",
+                    )
                 local = dict((snapshot or {}).get("local", {}).get(key, {}))
                 local["dirty"] = local.get("dirty", False) or target.get("dirty", False)
                 presentation = pdm_status.describe(
@@ -339,7 +357,11 @@ class Column:
 
             def walk(item, document, parent=None):
                 obj = object_for_item(item, document, parent) if document is not None else None
-                draw(item, rows.get((obj.Document.Name, obj.Name)) if obj is not None else None)
+                draw(
+                    item,
+                    rows.get((obj.Document.Name, obj.Name)) if obj is not None else None,
+                    obj=obj,
+                )
                 for index in range(item.childCount()):
                     child = item.child(index)
                     walk(child, obj.Document if obj is not None else document, obj)
@@ -377,6 +399,7 @@ class Controller:
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ForgePDM-status")
         self.future, self.context = None, None
         self.key, self.generation = None, 0
+        self.language = None
         self.snapshot, self.hash_cache = None, {}
         self.pending, self.next_refresh, self.next_paint = False, 0, 0
         self.stale = None
@@ -391,6 +414,7 @@ class Controller:
         if self.context:
             self.context.cancelled.set()
         self.key = session_key()
+        self.language = getattr(Session.client, "description_language", None)
         self.snapshot, self.hash_cache = None, {}
         self.stale = None
         self.column.clear()
@@ -420,6 +444,11 @@ class Controller:
         current_key = session_key()
         if current_key != self.key:
             self.reset()
+        language = getattr(Session.client, "description_language", None)
+        if language != self.language:
+            self.language = language
+            self.snapshot = None
+            self.request()
         if self.future is not None and self.future.done():
             future, request_key, generation = self.future, self.request_key, self.request_generation
             self.future, self.context = None, None

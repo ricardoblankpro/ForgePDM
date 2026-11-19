@@ -6,8 +6,8 @@ This is the current handoff. Start with [README](README.md) and
 
 ## Delivery
 
-- Addon: **0.22.0**
-- Backend package: **0.3.2**
+- Addon: **0.22.1**
+- Backend package: **0.3.3**
 - Database schema: **20**
 
 Versions are independent. The backend/server is AGPL-3.0-or-later and the
@@ -36,6 +36,9 @@ An installable Addon Manager distribution source/publication is still separate.
 - One canonical description/translation editor per revision: assigned material or manual P text, manual A, fixed structured S or manual generic S, and revisioned M text. Legacy item text remains available as history. See [ADR-027](docs/decisions/ADR-027-single-revision-description.md).
 - Shared S/M catalog, Fasteners association, descriptions, physical material
   snapshots, P/S mass evidence and revision-pinned assembly mass.
+- Native tree descriptions follow the browser/BOM language, including exact associated
+  Fasteners S revisions. Full-text hover tooltips and local geometry/label fallback
+  preserve assembly checkout ownership and unsaved description edits.
 - Persistent FreeCAD browser with Recent/Favorites/My Checkouts; web browsing,
   description controls and account/project administration.
 - Direct/Indented/Flattened BOM reports shared across clients. CAD-to-BOM changes
@@ -53,6 +56,21 @@ An installable Addon Manager distribution source/publication is still separate.
   missing/failed/interrupted/stale runs. Known older schema backups remain readable.
 
 ## Validation and local installation
+
+2026-11-18 native tree descriptions: backend **0.3.3** / schema **20** runs
+on loopback; addon **0.22.1** is installed in both profiles and active in FreeCAD
+1.1.4 / Qt 6.8.3. 556 backend, 433 addon (five optional Qt modules skipped),
+23 real Qt and nine native Fasteners/browser/BOM/hover checks pass. Native
+acceptance uses disposable data; a read-only production probe verifies all three
+open screw/washer/nut rows in Portuguese with full tooltips. Lint, formatting,
+documentation and packaging checks pass. A verified backup and prior addon copies
+are retained under `var/backups/before-tree-descriptions`. Engineering tables,
+29 items, 33 revisions, 245 file records and 237 blob hashes are preserved;
+a concurrent source-language confirmation is retained. Three open documents keep
+their file bytes, object labels/associations, paths and modified/touched flags;
+the active document, column layout and authenticated session are preserved.
+No production translations were created by acceptance. See
+[native tree and installation evidence](docs/validation/tree-descriptions-2026-11-18.json).
 
 2026-11-18 translation editor: backend **0.3.2** runs on loopback with schema
 **20**; addon **0.22.0** remains installed. 554 backend tests, 23 Node tests,

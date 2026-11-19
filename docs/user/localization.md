@@ -15,7 +15,9 @@ Choose **English descriptions** or **Descrições em português** in the FreeCAD
 browser, or **Description language** in the web catalog. Approved translations
 appear where available; otherwise ForgePDM shows the original text. FreeCAD also
 offers **Original descriptions** and remembers the choice per server/account.
-The choice applies to subsequent BOM reports and drawing-table generation.
+The choice applies to the native tree Description column, subsequent BOM reports
+and drawing-table generation. Embedded Fasteners use their exact associated S
+revision description; hovering over a Description cell shows its full text.
 It never changes native `PDMDescription` properties, geometry or server BOM lines.
 Search matches original text and approved translations, regardless of the display
 language, ignoring case and accents. Drafts are excluded.

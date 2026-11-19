@@ -1,6 +1,6 @@
 """Bounded status reads; unavailable IDs do not disclose item membership."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -23,8 +23,9 @@ def revision_status(
     request: Request,
     response: Response,
     user: Annotated[User, Depends(current_user)],
+    language: Literal["en", "pt-BR"] | None = None,
 ):
     response.headers["Cache-Control"] = "no-store"
     return request.app.state.tree_status_service.revisions(
-        user, [str(value) for value in payload.revision_ids]
+        user, [str(value) for value in payload.revision_ids], language
     )

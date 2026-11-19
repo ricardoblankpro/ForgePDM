@@ -28,6 +28,25 @@ edit its ledgers manually. Configuration folders accumulate; cleanup is explicit
 Opening the same exact snapshot activates an existing document and preserves its
 unsaved edits. A different snapshot opens separately.
 
+## Tree descriptions
+
+The native tree's **Description** column follows the description language selected
+in the ForgePDM browser, as do subsequent assembly BOM reports and drawing-table
+generation. Approved translations appear where available; otherwise the original
+description is shown. **Original descriptions** always shows original text.
+
+Embedded Fasteners and links to them show the description of their exact associated
+S revision. They keep their containing document's checkout/status context. If a
+Fastener has changed size or lacks a usable catalog association, the tree shows
+its local parameters or label until the association is reviewed through the normal
+Upload/Check In workflow. It never borrows the assembly description.
+
+Hover over any populated **Description** cell to read its full text without widening
+the column. These tree presentations do not modify labels, `Label2`, description
+metadata, geometry, saved files or frozen drawing tables. An explicit unsaved source
+description remains visible until saved/reconciled; it never acquires a translation
+of different text. Language changes refresh the tree asynchronously.
+
 ## Snapshot previews
 
 The browser shows an isometric preview of the selected **Uploaded CAD** snapshot.

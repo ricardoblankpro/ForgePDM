@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.22.1 — Localized native-tree Fasteners descriptions
+
+- Show each embedded or linked Fastener's exact associated S revision description in the native tree.
+- Follow the browser/BOM description language with approved translations and original fallback; retain explicit local source edits.
+- Show the full Description cell in a hover tooltip, including when the column is narrow.
+- Keep assembly checkout/status ownership and native document properties unchanged; changed or unassociated Fasteners show local parameters.
+- Backend 0.3.3 adds optional language resolution to the existing bounded status query; schema remains 20.
+
 ## 0.22.0 — One revision description
 
 - One description and translation editor per revision, with legacy text retained as history.

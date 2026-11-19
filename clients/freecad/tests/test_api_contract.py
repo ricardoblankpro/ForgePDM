@@ -332,3 +332,17 @@ def test_description_language_is_additive_and_creation_language_is_independent(a
     assert calls[-1][2]["source_language"] == "pt-BR"
     client.description_proposal({"geometry": {}}, "en")
     assert calls[-1][0:2] == ("POST", "/api/v1/description-proposals")
+
+
+def test_tree_status_language_is_optional_and_preserves_the_batch_contract(api, monkeypatch):
+    client = api.ForgePDMClient("http://localhost:8000")
+    calls = []
+    monkeypatch.setattr(client, "_json_request", lambda *args: calls.append(args) or {})
+    client.revision_status(["exact-A"], language="pt-BR")
+    assert calls[-1] == (
+        "POST",
+        "/api/v1/status/revisions?language=pt-BR",
+        {"revision_ids": ["exact-A"]},
+    )
+    client.revision_status(["exact-A"])
+    assert calls[-1] == ("POST", "/api/v1/status/revisions", {"revision_ids": ["exact-A"]})

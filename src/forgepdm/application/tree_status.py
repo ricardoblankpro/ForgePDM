@@ -11,7 +11,11 @@ class TreeStatusService:
         self.database = database
         self.authorization = authorization
 
-    def revisions(self, user, revision_ids):
+    def revisions(self, user, revision_ids, language=None):
+        if language is not None:
+            from forgepdm.application.localization import language as normalize_language
+
+            language = normalize_language(language)
         if not 1 <= len(revision_ids) <= 200:
             raise ValueError("request between 1 and 200 revision IDs")
         now = datetime.now(UTC)
@@ -50,16 +54,13 @@ class TreeStatusService:
                     "AND d.dataset_type='native_cad' ORDER BY d.created_at DESC,d.id DESC,f.id DESC LIMIT 1",
                     (revision_id,),
                 ).fetchone()
+                description = DescriptionService.read_in(connection, revision_id)
                 result.append(
                     {
                         "revision_id": revision_id,
                         "available": True,
-                        "description": DescriptionService.read_in(connection, revision_id)[
-                            "description"
-                        ],
-                        "description_token": DescriptionService.read_in(connection, revision_id)[
-                            "token"
-                        ],
+                        "description": description["description"],
+                        "description_token": description["token"],
                         "item_id": revision["item_id"],
                         "item_number": revision["number"],
                         "revision_label": revision["label"],
@@ -69,4 +70,13 @@ class TreeStatusService:
                         "latest_snapshot": dict(snapshot) if snapshot else None,
                     }
                 )
-        return {"checked_at": now.isoformat(), "items": result}
+                if language is not None:
+                    from forgepdm.application.localization import resolve
+
+                    result[-1]["localized_description"] = resolve(
+                        connection, revision["item_id"], revision_id, "description", language
+                    )
+        response = {"checked_at": now.isoformat(), "items": result}
+        if language is not None:
+            response["language"] = language
+        return response

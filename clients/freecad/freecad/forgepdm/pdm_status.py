@@ -19,6 +19,7 @@ COLORS = {
 def fetch(client, targets, hash_cache):
     """Only plain captured records cross into this worker; no CAD/Qt imports."""
     local = {}
+    language = getattr(client, "description_language", None)
     for target in targets:
         client._checkpoint()
         key = target["key"]
@@ -53,17 +54,60 @@ def fetch(client, targets, hash_cache):
             # Keep status useful for a managed revision even when local pins are unavailable.
             pass
         local[key] = value
-    identifiers = list(dict.fromkeys(target["revision_id"] for target in targets))
+    identifiers = list(
+        dict.fromkeys(
+            revision
+            for target in targets
+            for revision in [target["revision_id"]]
+            + [
+                entry["revision_id"]
+                for entry in target.get("fasteners", {}).values()
+                if entry.get("revision_id")
+            ]
+        )
+    )
     remote, checked_at = {}, None
     for start in range(0, len(identifiers), 200):
         client._checkpoint()
-        response = client.revision_status(identifiers[start : start + 200])
+        batch = identifiers[start : start + 200]
+        response = (
+            client.revision_status(batch, language=language)
+            if language
+            else client.revision_status(batch)
+        )
         checked_at = response["checked_at"]
         remote.update({row["revision_id"]: row for row in response["items"]})
     # A bounded cache avoids retaining old document paths indefinitely.
     if len(hash_cache) > 4096:
         hash_cache.clear()
-    return dict(local=local, remote=remote, checked_at=checked_at)
+    return dict(local=local, remote=remote, checked_at=checked_at, language=language)
+
+
+def description_text(target, snapshot, language, fastener=None):
+    """Display text only: preserve local source edits and exact occurrence revisions."""
+    snapshot = snapshot or {}
+    remote = snapshot.get("remote", {}).get((fastener or target).get("revision_id"), {})
+    text = target.get("description")
+    if fastener is not None:
+        text = fastener["description"]
+        if remote.get("available"):
+            text = remote.get("description", text)
+    elif remote.get("available") and (
+        text is None
+        or not target.get("dirty")
+        and target.get("description_token") != remote.get("description_token")
+    ):
+        text = remote.get("description", text)
+    localized = remote.get("localized_description")
+    if (
+        language
+        and snapshot.get("language") == language
+        and remote.get("available")
+        and localized
+        and localized.get("original_text") == text
+    ):
+        text = localized["text"]
+    return text or ""
 
 
 def describe(remote, local, checked_at, *, now=None, stale=None):

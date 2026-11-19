@@ -157,3 +157,16 @@ driver described above. The script creates only disposable items/translations. I
 the installed HTTP client and a real saved/reopened format-3 TechDraw table. It
 preserves pre-existing documents and the production session. These fixtures do
 not classify real legacy descriptions or translate existing engineering data.
+
+### Native tree descriptions
+
+`test_tree_status.py` in each test suite covers authorized batch localization,
+unchanged legacy status payloads, exact Fasteners association capture and rejection
+of old language results. `test_pdm_status.py` checks deduplication, bounded reads,
+original fallback and preservation of local description edits.
+
+`tree_descriptions_gui.run(App, Gui, CASE_DIR)` uses a disposable `serve.py` fixture
+with `tree-fixture.json` containing an assembly and three associated S revisions
+with approved translations. It creates real Fasteners proxies and native tree rows,
+compares English/Portuguese/original text with BOM reports, sends a real tooltip
+help event over a narrow Description cell, and preserves existing documents/session.

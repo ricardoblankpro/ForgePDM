@@ -1,0 +1,110 @@
+{
+  "date": "2026-11-18",
+  "scope": "Localized native-tree Fasteners descriptions and full-text hover tooltips",
+  "versions": {
+    "backend": "0.3.3",
+    "addon": "0.22.1",
+    "schema": 20
+  },
+  "validation": {
+    "backend": {
+      "passed": 556
+    },
+    "addon_base": {
+      "passed": 433,
+      "optional_qt_modules_skipped": 5
+    },
+    "real_qt": {
+      "passed": 23
+    },
+    "native": {
+      "addon": "0.22.1",
+      "freecad": [
+        "1",
+        "1",
+        "4"
+      ],
+      "qt": "6.8.3",
+      "checks": [
+        "Real Fasteners proxies retain exact associated revisions inside an assembly container",
+        "Native screw, washer, nut and repeated link match the BOM in pt-BR",
+        "Hover help over a narrow native Description cell shows its full text",
+        "An old language snapshot never displays the previous translation after switching",
+        "Native screw, washer, nut and repeated link match the BOM in en",
+        "Native screw, washer, nut and repeated link match the BOM in original language",
+        "Changed unassociated geometry shows its own parameters instead of assembly or stale catalog text",
+        "The existing browser language selector drives the same native tree and BOM language",
+        "Original document bytes, paths, labels, associations, dirty flags, active document and session are preserved"
+      ],
+      "scope": "Disposable server and native documents only"
+    },
+    "backend_and_addon_lint_format": true,
+    "documentation_links": true,
+    "addon_packaging_and_installed_source_hashes": true,
+    "backend_wheel_and_sdist": true
+  },
+  "installed": {
+    "database_tables_unchanged": false,
+    "changed_tables": [
+      "audit_events",
+      "localized_text_sources",
+      "localized_source_versions"
+    ],
+    "items": 29,
+    "revisions": 33,
+    "file_records": 245,
+    "unique_verified_blobs": 237,
+    "sqlite_integrity": "ok",
+    "foreign_key_errors": 0,
+    "installed_profiles": {
+      "Mod/ForgePDM": "0.22.1",
+      "v1-1/Mod/ForgePDM": "0.22.1"
+    },
+    "health": "ok",
+    "engineering_tables_unchanged": true,
+    "existing_audit_and_source_version_rows_retained": true,
+    "concurrent_changes": {
+      "localized_source_current_version_changes": 1,
+      "appended_source_versions": 1,
+      "appended_audit_events": 1,
+      "event": "localization.correct-language",
+      "note": "Concurrent source-language confirmation preserved; no database restore or production translation writes by acceptance."
+    },
+    "native": {
+      "native_state_preserved": true,
+      "language": "pt-BR",
+      "snapshot_language": "pt-BR",
+      "rows": [
+        {
+          "object": "Nut",
+          "full_tooltip": true,
+          "own_fastener_description": true
+        },
+        {
+          "object": "Washer",
+          "full_tooltip": true,
+          "own_fastener_description": true
+        },
+        {
+          "object": "Screw001",
+          "full_tooltip": true,
+          "own_fastener_description": true
+        }
+      ]
+    }
+  },
+  "backup": {
+    "verified": true,
+    "directory": "var/backups/before-tree-descriptions/backup-20261119T013423.659332Z-ddda1645",
+    "prior_addon_profiles_retained": true
+  },
+  "compatibility": [
+    "Existing status requests without language preserve original descriptions and response shape.",
+    "The language query is optional; approved translations and original fallback use the same resolver as BOM reports.",
+    "Fastener descriptions follow exact validated occurrence revisions; checkout/status ownership remains the containing native document.",
+    "Unassociated or changed geometry uses local parameters or label; no automatic association, translation approval or CAD mutation.",
+    "Language changes reject pending old-language results; explicit local description edits remain visible.",
+    "Existing frozen drawing tables retain their stored text and explicit update workflow."
+  ],
+  "publication": "Local review; no commit or push requested for this change"
+}

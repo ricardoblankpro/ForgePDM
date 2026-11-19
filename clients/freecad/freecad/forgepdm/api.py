@@ -217,10 +217,13 @@ class ForgePDMClient:
     def get_revision(self, revision_id):
         return self._json_request("GET", "/api/v1/revisions/" + self._quote(revision_id))
 
-    def revision_status(self, revision_ids):
+    def revision_status(self, revision_ids, language=None):
         try:
             return self._json_request(
-                "POST", "/api/v1/status/revisions", {"revision_ids": revision_ids}
+                "POST",
+                "/api/v1/status/revisions"
+                + ("?language=" + self._quote(language) if language else ""),
+                {"revision_ids": revision_ids},
             )
         except ForgePDMError as error:
             if error.status == 404:
