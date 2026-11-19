@@ -5,6 +5,10 @@ They do not certify later behavior or untested platforms. Keep original files,
 including reports reused as regressions, and never add credentials/private CAD.
 See [test tiers](../development/testing.md) and [current handoff](../../DEVELOPMENT_STATUS.md).
 
+## Web translation editor
+
+- [UX, Chrome regressions and installed data preservation](translation-editor-2026-11-18.json)
+
 ## Unified revision descriptions
 
 - [Schema-20 migration, installed data preservation and acceptance](unified-descriptions-2026-11-18.json)

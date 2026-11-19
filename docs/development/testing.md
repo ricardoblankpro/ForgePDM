@@ -152,7 +152,7 @@ tokens. The optional real Qt suite also includes `test_localization_ui.py`.
 
 Against a new `tests/web/serve.py` fixture, run
 `node tests/web/localization-browser.mjs CASE_DIR` with the external Playwright
-driver described above. The script creates only disposable items/translations.
+driver described above. The script creates only disposable items/translations. It checks the web comparison editor, target/display language independence, draft/approval states, source-language confirmation, contextual assistance, retained editing buffers, concurrent changes, view-only access and narrow layout. `tests/test_translation_assistance.py` verifies that availability checks do not persist proposals and reuse existing permissions and generation rules.
 `localization_gui.run(App, Gui, CASE_DIR)` in the native validation folder checks
 the installed HTTP client and a real saved/reopened format-3 TechDraw table. It
 preserves pre-existing documents and the production session. These fixtures do

@@ -57,6 +57,13 @@ def revision_texts(revision_id: UUID, request: Request, user=Depends(current_use
     return invoke(read)
 
 
+@router.get("/localized-texts/{source_id}/proposal-availability")
+def proposal_availability(
+    source_id: str, language: str, request: Request, user=Depends(current_user)
+):
+    return invoke(lambda: service(request).proposal_availability(user, source_id, language))
+
+
 @router.post("/localized-texts/{source_id}")
 def change(source_id: str, payload: Change, request: Request, user=Depends(current_user)):
     return invoke(

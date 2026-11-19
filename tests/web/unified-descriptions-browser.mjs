@@ -50,7 +50,7 @@ try {
  const record=await api(`/revisions/${structured.current_revision_id}/description`);
  check('structured S derives canonical text',record.description.includes('ISO4029')&&record.description.includes('45H'));
  await page.getByRole('tab',{name:'Translations',exact:true}).click();
- await page.getByRole('heading',{name:'description',exact:true}).waitFor();
+ await page.getByRole('heading',{name:'Translate description',exact:true}).waitFor();
  check('only one translation editor',await page.locator('#tab-content textarea').count()===1);
  check('legacy text remains accessible',await page.getByText('Historical item text',{exact:true}).count()===1);
  check('no JavaScript errors',errors.length===0);

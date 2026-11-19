@@ -9,8 +9,8 @@ import { readRoute, routeFor, fileSize, dateLabel, stateLabel } from "./model.mj
 
 const $ = selector => document.querySelector(selector);
 const api = new API();
-const localeUI = localizationUI({api,el,button});
-const languagePicker = el('select', {'aria-label':'Description language',onChange:()=>{api.language=languagePicker.value;state.cache={};loadItems();if(state.item)loadDetail();}}, el('option',{value:'en'},'English descriptions'),el('option',{value:'pt-BR'},'Descrições em português'));
+const localeUI = localizationUI({api,el,button,onChange:refreshTranslationPresentation});
+const languagePicker = el('select', {'aria-label':'Description language',onChange:()=>{api.language=languagePicker.value;state.cache={};loadItems();if(state.item)loadDetail({tab:state.tab});}}, el('option',{value:'en'},'English descriptions'),el('option',{value:'pt-BR'},'Descrições em português'));
 document.querySelector('#search-form').append(languagePicker);
 const previewUI = thumbnailViewer({api, el});
 const state = { user: null, projects: [], items: [], query: "", project: "", offset: 0,
@@ -79,7 +79,19 @@ function toast(message) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("#toast").hidden = true; }, 5000);
 }
 function request(path, options = {}) { return api.request(path, { signal: session.signal, ...options }); }
+async function refreshTranslationPresentation(item,revision) {
+  if(!state.user||state.item?.id!==item.id||state.revision?.id!==revision.id)return;
+  const version=detailVersion;
+  const sources=await request(`/items/${item.id}/localized-texts?revision_id=${revision.id}&language=${encodeURIComponent(api.language)}`);
+  if(version!==detailVersion||state.item?.id!==item.id||state.revision?.id!==revision.id)return;
+  const resolved=sources.find(s=>s.field==='description')?.resolved;
+  state.revision.localized_description=resolved||null;
+  const title=document.querySelector('.detail-name');
+  if(title)title.textContent=resolved?.text||'No description assigned.';
+  await loadItems();
+}
 function resetSession(message = "") {
+  localeUI.reset();
   api.language = 'en'; languagePicker.value = 'en';
   previewUI.reset();
   drawingUI.reset();
@@ -236,7 +248,7 @@ function renderEmptyDetail() {
   $("#detail").classList.add("detail-placeholder");
   $("#detail").replaceChildren(empty("Your product data, in context", "Select an item to explore its revisions, product structure and associated files.", "assembly"));
 }
-async function loadDetail() {
+async function loadDetail({tab="overview"}={}) {
   previewUI.reset();
   drawingUI.reset();
   const version = ++detailVersion; tabVersion++;
@@ -263,7 +275,7 @@ async function loadDetail() {
     const revisionText = localized.find(s=>s.field==='description')?.resolved;
     revision.localized_description = revisionText || null;
     state.item = item; state.revision = revision; state.revisions = revisions;
-    state.tab = "overview";
+    state.tab = tab;
     document.title = `${item.number} · Revision ${revision.label} · ForgePDM`;
     renderDetail();
   } catch (error) { if (version === detailVersion) showError($("#detail"), error, loadDetail); }

@@ -198,6 +198,64 @@ class LocalizationService:
                     )
             return result
 
+    def _proposal_in(self, c, user, current, locale):
+        from forgepdm.domain.description_generation import generate
+
+        spec = c.execute(
+            "SELECT specification_json FROM standard_specifications WHERE item_id=?",
+            (current["item_id"],),
+        ).fetchone()
+        if spec and current["field"] in (
+            "description",
+            "designation",
+            "master_description",
+        ):
+            proposal = generate(json.loads(spec[0]), locale)
+        else:
+            material = c.execute(
+                "SELECT d.material_revision_id,r.item_id FROM revision_descriptions d JOIN item_revisions r ON r.id=d.material_revision_id WHERE d.revision_id=?",
+                (current["revision_id"],),
+            ).fetchone()
+            if not material or current["field"] != "description":
+                raise ValueError(
+                    "generate a standard-part or pinned material proposal, or enter text manually"
+                )
+            self.authorization.require_read_revision(user, material[0], c)
+            inherited = resolve(c, material[1], material[0], "description", locale)
+            if (
+                not inherited
+                or inherited["fallback"]
+                or inherited["original_text"] != current["source"]["text"]
+            ):
+                raise Conflict(
+                    "pinned material has no matching reviewed description in this language"
+                )
+            proposal = {
+                "text": inherited["text"],
+                "provenance": {"origin": "material_snapshot", **inherited},
+            }
+        return proposal
+
+    def proposal_availability(self, user, sid, locale):
+        locale = language(locale)
+        with self.database.connection() as c:
+            c.execute("BEGIN")
+            current = self.read_in(c, user, sid)
+            if not current["can_edit"] or locale == current["source"]["language"]:
+                return {"available": False}
+            try:
+                proposal = self._proposal_in(c, user, current, locale)
+            except (ValueError, Conflict, Forbidden, NotFound):
+                return {"available": False}
+            origin = proposal["provenance"]["origin"]
+            return {
+                "available": True,
+                "label": "Use material translation"
+                if origin == "material_snapshot"
+                else "Generate from specification",
+                "warnings": proposal["provenance"].get("warnings", []),
+            }
+
     def change(
         self,
         user,
@@ -240,41 +298,7 @@ class LocalizationService:
                 if locale == current["source"]["language"]:
                     raise ValueError("translate into a different language")
                 if operation == "generate":
-                    from forgepdm.domain.description_generation import generate
-
-                    spec = c.execute(
-                        "SELECT specification_json FROM standard_specifications WHERE item_id=?",
-                        (current["item_id"],),
-                    ).fetchone()
-                    if spec and current["field"] in (
-                        "description",
-                        "designation",
-                        "master_description",
-                    ):
-                        proposal = generate(json.loads(spec[0]), locale)
-                    else:
-                        material = c.execute(
-                            "SELECT d.material_revision_id,r.item_id FROM revision_descriptions d JOIN item_revisions r ON r.id=d.material_revision_id WHERE d.revision_id=?",
-                            (current["revision_id"],),
-                        ).fetchone()
-                        if not material or current["field"] != "description":
-                            raise ValueError(
-                                "generate a standard-part or pinned material proposal, or enter text manually"
-                            )
-                        self.authorization.require_read_revision(user, material[0], c)
-                        inherited = resolve(c, material[1], material[0], "description", locale)
-                        if (
-                            not inherited
-                            or inherited["fallback"]
-                            or inherited["original_text"] != current["source"]["text"]
-                        ):
-                            raise Conflict(
-                                "pinned material has no matching reviewed description in this language"
-                            )
-                        proposal = {
-                            "text": inherited["text"],
-                            "provenance": {"origin": "material_snapshot", **inherited},
-                        }
+                    proposal = self._proposal_in(c, user, current, locale)
                     text, provenance = proposal["text"], proposal["provenance"]
                 if not isinstance(text, str) or not text.strip() or len(text) > 1000:
                     raise ValueError("translation must contain 1 to 1000 characters")

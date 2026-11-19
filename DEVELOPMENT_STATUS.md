@@ -7,7 +7,7 @@ This is the current handoff. Start with [README](README.md) and
 ## Delivery
 
 - Addon: **0.22.0**
-- Backend package: **0.3.0**
+- Backend package: **0.3.2**
 - Database schema: **20**
 
 Versions are independent. The backend/server is AGPL-3.0-or-later and the
@@ -28,6 +28,11 @@ An installable Addon Manager distribution source/publication is still separate.
   vocabulary. Family names do not infer nylon, tip shape or serrations; unknown
   material/finish text is preserved with draft warnings. See
   [terminology and remaining limits](docs/development/references/fastener-pt-BR.md).
+- The web translation tab compares original and target descriptions, keeps the editing
+  language separate from catalog display, shows saved/unsaved/review/approval states,
+  and offers specification/material assistance only when available. Original language
+  settings and history are secondary controls. Unsaved session buffers survive
+  navigation and conflicts; approvals update the header/catalog immediately.
 - One canonical description/translation editor per revision: assigned material or manual P text, manual A, fixed structured S or manual generic S, and revisioned M text. Legacy item text remains available as history. See [ADR-027](docs/decisions/ADR-027-single-revision-description.md).
 - Shared S/M catalog, Fasteners association, descriptions, physical material
   snapshots, P/S mass evidence and revision-pinned assembly mass.
@@ -48,6 +53,17 @@ An installable Addon Manager distribution source/publication is still separate.
   missing/failed/interrupted/stale runs. Known older schema backups remain readable.
 
 ## Validation and local installation
+
+2026-11-18 translation editor: backend **0.3.2** runs on loopback with schema
+**20**; addon **0.22.0** remains installed. 554 backend tests, 23 Node tests,
+34 translation-editor Chrome checks and 13 unified-description Chrome regressions
+pass. Lint, formatting, documentation links, backend wheel/sdist, isolated wheel
+resources and addon documentation packaging pass. A fresh verified backup is
+retained under `var/backups/before-translation-editor`. All database tables,
+29 items, 33 revisions, 243 file records and 236 unique blob hashes are preserved.
+Three open FreeCAD documents retain their paths, hashes and modified flags;
+the active document and authenticated session are unchanged. No production
+translations were created. See [editor and installation evidence](docs/validation/translation-editor-2026-11-18.json).
 
 2026-11-18 unified descriptions: backend **0.3.0** / schema **20** runs on
 loopback; addon **0.22.0** is installed and verified in both profiles and loaded
