@@ -6,7 +6,7 @@ This is the current handoff. Start with [README](README.md) and
 
 ## Delivery
 
-- Addon: **0.22.1**
+- Addon: **0.22.2**
 - Backend package: **0.3.3**
 - Database schema: **20**
 
@@ -43,8 +43,10 @@ An installable Addon Manager distribution source/publication is still separate.
   description controls and account/project administration.
 - Direct/Indented/Flattened BOM reports shared across clients. CAD-to-BOM changes
   remain explicit reviewed direct replacements; quantities/exact pins are retained.
-- Frozen customizable TechDraw BOMs, format-1 direct/format-2 non-direct/format-3 localized tables,
-  and explicit PDF publication pinned to exact uploaded source bytes.
+- Frozen customizable TechDraw BOMs, format-1 direct/format-2 non-direct/format-3 localized/format-4 sorted tables,
+  and explicit PDF publication pinned to exact uploaded source bytes. New drawing
+  tables default to item-number sorting; configurable ascending/descending order
+  preserves nested subtrees, positions, row notes and frozen source evidence.
 - Shared 384px isometric previews for new native uploads/check-ins. Each image is
   an immutable derivative of one exact source file; selected-snapshot images appear
   in FreeCAD and web. Capture preserves view/document state, rejects unsaved linked
@@ -56,6 +58,21 @@ An installable Addon Manager distribution source/publication is still separate.
   missing/failed/interrupted/stale runs. Known older schema backups remain readable.
 
 ## Validation and local installation
+
+2026-11-18 drawing BOM sorting: addon **0.22.2** is installed in both profiles
+and active in FreeCAD 1.1.4 / Qt 6.8.3. Backend **0.3.3** and schema **20** are
+unchanged. 456 addon tests (five optional Qt modules skipped), 25 real Qt tests,
+and nine native TechDraw/UI/save-reopen/PDF checks pass. The exported PDF is
+visually checked for sorted rows and matching notes. Lint, formatting, documentation
+and packaging checks pass. A verified backup and prior addon copies are retained
+under `var/backups/before-drawing-bom-sort`. All database tables, 29 items,
+33 revisions, 245 file records and 237 blob hashes are unchanged. Three open
+documents retain their file bytes, paths, modified/touched flags, object labels,
+Fasteners associations and frozen table data; active document and authenticated
+session are preserved. Existing tables are not automatically rewritten; older
+layouts default to stored order and explicitly sorted updates use format 4. See
+[sorting evidence](docs/validation/drawing-bom-sort-2026-11-18.json) and
+[ADR-028](docs/decisions/ADR-028-drawing-bom-sort-order.md).
 
 2026-11-18 native tree descriptions: backend **0.3.3** / schema **20** runs
 on loopback; addon **0.22.1** is installed in both profiles and active in FreeCAD

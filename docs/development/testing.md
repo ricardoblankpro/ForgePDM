@@ -170,3 +170,14 @@ with `tree-fixture.json` containing an assembly and three associated S revisions
 with approved translations. It creates real Fasteners proxies and native tree rows,
 compares English/Portuguese/original text with BOM reports, sends a real tooltip
 help event over a narrow Description cell, and preserves existing documents/session.
+
+### TechDraw BOM sorting
+
+`test_drawing_bom.py` tests default natural item ordering, numeric/description
+sorts, missing values, stable ties, indented subtree preservation, unchanged report
+evidence/positions, row notes and legacy formats. The real Qt drawing editor
+suite checks preview order, custom-note remapping, presets and existing tables.
+`drawing_bom_sort_gui.run(App, Gui, CASE_DIR, prior_model_path=None)` in the native
+validation folder creates disposable TechDraw tables, verifies format-4 frozen
+save/reopen and PDF export, and preserves existing documents/session. Its optional
+prior-addon model path proves safe rejection of unsupported format-4 updates.

@@ -41,6 +41,19 @@ class DrawingBOMDialog(QtWidgets.QDialog):
             if "views" in report or key == report.get("view", "direct"):
                 self.view.addItem(label, key)
         form.addRow("BOM view", self.view)
+        self.sort_by = QtWidgets.QComboBox()
+        for field, label in model.SORT_FIELDS.items():
+            self.sort_by.addItem(label, field)
+        self.sort_by.setToolTip(
+            "Indented BOMs sort siblings while keeping children with their parent."
+        )
+        self.sort_order = QtWidgets.QComboBox()
+        self.sort_order.addItem("Ascending", "ascending")
+        self.sort_order.addItem("Descending", "descending")
+        sorting = QtWidgets.QHBoxLayout()
+        sorting.addWidget(self.sort_by)
+        sorting.addWidget(self.sort_order)
+        form.addRow("Sort by", sorting)
         self.title = QtWidgets.QLineEdit()
         self.title.setMaxLength(300)
         self.title.setToolTip(
@@ -121,6 +134,8 @@ class DrawingBOMDialog(QtWidgets.QDialog):
         self.page.currentIndexChanged.connect(self.page_changed)
         self.target.currentIndexChanged.connect(self.target_changed)
         self.view.currentIndexChanged.connect(self.view_changed)
+        self.sort_by.currentIndexChanged.connect(self.sort_changed)
+        self.sort_order.currentIndexChanged.connect(self.sort_changed)
         load.clicked.connect(lambda: self.load_layout(self.presets.currentData()))
         save.clicked.connect(self.save_layout)
         if preferred:
@@ -170,6 +185,10 @@ class DrawingBOMDialog(QtWidgets.QDialog):
         self.report = model.report_for_view(self.source_report, self.view.currentData())
         self.preview()
 
+    def sort_changed(self, *_):
+        self.sort_order.setEnabled(self.sort_by.currentData() != "bom_order")
+        self.preview()
+
     def load_layout(self, value):
         self.stash()
         value = model.layout(value)
@@ -179,6 +198,11 @@ class DrawingBOMDialog(QtWidgets.QDialog):
         if self.view.currentIndex() < 0:
             raise ValueError("The report does not contain the saved BOM view")
         self.report = model.report_for_view(self.source_report, value["view"])
+        for combo, key in [(self.sort_by, "sort_by"), (self.sort_order, "sort_order")]:
+            combo.blockSignals(True)
+            combo.setCurrentIndex(combo.findData(value[key]))
+            combo.blockSignals(False)
+        self.sort_order.setEnabled(value["sort_by"] != "bom_order")
         self.title.setText(value["title"])
         self.font.setValue(value["font"])
         self.precision.setValue(value["precision"])
@@ -208,6 +232,8 @@ class DrawingBOMDialog(QtWidgets.QDialog):
         return model.layout(
             {
                 "view": self.view.currentData(),
+                "sort_by": self.sort_by.currentData(),
+                "sort_order": self.sort_order.currentData(),
                 "title": self.title.text(),
                 "font": self.font.value(),
                 "precision": self.precision.value(),
@@ -268,7 +294,7 @@ class DrawingBOMDialog(QtWidgets.QDialog):
             self.grid.setHorizontalHeaderLabels(
                 [column["heading"] for column in definition["columns"]]
             )
-            for row, line in enumerate(self.report["lines"]):
+            for row, line in enumerate(model.ordered_lines(self.report, definition)):
                 for i, column in enumerate(definition["columns"]):
                     item = QtWidgets.QTableWidgetItem(
                         model.cell(line, column, self.notes, definition["precision"])

@@ -80,7 +80,8 @@ text and its reviewed translations can be copied when explicitly creating the
 next engineering revision; subsequent edits are independent.
 
 New localized TechDraw tables embed language, displayed strings and source/
-translation provenance (saved format 3). Previously saved format-1/2 tables remain
+translation provenance (format 3, or format 4 for sorted tables). Previously saved
+format-1/2 tables remain
 readable. Reopening, recomputing or switching language never updates a saved
 table or published PDF. Updating a table remains an explicit Working-copy action;
 released document bytes and file/revision pins remain stable.

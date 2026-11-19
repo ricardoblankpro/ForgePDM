@@ -1,0 +1,93 @@
+{
+  "date": "2026-11-18",
+  "scope": "TechDraw BOM row sorting; addon only, backend and schema unchanged",
+  "versions": {
+    "addon": "0.22.2",
+    "backend": "0.3.3",
+    "schema": 20
+  },
+  "validation": {
+    "addon_base": {
+      "passed": 456,
+      "optional_qt_modules_skipped": 5
+    },
+    "real_qt": {
+      "passed": 25
+    },
+    "native": {
+      "addon": "0.22.2",
+      "freecad": [
+        "1",
+        "1",
+        "4"
+      ],
+      "qt": "6.8.3",
+      "checks": [
+        "Native Drawing BOM editor defaults to ascending natural item numbers",
+        "Numeric descending preview keeps custom text attached to its component",
+        "Embedded format 4 retains sort policy, original report/token, language provenance and notes",
+        "Previous addon safely rejects editing format 4 instead of discarding sorting",
+        "Explicit item-number sort updates the native SVG while keeping its original notes",
+        "Opening a legacy localized table preserves its original layout, row order and embedded bytes",
+        "Native FCStd save/reopen/recompute retains sorted SVG and frozen evidence without refetching",
+        "Real TechDraw exports the reopened frozen table to PDF",
+        "Original documents, unsaved edits, frozen tables, labels, active document and authenticated session are preserved"
+      ],
+      "scope": "Disposable native documents only; no production CAD or server mutations"
+    },
+    "backend_and_addon_lint_format": true,
+    "documentation_and_packaging": true
+  },
+  "installed": {
+    "database_tables_unchanged": true,
+    "changed_tables": [],
+    "items": 29,
+    "revisions": 33,
+    "file_records": 245,
+    "unique_verified_blobs": 237,
+    "sqlite_integrity": "ok",
+    "foreign_key_errors": 0,
+    "installed_profiles_match_archive": true,
+    "backend_unchanged": "0.3.3",
+    "exported_pdf_sorted_rows_visually_verified": true,
+    "all_native_state_preserved": true,
+    "documents": 3,
+    "authenticated_session_preserved": true
+  },
+  "backup": {
+    "verified": true,
+    "directory": "var/backups/before-drawing-bom-sort/backup-20261119T015055.251163Z-838a3c72",
+    "prior_addon_profiles_retained": true
+  },
+  "sorting": {
+    "new_table_default": "item_number ascending",
+    "fields": [
+      "item_number",
+      "position",
+      "description",
+      "quantity",
+      "unit_mass",
+      "total_mass",
+      "bom_order"
+    ],
+    "text": "Deterministic natural comparison ignoring case and accents",
+    "numeric": "Decimal comparison; missing values last in both directions",
+    "ties": "Stable original report order",
+    "indented": "Sort siblings and retain complete subtrees",
+    "saved_format": 4,
+    "legacy_formats": [
+      1,
+      2,
+      3
+    ],
+    "legacy_layout_default": "Stored BOM order until explicitly changed"
+  },
+  "preservation": [
+    "Original source report, evidence token, revision pins, BOM positions and quantities are unchanged by sorting.",
+    "Custom text remains keyed to occurrence/revision identities rather than visual row indices.",
+    "Existing tables and PDFs are never updated merely by reopening, recomputing or upgrading.",
+    "Older addons safely reject updates to unsupported format 4 while embedded native SVG remains visible.",
+    "No production engineering data, CAD files or drawing tables were changed by acceptance."
+  ],
+  "publication": "Local review; not committed or pushed"
+}

@@ -34,6 +34,7 @@ architecture](../development/architecture.md) and [user guides](../README.md).
 | 026 | [ADR-026 — Versioned item description localization](ADR-026-versioned-item-description-localization.md) |
 
 | 027 | [ADR-027 — One description per revision](ADR-027-single-revision-description.md) |
+| 028 | [ADR-028 — Frozen drawing BOM sort order](ADR-028-drawing-bom-sort-order.md) |
 
 ADR-013 supersedes the ordinary advanced-input UI from ADR-012; its APIs/data
 remain compatible. ADR-019 completes write fencing/revision recovery. ADR-022

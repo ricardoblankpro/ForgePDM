@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.2 — TechDraw BOM sorting
+
+- Add Sort by and ascending/descending controls, defaulting new tables to item number.
+- Sort BOM position, displayed description, quantities or masses; keep missing values last and indented subtrees together.
+- Persist sorting in drawing/layout presets while preserving source evidence, positions and custom notes.
+- Sorted tables use saved format 4; older tables retain their original order until explicitly changed. Backend/schema unchanged.
+
 ## 0.22.1 — Localized native-tree Fasteners descriptions
 
 - Show each embedded or linked Fastener's exact associated S revision description in the native tree.

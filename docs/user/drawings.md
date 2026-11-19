@@ -18,7 +18,18 @@ The title is editable up to 300 characters. Optional `{item_number}` and
 title blank to hide it. No footer is generated. Existing saved tables keep
 previous contents until explicitly updated.
 
-Configure columns, headings, order, widths, alignment and font size. Default
+**Sort by** defaults to **Item number**, ascending, for new tables. Choose
+BOM position, Description / Material, Quantity / root, Unit mass or Mass / root,
+and ascending/descending order. Quantities and masses sort numerically; unknown
+values stay last. Text sorting ignores case/accents and compares embedded numbers
+naturally (P2 before P10). Equal values retain their stored BOM order.
+
+Indented tables sort siblings while keeping children with their parent. Sorting
+does not renumber BOM positions or change quantities, source evidence or notes.
+Choose **Stored BOM order** to keep the report's original ordering. Older tables
+and layouts without a sort setting retain that order until explicitly changed.
+
+Configure columns, headings, column order, widths, alignment and font size. Default
 columns are position, item, revision, Qty / root and Description / Material.
 Optional columns include quantity per parent, material, type, lifecycle,
 unit/extended mass and custom text. Mass can use kg/g and 0–6 decimals; unknown
@@ -26,7 +37,7 @@ and estimated values keep their markers. The font family is currently fixed.
 
 **Preview / edit custom text** makes custom cells editable; generated cells remain
 read-only. Up to 12 columns, 500 rows and 30 local named layouts are supported.
-Layouts retain view/title/settings but no row notes. Each drawing embeds its own
+Layouts retain view/title/sort/settings but no row notes. Each drawing embeds its own
 layout/report/notes, so another workstation does not need the local preset.
 
 One table must fit one page. X/Y specify its centre in page millimetres. Correct
@@ -45,7 +56,9 @@ The table is a native embedded SVG symbol with frozen report data. Reopen,
 recompute and retrieval do not fetch new server values. Localized tables use format 3 and freeze language and translation provenance;
 see [description languages](localization.md). Direct/legacy tables use
 format 1; non-direct tables use format 2 so older addons refuse their update.
-Both remain viewable offline without ForgePDM. Active CAD edit mode, changed
+Explicitly sorted tables use format 4 and retain the same frozen language and
+provenance when present. Older addons can display their embedded SVG but reject
+updates they cannot preserve. Formats 1–4 remain viewable offline without ForgePDM. Active CAD edit mode, changed
 permissions/lease or stale report evidence rejects insertion/update.
 
 ## Embedded pages and templates

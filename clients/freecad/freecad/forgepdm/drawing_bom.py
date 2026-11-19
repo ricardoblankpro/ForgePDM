@@ -3,6 +3,8 @@
 import copy
 import json
 import math
+import re
+import unicodedata
 from decimal import Decimal, localcontext
 from xml.sax.saxutils import escape
 
@@ -21,8 +23,19 @@ FIELDS = {
     "total_mass": "Mass / root",
     "custom": "Custom text",
 }
+SORT_FIELDS = {
+    "item_number": "Item number",
+    "position": "BOM position",
+    "description": "Description / Material",
+    "quantity": "Quantity / root",
+    "unit_mass": "Unit mass",
+    "total_mass": "Mass / root",
+    "bom_order": "Stored BOM order",
+}
 DEFAULT = {
     "view": "direct",
+    "sort_by": "item_number",
+    "sort_order": "ascending",
     "title": "ENGINEERING BOM — {item_number} Rev {revision_label}",
     "columns": [
         {"field": field, "heading": FIELDS[field], "width": width, "align": "left", "unit": "kg"}
@@ -46,6 +59,15 @@ def layout(value):
     value.setdefault("view", "direct")
     if value["view"] not in ("direct", "indented", "flattened"):
         raise ValueError("Unsupported BOM view")
+    # Older layouts preserve the original report order until explicitly changed.
+    value.setdefault("sort_by", "bom_order")
+    value.setdefault("sort_order", "ascending")
+    if (
+        not isinstance(value["sort_by"], str)
+        or value["sort_by"] not in SORT_FIELDS
+        or value["sort_order"] not in ("ascending", "descending")
+    ):
+        raise ValueError("Unsupported BOM sort field or order")
     value.setdefault("title", DEFAULT["title"])
     if not isinstance(value["title"], str) or len(value["title"]) > 300:
         raise ValueError("Table title must contain at most 300 characters")
@@ -96,6 +118,69 @@ def report_for_view(report, view):
         "view": view,
         "lines": report["views"][view],
     }
+
+
+def ordered_lines(report, definition):
+    """Sort presentation rows, keeping identities, report evidence and subtrees intact."""
+    lines = report["lines"]
+    field = definition.get("sort_by", "bom_order")
+    if field == "bom_order":
+        return list(lines)
+
+    def natural(value):
+        text = "".join(
+            char
+            for char in unicodedata.normalize("NFKD", str(value).casefold())
+            if not unicodedata.combining(char)
+        )
+        return tuple(
+            (0, int(part)) if part.isdecimal() else (1, part)
+            for part in re.split(r"(\d+)", text)
+            if part
+        )
+
+    def value(line):
+        text = line.get(field)
+        if field == "description" and not text and line.get("item_number", "").startswith("S"):
+            text = line.get("item_name")
+        if text is None or not str(text).strip():
+            return None
+        if field in ("quantity", "unit_mass", "total_mass"):
+            try:
+                number = Decimal(str(text))
+            except ArithmeticError:
+                return None
+            return number if number.is_finite() else None
+        return natural(text)
+
+    def siblings(nodes):
+        # Stable ties use the original BOM order; missing values stay last either way.
+        known = [node for node in nodes if value(node[0]) is not None]
+        unknown = [node for node in nodes if value(node[0]) is None]
+        known.sort(
+            key=lambda node: value(node[0]), reverse=definition.get("sort_order") == "descending"
+        )
+        return known + unknown
+
+    roots, stack = [], []
+    for line in lines:
+        level = line.get("level", 1) if definition.get("view") == "indented" else 1
+        while stack and stack[-1][0] >= level:
+            stack.pop()
+        children = stack[-1][1] if stack else roots
+        node = (line, [])
+        children.append(node)
+        stack.append((level, node[1]))
+
+    result = []
+
+    def visit(nodes):
+        for line, children in siblings(nodes):
+            result.append(line)
+            visit(children)
+
+    visit(roots)
+    return result
 
 
 def cell(line, column, notes, precision):
@@ -154,6 +239,7 @@ def render(report, definition, notes, measure=None):
         raise ValueError("Custom text must contain at most 1000 characters per cell")
     font = definition["font"]
     columns = definition["columns"]
+    lines = ordered_lines(report, definition)
     measure = measure or (lambda text: len(text) * font * 0.65)
 
     def wrap(text, width):
@@ -187,11 +273,10 @@ def render(report, definition, notes, measure=None):
         ]
     ]
     rows += [
-        [cell(line, column, notes, definition["precision"]) for column in columns]
-        for line in report["lines"]
+        [cell(line, column, notes, definition["precision"]) for column in columns] for line in lines
     ]
     indents = [[0] * len(columns)]
-    for line in report["lines"]:
+    for line in lines:
         indents.append(
             [
                 (line.get("level", 1) - 1) * font * 1.5
@@ -262,9 +347,11 @@ def read_table(obj):
     if not hasattr(obj, "PDMTableData"):
         return None
     data = json.loads(obj.PDMTableData)
-    if data.get("format") not in (1, 2, 3):
+    if data.get("format") not in (1, 2, 3, 4):
         raise ValueError("Unsupported saved drawing BOM format")
     definition = layout(data["layout"])
+    if data["format"] == 4 and not {"sort_by", "sort_order"} <= data["layout"].keys():
+        raise ValueError("Invalid saved table sorting; original contents preserved")
     if not isinstance(data.get("report"), dict) or not isinstance(data.get("notes"), dict):
         raise ValueError("Invalid saved table data; original contents preserved")
     if definition["view"] != data["report"].get("view", "direct") or (
@@ -306,7 +393,13 @@ def apply(document, page, target, report, definition, notes, x, y):
     svg = placement(page, target, report, definition, notes, x, y)
     definition = layout(definition)
     data = {
-        "format": 3 if report.get("language") else 1 if definition["view"] == "direct" else 2,
+        "format": 4
+        if definition["sort_by"] != "bom_order"
+        else 3
+        if report.get("language")
+        else 1
+        if definition["view"] == "direct"
+        else 2,
         "report": report,
         "layout": definition,
         "notes": notes,

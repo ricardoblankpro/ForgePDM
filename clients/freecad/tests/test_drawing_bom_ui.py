@@ -133,3 +133,88 @@ def test_view_switch_preserves_layout_and_isolates_custom_notes(case, monkeypatc
     finally:
         dialog.reject()
         dialog.deleteLater()
+
+
+def multirow_report(dialog):
+    value = dict(dialog.source_report)
+    value["lines"] = [
+        {
+            **value["lines"][0],
+            "component_revision_id": key,
+            "position": position,
+            "item_number": number,
+            "quantity": quantity,
+        }
+        for key, position, number, quantity in [
+            ("p10", 1, "P10", "10"),
+            ("p2", 10, "P2", "2"),
+            ("p1", 2, "P1", "1.5"),
+        ]
+    ]
+    return value
+
+
+def test_sort_controls_default_and_presets_retain_choice_without_row_text(case, monkeypatch):
+    _, previous, values = case
+    dialog = ui.DrawingBOMDialog(None, multirow_report(previous), previous.pages)
+    try:
+        assert dialog.sort_by.currentData() == "item_number"
+        assert [dialog.grid.item(i, 1).text() for i in range(3)] == ["P1", "P2", "P10"]
+        dialog.add_column()
+        dialog.grid.item(0, 5).setText("Note on P1")
+        dialog.sort_by.setCurrentIndex(dialog.sort_by.findData("quantity"))
+        dialog.sort_order.setCurrentIndex(dialog.sort_order.findData("descending"))
+        assert [dialog.grid.item(i, 1).text() for i in range(3)] == ["P10", "P2", "P1"]
+        assert dialog.grid.item(2, 5).text() == "Note on P1"
+        monkeypatch.setattr(QtWidgets.QInputDialog, "getText", lambda *args: ("Sorted", True))
+        dialog.save_layout()
+        saved = json.loads(values["DrawingBOMLayouts"])["Sorted"]
+        assert saved["sort_by"] == "quantity" and saved["sort_order"] == "descending"
+        assert "Note on P1" not in values["DrawingBOMLayouts"]
+        dialog.load_layout(saved)
+        assert dialog.grid.item(2, 5).text() == "Note on P1"
+        assert dialog.report == multirow_report(previous)
+        dialog.sort_by.setCurrentIndex(dialog.sort_by.findData("bom_order"))
+        assert not dialog.sort_order.isEnabled()
+        assert [dialog.grid.item(i, 1).text() for i in range(3)] == ["P10", "P2", "P1"]
+    finally:
+        dialog.reject()
+        dialog.deleteLater()
+
+
+def test_saved_table_sort_loads_and_legacy_table_keeps_original_order(case):
+    _, previous, _ = case
+    report = multirow_report(previous)
+    page = SimpleNamespace(
+        Label="Sort QA", Views=[], Template=SimpleNamespace(Width=297, Height=210)
+    )
+    definition = previous.definition()
+    legacy = {k: v for k, v in definition.items() if k not in ("sort_by", "sort_order")}
+    for name, layout, version in [
+        ("Legacy", legacy, 1),
+        ("Sorted", {**definition, "sort_by": "item_number", "sort_order": "descending"}, 4),
+    ]:
+        page.Views.append(
+            SimpleNamespace(
+                Label=name,
+                PDMTableData=json.dumps(
+                    dict(format=version, report=report, layout=layout, notes={})
+                ),
+                X=140,
+                Y=50,
+            )
+        )
+    dialog = ui.DrawingBOMDialog(None, report, [page])
+    try:
+        dialog.target.setCurrentIndex(1)
+        assert dialog.sort_by.currentData() == "bom_order"
+        assert [dialog.grid.item(i, 1).text() for i in range(3)] == ["P10", "P2", "P1"]
+        dialog.target.setCurrentIndex(2)
+        assert (
+            dialog.sort_by.currentData() == "item_number"
+            and dialog.sort_order.currentData() == "descending"
+        )
+        assert [dialog.grid.item(i, 1).text() for i in range(3)] == ["P10", "P2", "P1"]
+    finally:
+        dialog.reject()
+        dialog.deleteLater()
