@@ -35,6 +35,8 @@ architecture](../development/architecture.md) and [user guides](../README.md).
 
 | 027 | [ADR-027 — One description per revision](ADR-027-single-revision-description.md) |
 | 028 | [ADR-028 — Frozen drawing BOM sort order](ADR-028-drawing-bom-sort-order.md) |
+| 029 | [ADR-029 — Explicit balloon links to frozen drawing BOM entries](ADR-029-linked-drawing-balloons.md) |
+| 030 | [ADR-030 — Automatic balloon attachment resolution](ADR-030-automatic-balloon-attachments.md) |
 
 ADR-013 supersedes the ordinary advanced-input UI from ADR-012; its APIs/data
 remain compatible. ADR-019 completes write fencing/revision recovery. ADR-022

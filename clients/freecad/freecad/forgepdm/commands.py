@@ -1699,7 +1699,128 @@ class DrawingBOMCommand(Command):
         ):
             raise workspace.WorkspaceError("Drawing table changed while checking the server")
         drawing_bom.apply(document, page, target, report, definition, notes, x, y)
+        from . import drawing_balloons
+
+        problems = drawing_balloons.issues(page)
+        if problems:
+            warning(
+                "Drawing BOM",
+                "Use Link BOM Balloon to reconcile these links before PDF publication:\n"
+                + "\n".join(problems),
+            )
         _open_status("Drawing BOM updated. Save and upload the drawing when ready.")
+
+
+class LinkBOMBalloonCommand(Command):
+    icon_name = "link-bom-balloon"
+    menu_text = "Link BOM Balloon…"
+    tooltip = "Link or reconcile a native TechDraw balloon with a frozen Direct BOM Position"
+    needs_document = True
+    number_series = ("A",)
+
+    def action(self):
+        from datetime import datetime, timezone
+        from . import drawing_balloons
+        from .drawing_balloons_ui import LinkBalloonDialog
+
+        from . import balloon_auto
+
+        selected = FreeCADGui.Selection.getSelection()
+        if len(selected) == 1 and selected[0].isDerivedFrom("TechDraw::DrawViewBalloon"):
+            mode = ask_choice(
+                "Link BOM Balloon",
+                "Resolve from the connected geometry or choose an entry manually?",
+                ["Automatic from arrow", "Manual entry"],
+            )
+            if mode is None:
+                return
+            if mode == "Automatic from arrow":
+                yield from balloon_auto.workflow(selected[0])
+                return
+
+        client = Session.require_client()
+        actor = (Session.user or {}).get("id")
+        document = _require_document()
+        metadata = _require_metadata(document)
+        name, revision_id, path = document.Name, metadata.RevisionId, document.FileName
+        workspace.binding(path, client.base_url, require_uploaded=False)
+        if workspace.working_path(path, client.base_url) is None:
+            raise workspace.WorkspaceError(
+                "Use Check Out / Renew to prepare a writable working copy"
+            )
+        yield from _editable(client, metadata)
+        lease = yield Request("Checking drawing checkout…", client.get_checkout, (revision_id,))
+        if not lease or lease["user_id"] != actor:
+            raise workspace.WorkspaceError(
+                "Check out this Working assembly before linking balloons"
+            )
+        document = _guard_document(name, revision_id)
+        if FreeCADGui.getDocument(name).getInEdit():
+            raise workspace.WorkspaceError("Finish the active CAD edit before linking balloons")
+        pages = [
+            obj
+            for obj in document.Objects
+            if obj.isDerivedFrom("TechDraw::DrawPage") and obj.Template
+        ]
+        if not pages:
+            raise workspace.WorkspaceError(
+                "Create a TechDraw page, BOM table and native balloon first"
+            )
+        preferred = next(
+            (
+                obj
+                for obj in FreeCADGui.Selection.getSelection()
+                if obj.Document is document and obj.isDerivedFrom("TechDraw::DrawViewBalloon")
+            ),
+            None,
+        )
+        dialog = LinkBalloonDialog(_main_window(), pages, preferred)
+        if not execute_dialog(dialog):
+            return
+        page, table, balloon = (
+            dialog.page.currentData(),
+            dialog.table.currentData(),
+            dialog.balloon.currentData(),
+        )
+        key = dialog.row_key()
+        from . import drawing_bom
+
+        if drawing_bom.read_table(table)["report"].get("revision_id") != revision_id:
+            raise workspace.WorkspaceError(
+                "Update this table from the current assembly revision before linking balloons"
+            )
+        before = (
+            table.PDMTableData,
+            drawing_balloons.review_state(balloon),
+        )
+        yield from _editable(client, metadata)
+        yield Request("Checking drawing edit permission…", client.bom_snapshot, (revision_id,))
+        current = yield Request("Revalidating checkout…", client.get_checkout, (revision_id,))
+        document = _guard_document(name, revision_id)
+        if (
+            Session.client is not client
+            or (Session.user or {}).get("id") != actor
+            or document.FileName != path
+            or FreeCADGui.getDocument(name).getInEdit()
+            or workspace.working_path(path, client.base_url) is None
+        ):
+            raise workspace.WorkspaceError("Document or session changed; reopen Link BOM Balloon")
+        if (
+            not current
+            or current["user_id"] != actor
+            or (current["id"], current["version"]) != (lease["id"], lease["version"])
+            or datetime.fromisoformat(current["expires_at"]) <= datetime.now(timezone.utc)
+        ):
+            raise workspace.WorkspaceError("Checkout changed or expired; reopen Link BOM Balloon")
+        if any(document.getObject(obj.Name) is not obj for obj in (page, table, balloon)):
+            raise workspace.WorkspaceError("Drawing objects changed; reopen Link BOM Balloon")
+        if before != (
+            table.PDMTableData,
+            drawing_balloons.review_state(balloon),
+        ):
+            raise workspace.WorkspaceError("Drawing link changed while checking the server")
+        drawing_balloons.bind(document, page, balloon, table, key)
+        _open_status("BOM balloon linked. Save and upload the drawing when ready.")
 
 
 class ShowBOMCommand(Command):

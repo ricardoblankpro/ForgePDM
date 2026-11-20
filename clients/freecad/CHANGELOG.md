@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.24.1 — Projection-group balloon page validation
+
+- Recognize projected source views through their owning page's projection group
+  for both balloon linking and PDF preflight; retain cross-page/document rejection.
+
+## 0.24.0 — Automatic balloon attachments
+
+- Resolve normal TechDraw balloon placement and arrow movement to managed component
+  geometry and frozen Direct BOM Positions; prompt for overlapping candidates.
+- Keep manual fallback, separate undo transactions and authorization guards.
+- Persist version-2 attachment evidence in format-6 tables and validate PDF input.
+
+## 0.23.0 — Linked TechDraw BOM balloons
+
+- Link existing native balloons explicitly to frozen Direct BOM entries using
+  the existing BOM Position, preserving leader placement and style.
+- Update table and balloon text atomically; unresolved targets display `?` and
+  require explicit reconciliation. Sorting/localization retain exact links.
+- Persist native links/expressions offline with format-5 tables; older addons
+  refuse table edits they cannot maintain. Existing unadopted drawings stay intact.
+- Check adopted frozen links before ForgePDM PDF rendering; preserve prior PDFs
+  and publication recovery. No backend/schema change.
+
 ## 0.22.2 — TechDraw BOM sorting
 
 - Add Sort by and ascending/descending controls, defaulting new tables to item number.

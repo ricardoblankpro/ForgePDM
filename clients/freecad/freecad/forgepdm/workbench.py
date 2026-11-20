@@ -39,6 +39,7 @@ class ForgePDMWorkbench(Gui.Workbench):
             ("ForgePDM_RefreshPDMStatus", commands.RefreshPDMStatusCommand),
             ("ForgePDM_ShowBOM", commands.ShowBOMCommand),
             ("ForgePDM_DrawingBOM", commands.DrawingBOMCommand),
+            ("ForgePDM_LinkBOMBalloon", commands.LinkBOMBalloonCommand),
             ("ForgePDM_AssignMaterials", commands.AssignMaterialsCommand),
             ("ForgePDM_RegisterRawMaterial", commands.RegisterRawMaterialCommand),
             ("ForgePDM_LinkPhysicalMaterial", commands.LinkPhysicalMaterialCommand),
@@ -68,7 +69,7 @@ class ForgePDMWorkbench(Gui.Workbench):
             "Documents": ["Download", "Checkout", "Upload", "CheckIn", "UpdateFromServer"],
             "Components": ["ManageComponent", "ChangeStandardPartAssociation"],
             "Lifecycle": ["Release", "NewRevision"],
-            "BOM and publishing": ["ShowBOM", "DrawingBOM", "PublishDrawings"],
+            "BOM and publishing": ["ShowBOM", "DrawingBOM", "LinkBOMBalloon", "PublishDrawings"],
             "Catalog and materials": [
                 "AssignMaterials",
                 "RegisterStandardPart",
@@ -85,6 +86,9 @@ class ForgePDMWorkbench(Gui.Workbench):
         from . import tree_observer
 
         tree_observer.install()
+        from . import balloon_auto
+
+        balloon_auto.install()
         self._initialized = True
 
     def ContextMenu(self, recipient):

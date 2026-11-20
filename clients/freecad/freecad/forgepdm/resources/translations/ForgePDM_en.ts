@@ -3,6 +3,14 @@
   <context>
     <name>ForgePDM</name>
     <message>
+      <source>Link BOM Balloon…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Link or reconcile a native TechDraw balloon with a frozen Direct BOM Position</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
       <source>Register Raw Material…</source>
       <translation type="unfinished" />
     </message>

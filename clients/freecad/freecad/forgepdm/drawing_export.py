@@ -5,7 +5,7 @@ from pathlib import Path
 import FreeCAD as App
 import FreeCADGui as Gui
 
-from . import cad
+from . import cad, drawing_balloons
 from .ui import QtCore, QtWidgets, parent_window
 from .workspace import WorkspaceError
 
@@ -46,6 +46,11 @@ def export(configuration, pages, directory, set_metadata):
             progress.setLabelText("Exporting PDF page {} of {}…".format(index, len(pages)))
             progress.setValue(index - 1)
             cad.settle_techdraw(document)
+            problems = drawing_balloons.issues(obj)
+            if problems:
+                raise WorkspaceError(
+                    "Relink BOM balloons and upload a corrected snapshot: " + "; ".join(problems)
+                )
             path = Path(directory) / "page_{:04d}.pdf".format(index)
             if path.exists():
                 raise WorkspaceError("The PDF export destination already exists")

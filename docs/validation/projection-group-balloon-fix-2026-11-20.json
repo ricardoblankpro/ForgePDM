@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-20",
+  "addon": "0.24.1",
+  "backend": "0.3.3",
+  "schema": 20,
+  "problem": "Grouped projection source omitted from page.Views caused valid balloon/table links to fail",
+  "validation": {
+    "addon_passed": 516,
+    "optional_qt_modules_skipped": 6,
+    "repository_docs_passed": 4,
+    "native": {
+      "freecad": [
+        "1",
+        "1",
+        "4"
+      ],
+      "checks": [
+        "Real projected source belongs through DrawProjGroup.Views instead of page.Views",
+        "Manual linking and PDF preflight accept the grouped source view",
+        "Geometry-based automatic binding and preflight accept the real grouped source",
+        "A page without the projection group still rejects its child source",
+        "Explicit table update and native save/reopen retain the grouped link",
+        "Native PDF rendering succeeds for the reopened grouped drawing"
+      ],
+      "scope": "Disposable native drawing only; no session/HTTP/server mutation"
+    },
+    "lint_format_docs_packaging": true
+  },
+  "installed": {
+    "profiles_match_archive": true,
+    "running_version": "0.24.1",
+    "open_documents_preserved": 3,
+    "unsaved_edits_and_native_metadata_preserved": true,
+    "authenticated_session_preserved": true,
+    "real_drawing_readonly_validation_passes": 2,
+    "original_documents_never_saved_or_relinked": true
+  },
+  "preservation": {
+    "database_tables": 44,
+    "changed_tables": [],
+    "verified_blobs": 238
+  },
+  "backup": "var/backups/before-projection-balloon-fix/backup-20261120T115627.131512Z-3d8d0ef4",
+  "publication": "Local installation; uncommitted and not pushed"
+}

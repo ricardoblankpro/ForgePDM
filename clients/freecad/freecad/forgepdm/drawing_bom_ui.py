@@ -4,7 +4,7 @@ import copy
 import json
 from uuid import uuid4
 
-from . import drawing_bom as model, settings
+from . import drawing_balloons, drawing_bom as model, settings
 from .ui import QtCore, QtWidgets
 
 
@@ -308,6 +308,15 @@ class DrawingBOMDialog(QtWidgets.QDialog):
                 f"Table size: {width:.1f} × {height:.1f} mm. X/Y are the table centre. "
                 + self.preset_error
             )
+            problems = drawing_balloons.update_issues(
+                self.target.currentData(), self.report, definition
+            )
+            if problems:
+                self.status.setText(
+                    self.status.text()
+                    + " Balloons will show ? and require relinking: "
+                    + "; ".join(problems)
+                )
             return True
         except (ValueError, KeyError, AttributeError) as error:
             self.status.setText(str(error))

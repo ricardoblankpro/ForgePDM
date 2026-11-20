@@ -44,7 +44,8 @@ One table must fit one page. X/Y specify its centre in page millimetres. Correct
 fit errors by changing widths/font/position. Indented item columns need enough
 width for their depth. Flattened generation is blocked by unresolved empty
 subassemblies; missing part mass alone does not block it. Sheet splitting,
-balloons, arbitrary CAD-property columns and stale-publication gates are deferred.
+arbitrary CAD-property columns and stale-publication gates are deferred. Direct
+table balloon links are available as described below.
 
 Select a generated table and reopen Drawing BOM to update it. Updates retain
 placement, scale/rotation and matching annotations. Direct notes follow exact
@@ -58,8 +59,72 @@ see [description languages](localization.md). Direct/legacy tables use
 format 1; non-direct tables use format 2 so older addons refuse their update.
 Explicitly sorted tables use format 4 and retain the same frozen language and
 provenance when present. Older addons can display their embedded SVG but reject
-updates they cannot preserve. Formats 1–4 remain viewable offline without ForgePDM. Active CAD edit mode, changed
+updates they cannot preserve. Linked tables use format 5 so older addons refuse
+updates that cannot maintain balloon links. Automatic attachments use format 6. Formats 1–6 remain viewable offline
+without ForgePDM. Active CAD edit mode, changed
 permissions/lease or stale report evidence rejects insertion/update.
+
+## Automatic balloons from connected geometry
+
+With a managed Working assembly checked out and a Direct Drawing BOM on the page,
+create a balloon with the normal **TechDraw → Insert Balloon Annotation** tool.
+After placement finishes, ForgePDM identifies the touched managed component and
+fills in its existing **BOM Position**. Moving the arrow to another component
+retargets the link; moving only the bubble preserves it.
+
+Ordinary orthographic/isometric and projection-group views are supported. The
+arrow must touch geometry or be inside its projected solid region, within 0.25 mm
+on paper. Overlapping/occluded components and split BOM entries require a chooser;
+ForgePDM does not guess which component is intended. Multiple compatible tables
+require a table choice unless the balloon already has a compatible target.
+
+Unmanaged geometry or a component absent from the frozen BOM cannot be assigned.
+Update the table if needed, then select the balloon and use **Link BOM Balloon… →
+Automatic from arrow** to retry. Ambiguous cancellation/resolution failure shows
+**?**. Without a valid session, permission and owned live checkout, automatic CAD
+changes are withheld; log in and retry explicitly.
+
+Undo the automatic linking transaction separately from the native placement/drag.
+Undo/redo does not immediately rerun detection. Reopening a drawing does not adopt
+old balloons. Automatic attachments use table format 6 and retain frozen geometry
+and view evidence; changed attachments block ForgePDM PDF rendering until corrected.
+Save/upload explicitly. Section, detail, broken and perspective views use manual
+linking below. CAD-derived engineering BOM changes remain separately reviewed.
+
+## Link a balloon to a BOM entry
+
+1. Check out the assembly's managed Working copy. Create and position a native
+   TechDraw balloon using the TechDraw workbench.
+2. Select that balloon and choose **ForgePDM → BOM and publishing → Link BOM
+   Balloon…**, then **Manual entry** when prompted. You can also choose a balloon within the dialog.
+3. Choose the page, balloon and a **Direct** ForgePDM table on that page. Select
+   the intended entry using its BOM Position, item number, revision and description.
+4. Accept to replace the balloon text/expression with the frozen **BOM Position**.
+   Save and upload explicitly when ready.
+
+Leader placement, arrow and bubble style are retained. Several balloons can link
+to one entry; repeated components at different positions are separate entries.
+The link survives sorting, language changes, save/reopen and offline display.
+Sorting never assigns new sequential drawing numbers. Existing literal balloons
+stay unlinked until explicitly adopted.
+
+An explicit Drawing BOM update changes its linked balloon text in the same undo
+transaction. Missing, renumbered or replaced revisions and changed duplicate-entry
+sets display **?** and an **Unresolved** property. The editor previews affected
+balloons and the update warns you. Use **Link BOM Balloon…** again to explicitly
+select the correct current entry. Returning an old entry does not automatically
+repair an unresolved link. A deleted table leaves an orphan link; relink it to a
+valid table or delete the unwanted balloon.
+
+ForgePDM blocks new PDF rendering when an adopted balloon on a selected page has
+an invalid/orphan link or inconsistent expression/text in the uploaded snapshot.
+Correct the links and save/upload before retrying publication. Regular TechDraw
+exports remain native. Previously published PDFs and recovery of already-frozen
+publication bundles are unchanged.
+
+Both workflows support Direct tables. Indented and Flattened balloon links,
+automatic bubble placement and physical leader reattachment are deferred. Native metadata provides entry continuity, not individual
+physical-instance tracking between identical components.
 
 ## Embedded pages and templates
 

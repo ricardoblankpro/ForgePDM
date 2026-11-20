@@ -13,7 +13,7 @@ stored separately.
 - Exclusive checkout, atomic native check-in, release and recoverable revision creation.
 - Shared standard/purchased components, Fasteners association, materials and mass.
 - Direct, Indented and Flattened BOM reports in FreeCAD, web and TechDraw.
-- Customizable drawing BOM tables and explicit source-pinned PDF publication.
+- Customizable drawing BOM tables, linked Direct BOM balloons and explicit source-pinned PDF publication.
 - Web browsing, description editing and account/project administration.
 - Reviewed English/Portuguese item descriptions with original fallback and multilingual search.
 - Shared isometric previews tied to exact uploaded CAD snapshots.

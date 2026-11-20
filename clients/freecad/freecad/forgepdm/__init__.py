@@ -1,3 +1,3 @@
 """Thin FreeCAD API client; safe to import without FreeCAD or Qt."""
 
-__version__ = "0.22.2"
+__version__ = "0.24.1"

@@ -347,7 +347,7 @@ def read_table(obj):
     if not hasattr(obj, "PDMTableData"):
         return None
     data = json.loads(obj.PDMTableData)
-    if data.get("format") not in (1, 2, 3, 4):
+    if data.get("format") not in (1, 2, 3, 4, 5, 6):
         raise ValueError("Unsupported saved drawing BOM format")
     definition = layout(data["layout"])
     if data["format"] == 4 and not {"sort_by", "sort_order"} <= data["layout"].keys():
@@ -390,6 +390,8 @@ def placement(page, target, report, definition, notes, x, y):
 
 
 def apply(document, page, target, report, definition, notes, x, y):
+    from . import drawing_balloons
+
     svg = placement(page, target, report, definition, notes, x, y)
     definition = layout(definition)
     data = {
@@ -404,6 +406,10 @@ def apply(document, page, target, report, definition, notes, x, y):
         "layout": definition,
         "notes": notes,
     }
+    if target is not None and (
+        read_table(target)["format"] in (5, 6) or drawing_balloons.linked(document, target)
+    ):
+        data["format"] = 6 if read_table(target)["format"] == 6 else 5
     document.openTransaction("ForgePDM Drawing BOM")
     try:
         if target is None:
@@ -415,6 +421,7 @@ def apply(document, page, target, report, definition, notes, x, y):
         target.PDMTableData = json.dumps(data, sort_keys=True)
         target.setEditorMode("PDMTableData", 1)
         target.X, target.Y = x, y
+        drawing_balloons.refresh(document, target, data)
         document.recompute()
         document.commitTransaction()
     except BaseException:

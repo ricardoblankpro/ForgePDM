@@ -1,0 +1,88 @@
+{
+  "date": "2026-11-20",
+  "versions": {
+    "addon": "0.24.0",
+    "backend": "0.3.3",
+    "schema": 20
+  },
+  "validation": {
+    "addon_passed": 510,
+    "optional_qt_modules_skipped": 6,
+    "real_qt_passed": 28,
+    "repository_docs_passed": 4,
+    "native": {
+      "freecad": [
+        "1",
+        "1",
+        "4"
+      ],
+      "qt": "6.8.3",
+      "checks": [
+        "Orthographic/isometric rotated and scaled views identify the correct pinned occurrence",
+        "Solid interiors resolve without requiring an edge selection",
+        "Native creation/property events trigger authorized automatic adoption through the observer",
+        "Moving the arrow retargets the existing native balloon to the second BOM Position",
+        "Undo/redo suppress observer replay and preserve separate native/link transactions",
+        "Bubble-only movement does not retarget",
+        "Save/reopen retains attachment evidence and does not automatically adopt restored objects",
+        "Format-6 native drawing passes FCStd reference inspection and real PDF rendering",
+        "Changed attachments block PDF preflight; unsupported perspective is rejected",
+        "Actual TechDraw_Balloon command on a selected projected edge automatically links via native observer events",
+        "Overlapping projections retain both candidates instead of guessing depth"
+      ],
+      "scope": "Disposable native documents; permission/checkout/workspace/worker fixtures, no HTTP publication or production writes"
+    },
+    "projection_group_probe": true,
+    "pdf_visually_checked": true,
+    "manual_link_native_regression": {
+      "addon": "0.24.0",
+      "freecad": [
+        "1",
+        "1",
+        "4"
+      ],
+      "qt": "6.8.3",
+      "checks": [
+        "Native adoption dialog selects an exact sorted frozen entry; expression displays BOM Position and retains leader/style",
+        "Adoption, table format and native properties undo/redo atomically",
+        "Sort, translation, quantity and recreated EBOM UUIDs preserve the exact link and other tables",
+        "Failed table/balloon updates roll back their SVG, report and binding",
+        "Multiple balloons may reference one exact BOM entry",
+        "Native linked FCStd passes managed upload/reference integrity inspection",
+        "Native save/reopen/recompute retains frozen links offline and exports linked balloon text to PDF",
+        "Changed-revision entries become unresolved together with their table; undo/redo restores all linked numbers",
+        "Duplicate/split occurrences require explicit reconciliation; returning old rows never silently repairs a link",
+        "Deleted tables leave detectable orphan links; literal legacy balloons remain unadopted",
+        "ForgePDM PDF export accepts valid frozen links, rejects orphans before rendering and closes its isolated documents (fixture configuration opener)"
+      ],
+      "scope": "Disposable CAD only; no backend mutation; initial empty document/session state preserved"
+    }
+  },
+  "installed": {
+    "profiles_match_archive": [
+      true,
+      true
+    ],
+    "archive_sha256": "63af0554624f636ed56fa482839419f062e3806d49f02efceec14fafcddd4be2",
+    "running_version": "0.24.0",
+    "observer_active": true,
+    "original_empty_unauthenticated_state_restored": true,
+    "data_preservation": {
+      "tables": 44,
+      "changed_tables": [],
+      "verified_blobs": 238,
+      "items": 29,
+      "revisions": 33,
+      "files": 247
+    }
+  },
+  "backup": "var/backups/before-automatic-balloons/backup-20261120T113757.133684Z-cfc2a1a3",
+  "scope": "Disposable native geometry with fixture permission/workspace/checkout/worker and chooser answers; actual normal TechDraw command tested; no real-account HTTP publication or production mutation",
+  "limits": [
+    "Direct BOM only; unsupported specialized views use explicit manual linking",
+    "Overlapping and occluded candidates require selection rather than depth guessing",
+    "Automatic writes require an owned Working checkout and valid session",
+    "Native and automatic linking have separate undo transactions"
+  ],
+  "publication": "Local installation, uncommitted and not pushed"
+}

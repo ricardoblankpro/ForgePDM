@@ -36,6 +36,8 @@ uv run --project clients/freecad --extra dev --locked --with PySide6==6.8.3 pyth
 
 The base suite skips those modules without PySide6. Do not install the test
 binding in FreeCAD's interpreter. Installed FreeCAD acceptance remains separate.
+Include `clients/freecad/tests/test_drawing_balloons_ui.py` for the explicit
+balloon adoption and reconciliation dialog.
 
 ## Browser fixtures
 
@@ -181,3 +183,31 @@ suite checks preview order, custom-note remapping, presets and existing tables.
 validation folder creates disposable TechDraw tables, verifies format-4 frozen
 save/reopen and PDF export, and preserves existing documents/session. Its optional
 prior-addon model path proves safe rejection of unsupported format-4 updates.
+
+### Linked drawing balloons
+
+`test_drawing_balloons.py` covers exact frozen identities, duplicate occurrence
+sets, conservative reconciliation and read-only PDF preflight. Command workflow
+tests cover cancellation, edit permission, Working lifecycle and document/session/
+checkout races. The real Qt suite includes `test_drawing_balloons_ui.py`.
+
+`drawing_balloons_gui.run(App, Gui, CASE_DIR, prior_model_path=None)` requires an
+idle empty FreeCAD session and a new `forgepdm-drawing-balloons-qa*` directory.
+It creates only disposable native CAD: adoption dialog, expression text, retained
+leader/style, multiple tables/balloons, atomic failure/undo/redo, native save/reopen,
+managed FCStd integrity inspection, PDF output and unresolved/orphan handling.
+PDF exporter acceptance supplies a fixture configuration opener; it exercises
+the real export gate/cleanup but does not claim an HTTP publication. The optional
+prior-addon model proves format-5 edit rejection. Preserve the initial session.
+
+### Automatic balloon attachments
+
+`test_balloon_auto.py` checks contact/ambiguity policy, restoration exclusion,
+bubble changes and undo/redo queue suppression. Automatic command tests cover
+permission, lease, session, geometry and table changes between checks.
+`automatic_balloons_gui.run(App, Gui, CASE_DIR)` requires an empty session and a
+new `forgepdm-auto-balloons-qa*` directory. It uses disposable pinned links and a
+fixture permission/checkout/workspace transport, verifies the actual native
+TechDraw balloon command, arrow movements, projection coordinates, overlapping
+candidates, native persistence and PDF output. Chooser results are supplied by
+the fixture; no production CAD, HTTP publication or server BOM mutation occurs.

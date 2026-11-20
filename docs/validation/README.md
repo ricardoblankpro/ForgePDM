@@ -5,6 +5,18 @@ They do not certify later behavior or untested platforms. Keep original files,
 including reports reused as regressions, and never add credentials/private CAD.
 See [test tiers](../development/testing.md) and [current handoff](../../DEVELOPMENT_STATUS.md).
 
+## Projection-group balloon validation fix
+
+- [Grouped source containment, native persistence/PDF and open drawing preservation](projection-group-balloon-fix-2026-11-20.json)
+
+## Automatic balloon attachments
+
+- [Native creation, connected-component resolution, retargeting and installed preservation](automatic-balloons-2026-11-20.json)
+
+## Linked drawing BOM balloons
+
+- [Explicit adoption, frozen identity, native undo/save-reopen/PDF and installed data preservation](linked-balloons-2026-11-19.json)
+
 ## TechDraw BOM sort order
 
 - [Sorting, notes, legacy compatibility, native save/reopen and PDF evidence](drawing-bom-sort-2026-11-18.json)

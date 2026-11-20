@@ -5,6 +5,7 @@ constraints and rationale; current instructions live in the [documentation index
 
 - [Development chronology through the shared BOM implementation](development-log.md)
 - [Original prototype provenance](provenance.md)
+- [Linked drawing balloon research from 2026-11-18](linked-bom-balloons-research.md)
 - [Standard-parts implementation sequence](plans/standard-parts.md)
 - [Early architecture proposal](guides/architecture.md), [domain model](guides/domain-model.md) and [phase roadmap](guides/roadmap.md)
 - [Phase 1 packaging](phases/freecad-addon-phase1.md), [Phase 2 connectivity](phases/freecad-addon-phase2.md), [Phase 3 workspaces](phases/freecad-addon-phase3.md), [Phase 4 BOM synchronization](phases/freecad-addon-phase4.md)

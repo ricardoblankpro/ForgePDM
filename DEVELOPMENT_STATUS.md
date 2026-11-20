@@ -6,7 +6,7 @@ This is the current handoff. Start with [README](README.md) and
 
 ## Delivery
 
-- Addon: **0.22.2**
+- Addon: **0.24.1**
 - Backend package: **0.3.3**
 - Database schema: **20**
 
@@ -43,10 +43,16 @@ An installable Addon Manager distribution source/publication is still separate.
   description controls and account/project administration.
 - Direct/Indented/Flattened BOM reports shared across clients. CAD-to-BOM changes
   remain explicit reviewed direct replacements; quantities/exact pins are retained.
-- Frozen customizable TechDraw BOMs, format-1 direct/format-2 non-direct/format-3 localized/format-4 sorted tables,
+- Frozen customizable TechDraw BOMs, format-1 direct/format-2 non-direct/format-3 localized/format-4 sorted/format-5 linked/format-6 automatic tables,
   and explicit PDF publication pinned to exact uploaded source bytes. New drawing
   tables default to item-number sorting; configurable ascending/descending order
   preserves nested subtrees, positions, row notes and frozen source evidence.
+- Native TechDraw balloons automatically resolve connected managed component geometry
+  for ordinary/projection-group views, with explicit manual fallback, and link to frozen Direct BOM entries using existing
+  BOM Positions. Table/balloon updates are atomic; unresolved targets require explicit
+  relinking and block new ForgePDM PDF rendering. Leader placement/style are preserved.
+  See [drawing workflow](docs/user/drawings.md#link-a-balloon-to-a-bom-entry) and
+  [ADR-029](docs/decisions/ADR-029-linked-drawing-balloons.md).
 - Shared 384px isometric previews for new native uploads/check-ins. Each image is
   an immutable derivative of one exact source file; selected-snapshot images appear
   in FreeCAD and web. Capture preserves view/document state, rejects unsaved linked
@@ -58,6 +64,63 @@ An installable Addon Manager distribution source/publication is still separate.
   missing/failed/interrupted/stale runs. Known older schema backups remain readable.
 
 ## Validation and local installation
+
+2026-11-20 projection-group balloon fix: addon **0.24.1** is installed in both
+profiles and loaded in the current authenticated FreeCAD session. Grouped projected
+sources now validate through their owning page's DrawProjGroup.Views; unrelated
+pages/documents remain rejected. 516 addon tests (six optional Qt modules skipped),
+four repository-documentation tests and six installed native checks pass, including
+manual/automatic binding, table update, save/reopen, PDF preflight and rendering.
+Both balloons in the user's actual drawing pass a read-only validation. All three
+open documents retain file bytes, modified/touched/object states, labels and frozen
+balloon/table metadata; the active document, selection and authenticated session are
+preserved. No user document was saved or relinked. Backend/schema are unchanged;
+all 44 database tables and 238 blob hashes match the verified backup. Prior addon
+profiles and backup are under `var/backups/before-projection-balloon-fix`. See
+[fix evidence](docs/validation/projection-group-balloon-fix-2026-11-20.json).
+
+2026-11-20 automatic balloon attachments: addon **0.24.0** is installed in both
+profiles and active in FreeCAD 1.1.4 / Qt 6.8.3 with its document observer enabled.
+510 addon tests (six optional Qt modules skipped), 28 real Qt tests and four
+repository-documentation tests pass. Eleven installed native checks cover picking,
+actual TechDraw_Balloon creation, retargeting, undo/redo, bubble-only movement,
+restoration exclusion, format-6 persistence/integrity and PDF rendering/preflight.
+A native projection-group probe passes; the PDF is visually verified. Transport,
+workspace and chooser answers are fixtures; no real-account HTTP publication or
+production CAD mutation was performed. A redundant GUI save in acceptance was
+removed because it opens the native dependent-files dialog; document API saves
+and background-calculation settling retain persistence coverage.
+
+Backend **0.3.3** / schema **20** are unchanged. The verified backup and prior
+addon profiles are under `var/backups/before-automatic-balloons`. All 44 database
+tables, 29 items, 33 revisions, 247 files and 238 blob hashes are unchanged. The
+empty document/unauthenticated session state is restored. Automatic links follow
+arrow movement and use existing Direct BOM Positions, version-2 attachment
+metadata and table format 6. Overlaps require selection; specialized views retain
+manual fallback. Existing restored balloons are never automatically adopted.
+See [ADR-030](docs/decisions/ADR-030-automatic-balloon-attachments.md) and
+[installed evidence](docs/validation/automatic-balloons-2026-11-20.json).
+
+2026-11-19 linked drawing balloons: addon **0.23.0** is installed in both profiles
+and loaded from the installed path in FreeCAD 1.1.4 / Qt 6.8.3. Backend **0.3.3**
+and schema **20** are unchanged. 490 addon tests (six optional Qt modules skipped),
+28 real Qt tests, four repository-documentation tests and 12 native checks pass.
+Native acceptance covers explicit adoption, native expression text, retained leader/
+style, multiple tables/balloons, atomic failure and undo/redo, managed FCStd integrity,
+offline save/reopen, reconciliation/orphans and PDF output/export gating. The PDF
+is visually checked. Export-gate acceptance uses a fixture configuration opener;
+no HTTP publication or production drawing mutation was performed. Lint, formatting,
+documentation and packaging checks pass. The new menu command and its actual
+registered callback dispatch are verified without advancing the workflow.
+
+A verified backup and prior addon installations are retained under
+`var/backups/before-linked-balloons`. All 44 database tables, 29 items, 33 revisions,
+247 file records and 238 blob hashes are unchanged. The original empty document
+and unauthenticated session state and active workbench are preserved. Linked tables
+use format 5; older addons reject their edits. Existing drawings/balloons are never
+automatically adopted or rewritten. Direct links use the existing BOM Position;
+renumber/replacement/changed duplicate sets require explicit relinking. See
+[installed/native evidence](docs/validation/linked-balloons-2026-11-19.json).
 
 2026-11-18 drawing BOM sorting: addon **0.22.2** is installed in both profiles
 and active in FreeCAD 1.1.4 / Qt 6.8.3. Backend **0.3.3** and schema **20** are
@@ -168,10 +231,10 @@ including data preservation and earlier Qt/browser counts, remains in dated
 - Thumbnails have no automatic backfill, per-row lazy loading, headless service or
   sheet-preview rendering. Capture caps individual files at 256 MiB and linked
   documents at 1000; missing/unavailable images never prevent opening CAD.
-- TechDraw tables are bounded to 500 rows and one page. Sheet splitting, balloons,
+- TechDraw tables are bounded to 500 rows and one page. Sheet splitting, Indented/Flattened balloon links, automatic placement/recognition,
   CAD-property mappings and stale-publication gates remain open.
 - Broader supplier coverage, stock/cutting workflows and ERPNext synchronization
-  remain separate increments. No next feature order is assumed.
+  remain separate increments. Remaining features have no agreed order.
 - Advanced material records/APIs, migrations, old-file retrieval and local durable
   recovery journals remain supported compatibility surfaces. Preserve them.
 
