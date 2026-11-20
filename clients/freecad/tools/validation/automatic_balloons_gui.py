@@ -176,8 +176,8 @@ def run(App, Gui, directory):
         point(App.Vector(30, 5, 5))
         root.commitTransaction()
         observer.flush()
-        assert balloon.Text == "6" and json.loads(balloon.PDMBOMBinding)["format"] == 2
-        assert bom.read_table(table)["format"] == 6
+        assert balloon.Text == "6" and json.loads(balloon.PDMBOMBinding)["format"] == 3
+        assert bom.read_table(table)["format"] == 7
         checks.append(
             "Moving the arrow retargets the existing native balloon to the second BOM Position"
         )
@@ -226,7 +226,7 @@ def run(App, Gui, directory):
         _, references = fcstd.inspect(root.FileName)
         assert len(references) == 2
         checks.append(
-            "Format-6 native drawing passes FCStd reference inspection and real PDF rendering"
+            "Format-7 native drawing passes FCStd reference inspection and real PDF rendering"
         )
         observer.suspended = True
         balloon.OriginX = 500

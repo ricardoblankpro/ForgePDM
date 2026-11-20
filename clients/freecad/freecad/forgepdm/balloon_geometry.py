@@ -4,6 +4,8 @@ import hashlib
 import json
 import math
 
+from .geometry_fingerprint import PROFILE, fingerprint
+
 TOLERANCE_MM = 0.25
 SUPPORTED = {"TechDraw::DrawViewPart", "TechDraw::DrawProjGroupItem"}
 
@@ -91,7 +93,7 @@ def pick(balloon):
     return hits
 
 
-def evidence(balloon):
+def evidence(balloon, *, legacy=False):
     """Snapshot geometry and view configuration; no mutable visual row index."""
     view = balloon.SourceView
     rows = components(view)
@@ -109,13 +111,17 @@ def evidence(balloon):
                 obj.Document.Name,
                 obj.Name,
                 rid,
-                hashlib.sha256(shape.exportBrepToString().encode()).hexdigest(),
+                hashlib.sha256(shape.exportBrepToString().encode()).hexdigest()
+                if legacy
+                else fingerprint(shape.exportBrepToString()),
             )
             for obj, rid, shape in rows
         ],
     }
-    # Document names change on isolated retrieval; object names and native bytes do not.
+    # Document names change on isolated retrieval; occurrence names remain local.
     value["components"] = [list(row[1:]) for row in value["components"]]
+    if not legacy:
+        value["fingerprint"] = PROFILE
     return value
 
 

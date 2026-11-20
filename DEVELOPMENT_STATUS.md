@@ -6,7 +6,7 @@ This is the current handoff. Start with [README](README.md) and
 
 ## Delivery
 
-- Addon: **0.24.3**
+- Addon: **0.26.0**
 - Backend package: **0.3.3**
 - Database schema: **20**
 
@@ -43,7 +43,7 @@ An installable Addon Manager distribution source/publication is still separate.
   description controls and account/project administration.
 - Direct/Indented/Flattened BOM reports shared across clients. CAD-to-BOM changes
   remain explicit reviewed direct replacements; quantities/exact pins are retained.
-- Frozen customizable TechDraw BOMs, format-1 direct/format-2 non-direct/format-3 localized/format-4 sorted/format-5 linked/format-6 automatic tables,
+- Frozen customizable TechDraw BOMs, format-1 direct/format-2 non-direct/format-3 localized/format-4 sorted/format-5 linked/format-6 automatic/format-7 stable-geometry tables,
   and explicit PDF publication pinned to exact uploaded source bytes. New drawing
   tables default to item-number sorting; configurable ascending/descending order
   preserves nested subtrees, positions, row notes and frozen source evidence.
@@ -64,6 +64,120 @@ An installable Addon Manager distribution source/publication is still separate.
   missing/failed/interrupted/stale runs. Known older schema backups remain readable.
 
 ## Validation and local installation
+
+2026-11-20 stable balloon evidence: addon **0.26.0** is installed in both profiles
+and active in FreeCAD. New automatic bindings use version 3/profile
+`occt-brep-q12-v1` and table format 7; formats 1–6 and the exact version-2 legacy
+reader remain supported. Fingerprinting normalizes insignificant serialized real
+values and kernel processing flags without changing native shapes. Geometry,
+placement, topology, occurrence/revision membership, arrow/view and frozen BOM
+identity checks remain. Unknown formats/profiles fail closed. Table updates and
+manual linking preserve format 7. See [ADR-031](docs/decisions/ADR-031-stable-balloon-geometry-evidence.md).
+
+577 addon tests (seven optional Qt modules skipped), 37 real Qt tests and 15 native
+checks pass. Final native acceptance runs in a separate process, temporary profile
+and X display, with no production login and only copied configuration files. It
+uses the actual configuration/PDF loaders on this assembly's transformed parts
+and Fasteners: all six component fingerprints survive BREP roundtrips, all seven
+automatic links survive reconstruction/save/reopen and real arrow/placement/target
+changes remain rejected. The generated PDF is visually checked. The PDF renderer
+reported two nonfatal empty-closepath warnings from the native output; no visible
+content loss was observed. Lint/format, documentation and packaging checks pass.
+
+Under the user's explicit repair request and revalidated Working/edit/owned-live-
+checkout guards, seven legacy automatic bindings in the working assembly were
+rebaselined atomically to their verified existing targets. Non-geometry view/arrow
+fields, component occurrence/revision sets, frozen entry identity and exact target
+arrow hits were verified; there was no replacement guessing. All BOM Positions,
+manual binding, table report/notes/SVG, text, leaders and styles are retained. The
+saved working copy passes balloon and native-reference validation with zero issues;
+component file bytes are unchanged. It still needs explicit Upload before Publish
+Drawing PDFs. No server upload/check-in/publication was performed by this change.
+
+FreeCAD exited during closure of owned native test copies in the initial shared-
+session probe. Saved files, the live unsaved assembly and original addon profiles
+had been backed up immediately beforehand. All three working documents were
+reopened through recovery, and the user logged back in. Remaining native acceptance
+was moved to the isolated process described above; the harness now rejects a normal
+user profile, open documents, production login and non-temporary configurations.
+Retain `var/backups/before-stable-balloon-fingerprints`, including the live snapshot,
+recovery cache, original bindings and reconciliation evidence. See
+[validation](docs/validation/stable-balloon-fingerprints-2026-11-20.json).
+
+2026-11-20 automatic-balloon fingerprint investigation: the user's assembly's
+seven format-2 automatic bindings fail in both the working document and an exact
+source-pinned replay of the PDF configuration loader. All non-component evidence
+(arrow/view/scale/orientation) and component revision IDs match. The local source
+hash equals the workspace's recorded uploaded hash; there is no pending local PDF
+publication journal. One manually linked balloon is unaffected.
+
+The fingerprint hashes raw `exportBrepToString()` output for every component in a
+view. Native probes demonstrate that serialization/reconstruction can change
+insignificant numerical values and OCCT's transient Checked flag. Live versus
+reconstructed component BREP strings differ, but all six match after diagnostic
+normalization of that flag and numerical roundoff; observed vertex deltas are
+below 7.2e-15 mm, and revision IDs/vertex counts match. An isolated evidence refresh
+clears all seven errors and survives save/reopen. These findings expose unstable
+representation-based evidence and view-wide invalidation; they do not prove an
+arbitrary old hash is safe to replace. No validation relaxation, original balloon
+relink, production save/upload or PDF publication was performed. Original saved
+file bytes and recorded object properties are preserved.
+
+This investigation led to the versioned correction recorded above. Its original
+evidence and cautions about old one-way hashes remain valid; ordinary inspection
+never upgrades bindings. See
+[investigation evidence](docs/validation/balloon-fingerprint-investigation-2026-11-20.json).
+
+2026-11-20 balloon problem highlighting: addon **0.25.0** is installed in both
+profiles and active in FreeCAD. **Check BOM Balloons…** opens an offline, read-only
+panel with numbered red bubble markers, exact-object selection, specific attachment
+failure reasons and the existing guarded **Link selected…** workflow. The list
+revalidates after edits/undo/relinking and supports explicit Recheck; closing it
+removes its observer and markers. Correct frozen bindings are never adopted or
+rewritten by inspection. Markers are viewport widgets, outside the native drawing
+scene and PDF output. No backend/schema change. See
+[user workflow](docs/user/drawings.md#find-balloons-that-need-repair).
+
+543 addon tests (seven optional Qt modules skipped), 37 real Qt tests and eight
+installed native checks pass. Native coverage includes ordinary/projection-group
+positions, valid-balloon exclusion, selection, frozen/file preservation, repaired
+entry removal and panel/document cleanup. Before/after native PDF rasterizations
+are pixel-identical. The new command is registered in the current workbench; its
+panel is open with eight markers on the recovered drawing. Lint, formatting,
+documentation and packaging checks pass; no production upload/check-in/relink was
+performed. See [validation](docs/validation/balloon-problem-highlights-2026-11-20.json).
+
+During initial page-graphics inspection FreeCAD exited unexpectedly. The native
+scene-item inspection/reopening sequence preceded the exit; its exact crash cause
+was not established. The shipped implementation never inspects or wraps native
+graphics items and tests viewport painting separately. The recovery cache and saved
+assembly were backed up before restarting. FreeCAD reopened all three documents
+through recovery; recovered unsaved state was retained, and the user subsequently
+logged in again. Disk ZIP integrity checks pass, but no claim is made that edits
+newer than the last recovery snapshot survived. Backups and local evidence are under
+`var/backups/before-balloon-problem-highlights`; do not discard recovered edits.
+
+2026-11-20 saved reference paths: addon **0.24.4** is installed in both profiles
+and active in FreeCAD. Controlled saves inspect serialized component paths and
+refresh only stale native link caches, including ordinary saves and writable Save
+As. Correct paths and unresolved/genuinely different targets are not relinked;
+strict transfer validation remains unchanged. 533 addon tests (six optional Qt
+modules skipped), 16 installed native checks and the retained Upload/Check In
+callbacks pass. Native coverage reproduces the FreeCAD 1.1.4 Save As defect for
+App::Link and Assembly::AssemblyLink, repairs/reopens both and preserves internal
+links, placements and component bytes. Documentation/lint/format/package checks
+pass; no backend/schema change or production HTTP mutation was performed.
+
+The user's backed-up assembly working copy now passes saved-reference and client
+upload-preparation validation. Three open documents, the authenticated session,
+component bytes, frozen table/balloon bindings and revision pins are preserved;
+native recompute changed three placement coordinates only below 8e-31 mm. Three
+balloons still fail PDF attachment validation (two have older view-scale evidence;
+one has different geometry hashes). Their bindings were preserved, not automatically
+reconciled. Relink them explicitly before PDF publication. No upload/check-in was
+performed. Prior profiles, original working-copy bytes and detailed local evidence
+are retained under `var/backups/before-saved-reference-path-fix`. See
+[validation](docs/validation/saved-reference-paths-2026-11-20.json).
 
 2026-11-20 concise balloon choices: addon **0.24.3** is installed in both profiles
 and loaded in FreeCAD. The automatic component chooser omits the redundant CAD

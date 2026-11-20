@@ -93,7 +93,64 @@ def test_attachment_change_is_detected_without_document_mutation(monkeypatch):
         "component_revision_id": "a",
         "attachment": {"geometry": saved, "component": "Part"},
     }
-    monkeypatch.setattr(geometry, "evidence", lambda _: {"view": "View", "origin": [2, 2]})
+    monkeypatch.setattr(
+        geometry, "evidence", lambda _, **kwargs: {"view": "View", "origin": [2, 2]}
+    )
     with pytest.raises(ValueError, match="changed"):
         links.validate_attachment(object(), binding)
     assert binding["attachment"]["geometry"] == saved
+
+
+@pytest.mark.parametrize(
+    "field,message",
+    [
+        ("scale", "View scale changed"),
+        ("rotation", "View rotation changed"),
+        ("components", "Component geometry changed"),
+    ],
+)
+def test_attachment_diagnostics_explain_the_changed_evidence(monkeypatch, field, message):
+    saved = {field: "before"}
+    binding = {"format": 2, "attachment": {"geometry": saved}}
+    monkeypatch.setattr(geometry, "evidence", lambda _, **kwargs: {field: "after"})
+    with pytest.raises(ValueError, match=message):
+        links.validate_attachment(object(), binding)
+    assert saved == {field: "before"}
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_profile_dispatch_keeps_legacy_raw_validation_and_stable_validation_separate(
+    monkeypatch, version
+):
+    from freecad.forgepdm.geometry_fingerprint import PROFILE
+
+    calls = []
+    evidence = {"view": "View", "components": [["Part", "a", "stored"]]}
+    if version == 3:
+        evidence["fingerprint"] = PROFILE
+    binding = {
+        "format": version,
+        "component_revision_id": "a",
+        "attachment": {"geometry": evidence, "component": "Part"},
+    }
+
+    def current(_, **kwargs):
+        calls.append(kwargs.get("legacy", False))
+        return evidence
+
+    monkeypatch.setattr(geometry, "evidence", current)
+    monkeypatch.setattr(geometry, "pick", lambda _: [(NS(Name="Part"), "a")])
+    links.validate_attachment(object(), binding)
+    assert calls == [version == 2]
+    changed = dict(evidence, components=[["Part", "a", "different"]])
+    monkeypatch.setattr(geometry, "evidence", lambda *a, **k: changed)
+    with pytest.raises(ValueError, match="Component geometry changed"):
+        links.validate_attachment(object(), binding)
+
+
+def test_unknown_stable_fingerprint_is_rejected_without_geometry_guessing(monkeypatch):
+    monkeypatch.setattr(geometry, "evidence", lambda _: pytest.fail("unexpected fallback"))
+    with pytest.raises(ValueError, match="Unsupported"):
+        links.validate_attachment(
+            object(), {"format": 3, "attachment": {"geometry": {"fingerprint": "future"}}}
+        )

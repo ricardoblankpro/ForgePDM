@@ -5,6 +5,19 @@ They do not certify later behavior or untested platforms. Keep original files,
 including reports reused as regressions, and never add credentials/private CAD.
 See [test tiers](../development/testing.md) and [current handoff](../../DEVELOPMENT_STATUS.md).
 
+## Stable balloon geometry evidence
+
+- [Versioned fingerprints, isolated native PDF reconstruction, strict negative cases and authorized working-copy reconciliation](stable-balloon-fingerprints-2026-11-20.json)
+
+## Balloon problem highlighting
+
+- [Read-only numbered markers, native selection, repair revalidation and PDF exclusion](balloon-problem-highlights-2026-11-20.json)
+- [Subsequent raw-BREP fingerprint instability investigation and exact PDF-source replay](balloon-fingerprint-investigation-2026-11-20.json)
+
+## Saved reference paths
+
+- [Native stale-path reproduction, selective repair, installed callbacks and working-copy preservation](saved-reference-paths-2026-11-20.json)
+
 ## Balloon choice descriptions
 
 - [Frozen descriptions, target-selection regression and installed native chooser verification](balloon-choice-descriptions-2026-11-20.json)

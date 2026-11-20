@@ -3,6 +3,10 @@
 Status: accepted, 2026-11-20. Extends ADR-029 following the owner's request to
 use normal TechDraw balloons and follow the connected component when its arrow moves.
 
+[ADR-031](ADR-031-stable-balloon-geometry-evidence.md) extends the evidence contract
+with stable version-3 attachments and format-7 tables; the legacy contract below
+remains supported.
+
 A deferred document observer handles newly placed native balloons and changes to
 OriginX/OriginY/SourceView. It ignores restoration, bubble X/Y changes and internal
 binding writes. Undo/redo discards pending automatic work. It waits for mouse release,

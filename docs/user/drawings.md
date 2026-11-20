@@ -60,7 +60,8 @@ format 1; non-direct tables use format 2 so older addons refuse their update.
 Explicitly sorted tables use format 4 and retain the same frozen language and
 provenance when present. Older addons can display their embedded SVG but reject
 updates they cannot preserve. Linked tables use format 5 so older addons refuse
-updates that cannot maintain balloon links. Automatic attachments use format 6. Formats 1–6 remain viewable offline
+updates that cannot maintain balloon links. Legacy automatic attachments use format 6;
+new stable attachments use format 7. Formats 1–7 remain viewable offline
 without ForgePDM. Active CAD edit mode, changed
 permissions/lease or stale report evidence rejects insertion/update.
 
@@ -87,10 +88,36 @@ changes are withheld; log in and retry explicitly.
 
 Undo the automatic linking transaction separately from the native placement/drag.
 Undo/redo does not immediately rerun detection. Reopening a drawing does not adopt
-old balloons. Automatic attachments use table format 6 and retain frozen geometry
+old balloons. New automatic attachments use table format 7 and retain frozen geometry
 and view evidence; changed attachments block ForgePDM PDF rendering until corrected.
 Save/upload explicitly. Section, detail, broken and perspective views use manual
 linking below. CAD-derived engineering BOM changes remain separately reviewed.
+
+Addon 0.26.0 and later use stable geometry evidence so insignificant numeric and
+kernel bookkeeping differences after save/retrieval do not invalidate new links.
+Real geometry, placement, view, arrow or revision changes still require review.
+Older automatic links keep their original validation until explicitly relinked;
+**Link BOM Balloon… → Automatic from arrow** creates the new evidence. Inspection
+and opening a drawing never reset an old link's baseline automatically. Older
+addons reject edits to format-7 tables; upgrade before editing these drawings.
+
+## Find balloons that need repair
+
+Choose **ForgePDM → BOM and publishing → Check BOM Balloons…** with a drawing
+open. A **BOM balloon problems** panel lists the adopted balloons that fail the
+same checks used before PDF publication. Numbered red rings mark their bubbles
+on the active page; the red numbers match the panel rows, not BOM Positions.
+
+Click a row to select and locate that balloon. The panel explains changes such
+as a different view scale, moved arrow, changed component geometry or missing
+table. **Link selected…** opens the existing linking workflow for that exact
+balloon. A login and an owned Working-copy checkout are still required to repair
+links. The inspection itself works offline and on read-only drawings.
+
+The list refreshes after edits and relinking; **Recheck** refreshes it immediately.
+Use the page selector for another page. Close the panel to remove the temporary
+markers. Markers follow page pan/zoom, do not change saved colors, text or bindings,
+and are excluded from PDFs. Unlinked literal balloons are not flagged or adopted.
 
 ## Link a balloon to a BOM entry
 

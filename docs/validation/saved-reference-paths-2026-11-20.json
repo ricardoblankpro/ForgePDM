@@ -1,0 +1,67 @@
+{
+  "date": "2026-11-20",
+  "addon": "0.24.4",
+  "backend": "0.3.3 (unchanged)",
+  "schema": 20,
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "scope": "Local cached reference path correction; disposable native regressions and authorized assembly working-copy repair. No upload, check-in or server mutation.",
+  "unit_tests": {
+    "passed": 533,
+    "optional_qt_modules_skipped": 6
+  },
+  "native_checks": [
+    "App::Link reproduces stale paths after native Save As",
+    "App::Link ordinary save repairs paths and keeps live references",
+    "App::Link preserves placements, labels and internal links",
+    "App::Link repeated save keeps repaired paths",
+    "App::Link still rejects genuine reference changes",
+    "App::Link leaves component bytes unchanged",
+    "App::Link writable Save As repairs paths and preserves its source",
+    "App::Link reopens with exact targets and placements",
+    "Assembly::AssemblyLink reproduces stale paths after native Save As",
+    "Assembly::AssemblyLink ordinary save repairs paths and keeps live references",
+    "Assembly::AssemblyLink preserves placements, labels and internal links",
+    "Assembly::AssemblyLink repeated save keeps repaired paths",
+    "Assembly::AssemblyLink still rejects genuine reference changes",
+    "Assembly::AssemblyLink leaves component bytes unchanged",
+    "Assembly::AssemblyLink writable Save As repairs paths and preserves its source",
+    "Assembly::AssemblyLink reopens with exact targets and placements"
+  ],
+  "installed_profiles_verified": 2,
+  "loaded_from_installed_profile": true,
+  "retained_callbacks": [
+    "ForgePDM_Upload resolves current action before execution",
+    "ForgePDM_CheckIn resolves current action before execution",
+    "no workflow body executed",
+    "documents/files/dirty state/selection preserved",
+    "session identity preserved"
+  ],
+  "working_copy": {
+    "saved_path_validation": "passed",
+    "client_native_validation": "passed",
+    "open_documents_preserved": 3,
+    "authenticated_session_preserved": true,
+    "component_file_bytes_and_revision_pins_preserved": true,
+    "frozen_table_and_balloon_metadata_preserved": true,
+    "placements": "Native recompute numerical changes in three placements; maximum absolute coordinate delta below 8e-31 mm.",
+    "final_modified": false,
+    "pending_transaction": false,
+    "pdf_limitation": "Three existing bindings require explicit relinking: two have old view-scale evidence; one differs in component geometry hashes. Bindings were preserved and no PDF was published."
+  },
+  "behavior": "Ordinary saves and writable Save As inspect serialized paths, refreshing only stale supported native link caches. Unresolved or different target identities are left to strict transfer validation; unsupported archives are not repaired.",
+  "backup_directory": "var/backups/before-saved-reference-path-fix",
+  "limits": [
+    "Linux FreeCAD 1.1.4 native coverage only",
+    "No production HTTP mutation or PDF publication",
+    "Six optional Qt modules skipped in the base suite"
+  ]
+}

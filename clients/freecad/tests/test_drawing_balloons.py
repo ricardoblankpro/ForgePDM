@@ -177,6 +177,9 @@ def test_pdf_preflight_rejects_damaged_links_without_rewriting_them(data, damage
         table.PDMTableData = json.dumps({**data, "format": 4})
     before = copy.copy(balloon.__dict__)
     assert len(balloons.issues(page)) == 1
+    diagnostic = balloons.diagnostics(page)
+    assert len(diagnostic) == 1 and diagnostic[0]["balloon"] is balloon
+    assert balloons.issues(page) == [balloon.Label + ": " + diagnostic[0]["reason"]]
     assert balloon.__dict__ == before
 
 
@@ -185,6 +188,58 @@ def test_format5_keeps_all_table_evidence(data):
     obj = NS(PDMTableData=json.dumps(data))
     assert bom.read_table(obj) == data
     assert obj.PDMTableData == json.dumps(data)
+
+
+def test_stable_binding_resolves_same_frozen_identity_and_keeps_format7(data):
+    data["format"] = 7
+    binding = dict(balloons.identity(data, data["report"]["lines"][0]), format=3, attachment={})
+    assert balloons.resolve(binding, data) is data["report"]["lines"][0]
+    obj = NS(PDMTableData=json.dumps(data))
+    assert bom.read_table(obj) == data
+
+
+@pytest.mark.parametrize("damage", [None, "view", "revision", "miss", "unresolved", "position"])
+def test_explicit_legacy_rebaseline_retains_target_or_rejects_changes(data, monkeypatch, damage):
+    from freecad.forgepdm import balloon_geometry as geometry
+    from freecad.forgepdm.geometry_fingerprint import PROFILE
+
+    data["format"] = 6
+    table = NS(PDMTableData=json.dumps(data))
+    balloon = Balloon(data, table)
+    source = object()
+    document = NS(Objects=[table, balloon, source])
+    page = NS(Document=document, Views=[table, balloon, source])
+    balloon.Document = table.Document = document
+    balloon.SourceView, balloon.Text = source, "5"
+    rid = data["report"]["lines"][0]["component_revision_id"]
+    old = dict(view="View", origin=[1, 2], components=[["Part", rid, "old-raw-hash"]])
+    binding = dict(
+        json.loads(balloon.PDMBOMBinding), format=2, attachment=dict(component="Part", geometry=old)
+    )
+    balloon.PDMBOMBinding = json.dumps(binding)
+    current = dict(old, fingerprint=PROFILE, components=[["Part", rid, "stable-hash"]])
+    hits = [(NS(Name="Part"), rid)]
+    if damage == "view":
+        current["origin"] = [2, 2]
+    elif damage == "revision":
+        current["components"] = [["Part", "different", "stable-hash"]]
+    elif damage == "miss":
+        hits.clear()
+    elif damage == "unresolved":
+        balloon.PDMBOMStatus = "Unresolved"
+    elif damage == "position":
+        balloon.PDMBOMPosition = "8"
+    monkeypatch.setattr(geometry, "evidence", lambda _: current)
+    monkeypatch.setattr(geometry, "pick", lambda _: hits)
+    before = copy.copy(balloon.__dict__)
+    if damage:
+        with pytest.raises(ValueError):
+            balloons.plan_legacy_upgrade(page, balloon)
+    else:
+        upgraded = balloons.plan_legacy_upgrade(page, balloon)
+        assert upgraded["format"] == 3 and upgraded["attachment"]["component"] == "Part"
+        assert balloons.resolve(upgraded, data) is data["report"]["lines"][0]
+    assert balloon.__dict__ == before
 
 
 @pytest.mark.parametrize(

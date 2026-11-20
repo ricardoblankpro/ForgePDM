@@ -93,6 +93,14 @@ recover the original result before starting a new intent. Newer unsaved changes
 are preserved and are not silently included in an old retry. Keep journals with
 workspace backups; see [recovery](../operations/server.md#recovery).
 
+ForgePDM saves refresh external link paths to their currently loaded components,
+including working copies moved to another folder. Exact component identities and
+placements are retained. If an upload reports that a CAD reference changed, keep
+the assembly and its components open and retry with addon 0.24.4 or later. The
+saved snapshot must still pass reference validation; unresolved components or
+genuine target changes require inspection. A failed upload can leave an existing
+item or checkout, so continue with that item rather than creating a duplicate.
+
 ## Revise or update a component
 
 **Create Next Revision** requires a change note and opens a separate Working

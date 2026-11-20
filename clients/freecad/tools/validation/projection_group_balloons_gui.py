@@ -97,7 +97,7 @@ def run(App, Gui, directory):
         assert (
             balloon.Text == "5"
             and links.issues(page) == []
-            and bom.read_table(table)["format"] == 6
+            and bom.read_table(table)["format"] == 7
         )
         checks.append(
             "Geometry-based automatic binding and preflight accept the real grouped source"

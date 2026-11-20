@@ -377,6 +377,46 @@ def test_managed_save_rebases_external_links_after_filename_changes(commands, tm
     assert document.saved == [("saveAs", str(destination)), ("save", str(destination))]
 
 
+@pytest.mark.parametrize("save_as", [False, True])
+@pytest.mark.parametrize("stale", [False, True])
+def test_save_repairs_only_stale_serialized_paths(commands, monkeypatch, tmp_path, save_as, stale):
+    path = tmp_path / "assembly.FCStd"
+    path.write_bytes(b"original")
+    document = Document(None if save_as else path)
+    if save_as:
+        choose_file(commands, monkeypatch, path)
+    repairs = []
+
+    def repair(doc):
+        assert doc.saved == [("saveAs" if save_as else "save", str(path))]
+        repairs.append(doc)
+        return stale
+
+    monkeypatch.setattr(commands.cad, "repair_saved_link_paths", repair)
+    assert commands._save_document(document) == str(path)
+    assert repairs == [document]
+    assert len(document.saved) == 1 + int(stale)
+
+
+def test_failed_reference_refresh_does_not_clear_modified_flag(commands, monkeypatch, tmp_path):
+    path = tmp_path / "assembly.FCStd"
+    path.write_bytes(b"original")
+    document = Document(path)
+    gui_document = SimpleNamespace(Modified=True)
+    monkeypatch.setattr(
+        commands.FreeCADGui, "getDocument", lambda name: gui_document, raising=False
+    )
+
+    def fail(document):
+        raise RuntimeError("reference refresh failed")
+
+    monkeypatch.setattr(commands.cad, "repair_saved_link_paths", fail)
+    with pytest.raises(RuntimeError, match="reference refresh failed"):
+        commands._save_document(document)
+    assert gui_document.Modified
+    assert path.read_bytes() == b"original"
+
+
 def test_reference_change_during_preparation_stops_before_upload(commands, monkeypatch):
     from types import SimpleNamespace
 

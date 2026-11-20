@@ -1,0 +1,108 @@
+{
+  "date": "2026-11-20",
+  "addon": "0.25.0 (unchanged)",
+  "freecad": "1.1.4",
+  "occt": "7.8.1",
+  "scope": "Investigate repeated component-geometry rejection; no validation or evidence-format implementation changes.",
+  "actual_source": {
+    "local_bytes_match_recorded_uploaded_hash": true,
+    "pending_local_pdf_publication_journal": false,
+    "automatic_bindings_failing": 7,
+    "manual_binding_unaffected": 1,
+    "exact_pinned_pdf_configuration_loader_reproduces_failure": true,
+    "all_non_component_evidence_matches": true,
+    "component_revision_ids_match": true
+  },
+  "fingerprint_implementation": "SHA-256 of raw shape.exportBrepToString(). Each automatic attachment records all visible component hashes.",
+  "native_findings": {
+    "inmemory_brep_roundtrip_changes_raw_hashes": 6,
+    "live_vs_exact_pdf_configuration": [
+      {
+        "object": "Nut",
+        "revision_equal": true,
+        "raw_hash_equal": false,
+        "volume_delta": -4.547473508864641e-13,
+        "area_delta": -4.547473508864641e-13,
+        "max_bound_delta": 0.0,
+        "vertex_counts_equal": true,
+        "max_vertex_delta": 8.881784197001252e-16
+      },
+      {
+        "object": "Screw001",
+        "revision_equal": true,
+        "raw_hash_equal": false,
+        "volume_delta": 0.0,
+        "area_delta": 0.0,
+        "max_bound_delta": 0.0,
+        "vertex_counts_equal": true,
+        "max_vertex_delta": 8.881784197001252e-16
+      },
+      {
+        "object": "Washer",
+        "revision_equal": true,
+        "raw_hash_equal": false,
+        "volume_delta": 0.0,
+        "area_delta": 0.0,
+        "max_bound_delta": 0.0,
+        "vertex_counts_equal": true,
+        "max_vertex_delta": 0.0
+      },
+      {
+        "object": "Body001",
+        "revision_equal": true,
+        "raw_hash_equal": true,
+        "volume_delta": 0.0,
+        "area_delta": 0.0,
+        "max_bound_delta": 0.0,
+        "vertex_counts_equal": true,
+        "max_vertex_delta": 0.0
+      },
+      {
+        "object": "Body002",
+        "revision_equal": true,
+        "raw_hash_equal": false,
+        "volume_delta": 0.0,
+        "area_delta": 0.0,
+        "max_bound_delta": 7.105427357601002e-15,
+        "vertex_counts_equal": true,
+        "max_vertex_delta": 7.105427357601002e-15
+      },
+      {
+        "object": "Body",
+        "revision_equal": true,
+        "raw_hash_equal": false,
+        "volume_delta": 0.0,
+        "area_delta": 0.0,
+        "max_bound_delta": 0.0,
+        "vertex_counts_equal": true,
+        "max_vertex_delta": 1.7516230804060213e-46
+      }
+    ],
+    "diagnostic_numeric_and_checked_flag_normalization_matches_all_components": true,
+    "maximum_observed_vertex_coordinate_delta_mm": 7.105427357601002e-15,
+    "bounding_boxes_volume_area": "See per-component deltas; these summaries are supporting evidence, not a general shape-equivalence proof."
+  },
+  "isolated_evidence_refresh": {
+    "failed_before": 7,
+    "failed_after_refresh": 0,
+    "failed_after_save": 0,
+    "failed_after_reopen": 0,
+    "only_disposable_copy_modified": true
+  },
+  "preservation": {
+    "production_file_bytes_unchanged": true,
+    "original_saved_bindings_unchanged": true,
+    "no_http_mutations": true,
+    "no_pdf_publication": true
+  },
+  "limitations": [
+    "No safe inference of an old geometric baseline from a one-way raw hash.",
+    "No automatic migration, production relink, validation bypass or fingerprint replacement implemented.",
+    "Simple prior native acceptance did not cover this actual Fasteners/transform configuration-loading case."
+  ],
+  "next_step": "Design versioned persistence-stable geometry evidence, retain legacy validation and add native recompute/reconstruction/PDF regressions before changing stored bindings.",
+  "primary_references": [
+    "https://github.com/Open-Cascade-SAS/OCCT/wiki/brep_format",
+    "https://github.com/Open-Cascade-SAS/OCCT/blob/master/src/ModelingData/TKBRep/BRepTools/BRepTools.cxx"
+  ]
+}

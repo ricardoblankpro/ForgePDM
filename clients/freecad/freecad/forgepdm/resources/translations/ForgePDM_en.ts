@@ -252,5 +252,7 @@
     </message>
     <message><source>Drawing BOM…</source><translation>Drawing BOM…</translation></message>
     <message><source>Insert or update a direct, indented or flattened engineering BOM on a TechDraw page</source><translation>Insert or update a direct, indented or flattened engineering BOM on a TechDraw page</translation></message>
+    <message><source>Check BOM Balloons…</source><translation>Check BOM Balloons…</translation></message>
+    <message><source>Highlight broken BOM balloon links on the drawing and review their problems</source><translation>Highlight broken BOM balloon links on the drawing and review their problems</translation></message>
   </context>
 </TS>

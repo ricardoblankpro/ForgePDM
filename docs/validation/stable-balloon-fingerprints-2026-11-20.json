@@ -1,0 +1,105 @@
+{
+  "date": "2026-11-20",
+  "addon": "0.26.0",
+  "backend": "0.3.3 (no code change)",
+  "schema": 20,
+  "profile": "occt-brep-q12-v1",
+  "binding_version": 3,
+  "table_format": 7,
+  "compatibility": {
+    "manual_bindings_version_1": true,
+    "legacy_raw_reader_version_2": true,
+    "table_formats_1_to_6_readable": true,
+    "unknown_profiles_rejected": true,
+    "no_automatic_restore_or_inspection_migration": true
+  },
+  "tests": {
+    "addon_passed": 577,
+    "optional_qt_modules_skipped": 7,
+    "real_qt_passed": 37,
+    "native": {
+      "checks": [
+        "Nut geometric fingerprint survives native BREP roundtrip",
+        "Screw001 geometric fingerprint survives native BREP roundtrip",
+        "Washer geometric fingerprint survives native BREP roundtrip",
+        "Body001 geometric fingerprint survives native BREP roundtrip",
+        "Body002 geometric fingerprint survives native BREP roundtrip",
+        "Body geometric fingerprint survives native BREP roundtrip",
+        "Legacy targets are verified without guessing different components",
+        "Stable bindings pass native PDF preflight after recompute",
+        "A real arrow movement still fails validation",
+        "An unchanged fingerprint cannot bypass exact arrow-target validation",
+        "A real component placement change still fails validation",
+        "Manual bindings, automatic targets and BOM Positions are preserved",
+        "Stable links survive exact reconstruction/relink/recompute/save loader",
+        "Every reopened binding keeps its component, position and table",
+        "The actual PDF export pipeline accepts the reconstructed stable links"
+      ],
+      "stable_bindings": 7,
+      "manual_bindings": 1,
+      "freecad": [
+        "1",
+        "1",
+        "4",
+        "20260928 (Git shallow)",
+        "Unknown",
+        "2026/09/28 13:46:34",
+        "(HEAD detached at 4fd3bf320)",
+        "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+      ],
+      "occt": "7.8.1",
+      "server_mutations": false,
+      "original_document_writes": false
+    }
+  },
+  "native_isolation": {
+    "separate_process": true,
+    "separate_x_display": true,
+    "temporary_user_profile": true,
+    "temporary_configuration_copy": true,
+    "no_production_login": true,
+    "actual_configuration_and_pdf_exporters": true,
+    "original_transformed_parts_and_fasteners_used": true
+  },
+  "pdf_validation": {
+    "rendered_and_visually_inspected": true,
+    "publication_performed": false,
+    "native_renderer_notes": "pdftoppm reported two nonfatal empty-closepath warnings; no visible content loss observed."
+  },
+  "live_repair": {
+    "upgraded_automatic_bindings": 7,
+    "manual_bindings_preserved": true,
+    "existing_positions_targets_and_visual_properties_preserved": true,
+    "component_file_bytes_preserved": true,
+    "working_copy_saved": true,
+    "remaining_balloon_issues": [],
+    "server_mutations": false
+  },
+  "final_validation": {
+    "addon": "0.26.0",
+    "issues": {
+      "Page": []
+    },
+    "native_reference_validation": true,
+    "modified": false,
+    "document_count": 3,
+    "authenticated": true,
+    "review_rows": 0
+  },
+  "runtime_incident": {
+    "description": "Initial shared-session probe exited during closure of owned test documents; remaining acceptance moved to a separate process/display.",
+    "live_unsaved_assembly_backed_up_before_test": true,
+    "saved_working_copies_and_addon_profiles_backed_up": true,
+    "three_working_documents_reopened_via_recovery": true,
+    "user_logged_back_in": true,
+    "final_harness_rejects_shared_profiles_open_documents_and_production_login": true
+  },
+  "limits": [
+    "Conservative serialized geometry fingerprint, not a general shape-equivalence proof.",
+    "Numeric coefficients round to 12 decimal places; topology reordering or rounding-boundary cases may still require explicit relinking.",
+    "Native validation limited to Linux FreeCAD 1.1.4 / OCCT 7.8.1.",
+    "Corrected working copy must be uploaded explicitly before server PDF publication."
+  ],
+  "backup_directory": "var/backups/before-stable-balloon-fingerprints",
+  "decision": "docs/decisions/ADR-031-stable-balloon-geometry-evidence.md"
+}

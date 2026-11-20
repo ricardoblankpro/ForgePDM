@@ -114,6 +114,11 @@ def _save_document(document):
             document.saveAs(path)
         else:
             document.save()
+        # Native Save As can retain cached paths relative to the old folder.
+        # Refresh on ordinary saves too, to recover copies moved earlier.
+        if cad.repair_saved_link_paths(document):
+            cad.settle_techdraw(document)
+            document.save()
     except (OSError, RuntimeError) as exception:
         raise RuntimeError(
             "Could not save FreeCAD document to '{}': {}. "
@@ -1709,6 +1714,30 @@ class DrawingBOMCommand(Command):
                 + "\n".join(problems),
             )
         _open_status("Drawing BOM updated. Save and upload the drawing when ready.")
+
+
+class CheckBOMBalloonLinksCommand(Command):
+    icon_name = "check-bom-balloons"
+    menu_text = "Check BOM Balloons…"
+    tooltip = "Highlight broken BOM balloon links on the drawing and review their problems"
+    needs_document = True
+
+    def IsActive(self):
+        document = FreeCAD.ActiveDocument
+        return bool(
+            not Session.busy
+            and document is not None
+            and any(obj.isDerivedFrom("TechDraw::DrawPage") for obj in document.Objects)
+        )
+
+    def action(self):
+        from .balloon_review_ui import show_review
+
+        document = _require_document()
+        view = FreeCADGui.activeDocument().activeView()
+        preferred = view.getPage() if hasattr(view, "getPage") else None
+        show_review(_main_window(), document, preferred)
+        yield from ()
 
 
 class LinkBOMBalloonCommand(Command):

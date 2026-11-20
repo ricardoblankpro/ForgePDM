@@ -49,7 +49,7 @@ def identity(data, line):
 
 
 def resolve(binding, data):
-    if not isinstance(binding, dict) or binding.get("format") not in (1, 2):
+    if not isinstance(binding, dict) or binding.get("format") not in (1, 2, 3):
         raise ValueError("Unsupported balloon binding; explicitly relink the balloon")
     saved = {k: v for k, v in binding.items() if k != "attachment"}
     saved["format"] = 1
@@ -131,7 +131,12 @@ def bind(document, page, balloon, table, row_key, attachment=None):
         raise ValueError("The chosen frozen BOM entry changed; reopen Link BOM Balloon")
     binding = identity(data, candidates[0])
     if attachment is not None:
-        binding.update(format=2, attachment=attachment)
+        from .geometry_fingerprint import PROFILE
+
+        profile = attachment["geometry"].get("fingerprint")
+        if profile not in (None, PROFILE):
+            raise ValueError("Unsupported balloon geometry fingerprint")
+        binding.update(format=3 if profile == PROFILE else 2, attachment=attachment)
     document.openTransaction("ForgePDM Link BOM Balloon")
     try:
         for name, kind in PROPERTIES.items():
@@ -145,7 +150,13 @@ def bind(document, page, balloon, table, row_key, attachment=None):
         for name in PROPERTIES:
             balloon.setEditorMode(name, 1)
         # Older addons must refuse table edits that would leave balloons stale.
-        data["format"] = 6 if attachment is not None or data["format"] == 6 else 5
+        data["format"] = (
+            7
+            if binding["format"] == 3 or data["format"] == 7
+            else 6
+            if attachment is not None or data["format"] == 6
+            else 5
+        )
         table.PDMTableData = json.dumps(data, sort_keys=True)
         document.recompute()
         document.commitTransaction()
@@ -185,8 +196,8 @@ def update_issues(table, report, definition):
     return result
 
 
-def issues(page):
-    """Validate frozen links before ForgePDM PDF export; never change the snapshot."""
+def diagnostics(page):
+    """Return object identities and reasons without changing frozen links or styles."""
     result = []
     for balloon in page.Views:
         if not hasattr(balloon, "PDMBOMBinding"):
@@ -199,7 +210,8 @@ def issues(page):
             validate_attachment(balloon, binding)
             line = resolve(binding, data)
             if (
-                data["format"] not in (5, 6)
+                data["format"] not in (5, 6, 7)
+                or (binding.get("format") == 3 and data["format"] != 7)
                 or balloon.PDMBOMStatus != "Linked"
                 or text_expression(balloon) != EXPRESSION
                 or balloon.PDMBOMPosition != str(line["position"])
@@ -207,23 +219,92 @@ def issues(page):
             ):
                 raise ValueError("Balloon text or link changed; explicitly relink it")
         except (ValueError, TypeError, KeyError, AttributeError) as error:
-            result.append(balloon.Label + ": " + str(error))
+            result.append({"balloon": balloon, "reason": str(error)})
     return result
 
 
+def issues(page):
+    """Validate frozen links before ForgePDM PDF export; never change the snapshot."""
+    return [entry["balloon"].Label + ": " + entry["reason"] for entry in diagnostics(page)]
+
+
 def validate_attachment(balloon, binding):
-    if binding.get("format") == 2:
+    if binding.get("format") in (2, 3):
         from . import balloon_geometry
+        from .geometry_fingerprint import PROFILE
 
         attachment = binding["attachment"]
-        if attachment["geometry"] != balloon_geometry.evidence(balloon):
-            raise ValueError("Arrow or source geometry changed; retry Link BOM Balloon")
+        saved = attachment["geometry"]
+        if binding["format"] == 3 and saved.get("fingerprint") != PROFILE:
+            raise ValueError(
+                "Unsupported balloon geometry fingerprint; explicitly relink the balloon"
+            )
+        current = (
+            balloon_geometry.evidence(balloon, legacy=True)
+            if binding["format"] == 2
+            else balloon_geometry.evidence(balloon)
+        )
+        if saved != current:
+            reason = "Arrow or source geometry changed"
+            for key, message in (
+                ("view", "Source view changed"),
+                ("origin", "Arrow position changed"),
+                ("scale", "View scale changed"),
+                ("direction", "View direction changed"),
+                ("x_direction", "View orientation changed"),
+                ("rotation", "View rotation changed"),
+                ("perspective", "View perspective changed"),
+                ("components", "Component geometry changed"),
+            ):
+                if saved.get(key) != current.get(key):
+                    reason = message
+                    break
+            raise ValueError(reason + "; retry Link BOM Balloon")
         hits = balloon_geometry.pick(balloon)
         if not any(
             obj.Name == attachment["component"] and rid == binding["component_revision_id"]
             for obj, rid in hits
         ):
             raise ValueError("The arrow no longer touches its saved component")
+
+
+def plan_legacy_upgrade(page, balloon):
+    """Plan an explicitly authorized rebaseline to the same verified target.
+
+    This is never used during restore or PDF validation. An old one-way hash
+    cannot prove geometric equivalence; the caller must authorize a rebaseline
+    under the normal working-copy, permission and checkout guards.
+    """
+    from . import balloon_geometry as geometry
+
+    table = balloon.PDMBOMTable
+    validate_target(page.Document, page, balloon, table)
+    data = drawing_bom.read_table(table)
+    binding = json.loads(balloon.PDMBOMBinding)
+    resolve(binding, data)
+    if (
+        binding.get("format") != 2
+        or balloon.PDMBOMStatus != "Linked"
+        or text_expression(balloon) != EXPRESSION
+        or balloon.Text != str(binding["position"])
+        or balloon.PDMBOMPosition != str(binding["position"])
+    ):
+        raise ValueError("Review this balloon explicitly with Link BOM Balloon")
+    saved = binding["attachment"]["geometry"]
+    current = geometry.evidence(balloon)
+    if {k: v for k, v in saved.items() if k != "components"} != {
+        k: v for k, v in current.items() if k not in ("components", "fingerprint")
+    }:
+        raise ValueError("Arrow or view changed; review Link BOM Balloon")
+    if [row[:2] for row in saved["components"]] != [row[:2] for row in current["components"]]:
+        raise ValueError("Component occurrences or revisions changed; review Link BOM Balloon")
+    component = binding["attachment"]["component"]
+    if not any(
+        obj.Name == component and rid == binding["component_revision_id"]
+        for obj, rid in geometry.pick(balloon)
+    ):
+        raise ValueError("The arrow no longer touches its saved component")
+    return dict(binding, format=3, attachment=dict(component=component, geometry=current))
 
 
 def unresolved(balloon, reason):

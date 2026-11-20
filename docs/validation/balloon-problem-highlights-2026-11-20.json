@@ -1,0 +1,71 @@
+{
+  "date": "2026-11-20",
+  "addon": "0.25.0",
+  "backend": "0.3.3 (unchanged)",
+  "schema": 20,
+  "native": {
+    "checks": [
+      "Object-aware diagnostics match PDF preflight and ignore the valid balloon",
+      "Both ordinary and projection-group bubbles have temporary page markers",
+      "Changed view scale has a specific diagnostic",
+      "Clicking an issue selects its exact native balloon",
+      "Inspection retains frozen metadata, expressions and saved CAD bytes",
+      "Closing the panel removes markers and its document observer",
+      "A repaired balloon disappears on observer-driven revalidation",
+      "Closing the fixture document clears the issue list and markers"
+    ],
+    "freecad": [
+      "1",
+      "1",
+      "4",
+      "20260928 (Git shallow)",
+      "Unknown",
+      "2026/09/28 13:46:34",
+      "(HEAD detached at 4fd3bf320)",
+      "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+    ],
+    "scope": "Disposable native data; no server requests or production-document writes"
+  },
+  "addon_tests": {
+    "passed": 543,
+    "optional_qt_modules_skipped": 7
+  },
+  "real_qt_tests": 37,
+  "native_pdf_raster_comparison": {
+    "identical_pixels": true,
+    "dpi": 100,
+    "size": [
+      1170,
+      827
+    ]
+  },
+  "installed_profiles_verified": 2,
+  "active_drawing_markers": 8,
+  "behavior": {
+    "read_only_offline_inspection": true,
+    "uses_pdf_preflight_validation": true,
+    "specific_change_reasons": true,
+    "exact_object_selection": true,
+    "repair_uses_existing_command_and_authorization": true,
+    "observer_revalidation": true,
+    "viewport_widgets_only": true,
+    "no_drawing_color_text_binding_or_numbering_changes": true,
+    "pdf_markers_excluded": true
+  },
+  "runtime_incident": {
+    "description": "FreeCAD exited unexpectedly during initial native page-graphics inspection/reopening, before implementation. Exact crash cause unconfirmed. The implementation does not inspect native graphics items.",
+    "recovery_cache_and_saved_working_copy_backed_up": true,
+    "recovered_documents_reopened": 3,
+    "recovered_unsaved_state_retained": true,
+    "original_disk_zip_integrity_passed": true,
+    "newer_than_recovery_snapshot_edits": "Not verified; no assertion of complete unsaved-edit recovery",
+    "user_logged_in_again": true
+  },
+  "production_mutations": "No CAD save/upload/check-in/relink requested by the implementation or native fixture tests; diagnostic painting and selection only.",
+  "backup_directory": "var/backups/before-balloon-problem-highlights",
+  "limits": [
+    "Linux FreeCAD 1.1.4 only",
+    "Unlocatable balloons remain listed without a guessed marker",
+    "No automatic reconciliation or relaxation of PDF validation"
+  ]
+}

@@ -133,6 +133,36 @@ session identity. It requires an idle authenticated session with a managed activ
 document so those registered actions are available. The 0.20.1 dispatch regression
 also covers retained-instance state and ordinary/unbound workflows in unit tests.
 
+### Drawing balloon diagnostics
+
+`stable_balloon_fingerprints_gui.run(App, Gui, CONFIGURATION, CASE_DIR)` must run
+in a separate FreeCAD process with `FREECAD_USER_HOME` under `/tmp`, a copied
+configuration under `/tmp`, no open documents and no production login. The harness
+enforces these conditions. Use a separate X display when testing document closure;
+do not execute it inside the user's active FreeCAD session. Provide the needed
+FreeCAD addons/dependencies in that temporary profile. The harness exercises the
+real configuration loader, legacy-target verification, stable BREP evidence,
+strict arrow/placement/target failures, save/reopen and the actual PDF exporter.
+No source snapshot is uploaded or published. See
+[stable evidence](../decisions/ADR-031-stable-balloon-geometry-evidence.md).
+
+`balloon_review_gui.run(App, Gui, CASE_DIR)` creates disposable ordinary and
+projection-group views with valid and damaged frozen balloon links. It checks
+object-aware diagnostics, native selection, revalidation/cleanup and PDF output.
+Compare `before.pdf` and `with-markers.pdf` as raster images; the diagnostic
+viewport widgets must not appear in either export. Unit/real-Qt tests cover marker
+coordinates, stale selection, document/page changes, signed-out inspection and
+visible/cleared viewport paint. Do not enumerate or wrap private TechDraw scene
+items; the adapter uses native model coordinates and a child viewport widget.
+
+Coordinate mapping follows the documented implementation in FreeCAD 1.1.0's
+[QGIViewBalloon](https://github.com/FreeCAD/FreeCAD/blob/1.1.0/src/Mod/TechDraw/Gui/QGIViewBalloon.cpp),
+[QGIView projection-group positioning](https://github.com/FreeCAD/FreeCAD/blob/1.1.0/src/Mod/TechDraw/Gui/QGIView.cpp)
+and [Rez conversion](https://github.com/FreeCAD/FreeCAD/blob/1.1.0/src/Mod/TechDraw/Gui/Rez.cpp).
+These LGPL-2.0-or-later sources were consulted as references; the Python adapter
+and viewport painting were written in this repository. Native acceptance remains
+limited to the runtime recorded in the dated evidence.
+
 ## Documentation and packaging checks
 
 `tools/check_docs.py` checks local Markdown targets/anchors, the current handoff

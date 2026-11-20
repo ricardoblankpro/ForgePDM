@@ -56,9 +56,11 @@ def settle_techdraw(document, timeout=30):
         raise WorkspaceError(failure[0])
 
 
-def rebase_links(document):
+def rebase_links(document, names=None):
     """Refresh FreeCAD's cached relative paths after changing FileName."""
     for name in [obj.Name for obj in document.Objects]:
+        if names is not None and name not in names:
+            continue
         obj = document.getObject(name)
         if obj is None or obj.TypeId not in ("App::Link", "Assembly::AssemblyLink"):
             continue
@@ -76,12 +78,50 @@ def rebase_links(document):
             obj.setLink(target)
         obj.Placement = placement
     for obj in fasteners.objects(document):
+        if names is not None and obj.Name not in names:
+            continue
         attached = fasteners.attachment(obj)
         if attached and attached[0].Document is not document:
             target, subelement = attached
             obj.BaseObject = None
             obj.BaseObject = (target, [subelement])
     document.recompute()
+
+
+def repair_saved_link_paths(document):
+    """Refresh stale path caches only; transfer validation remains authoritative."""
+    from . import fcstd
+
+    try:
+        _tree, references = fcstd.inspect(document.FileName)
+    except fcstd.CADIntegrityError:
+        # Unsupported archives still fail transfer validation. A local save is
+        # not a certification, and must not attempt repairs we cannot inspect.
+        return False
+    stale = set()
+    for ref in references:
+        obj = document.getObject(ref["object_name"])
+        if obj is None:
+            continue
+        if ref["property_name"] == "LinkedObject":
+            target = obj.LinkedObject
+        else:
+            attached = fasteners.attachment(obj)
+            target = attached[0] if attached else None
+        if (
+            target is None
+            or isinstance(target, tuple)
+            or target.Document is document
+            or target.Name != ref["target_object_name"]
+        ):
+            continue
+        saved = (Path(document.FileName).parent / ref["file"]).resolve()
+        if saved != Path(target.Document.FileName).resolve():
+            stale.add(obj.Name)
+    if not stale:
+        return False
+    rebase_links(document, names=stale)
+    return True
 
 
 def capture(document):

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.26.0 — Stable automatic-balloon geometry evidence
+
+- Fingerprint supported OCCT geometry with versioned numeric normalization and
+  removal of transient kernel flags, retaining topology, placement and shape data.
+- Use version-3 automatic bindings and format-7 tables; retain legacy readers and
+  reject unknown profiles. Real geometry/revision/arrow/view changes still block PDF
+  publication. Explicit relinking upgrades old attachments; inspection never does.
+
+## 0.25.0 — Highlight drawing balloon problems
+
+- Add Check BOM Balloons with numbered red page markers and a modeless list of
+  affected balloons, validation reasons, selection and the existing link workflow.
+- Recheck after drawing edits/relinking; keep diagnostics offline and read-only.
+  Markers are viewport widgets, excluded from native drawing data and PDF output.
+- Explain changed arrow, view scale/orientation and component geometry evidence.
+
+## 0.24.4 — Refresh saved component paths
+
+- Refresh external component links on ordinary ForgePDM saves and writable Save As
+  copies, preserving their targets and placements after a document changes folder.
+- Keep upload validation strict: genuine target changes and unresolved links still
+  prevent publication. No backend/schema change.
+
 ## 0.24.3 — Concise balloon component choices
 
 - Remove the redundant CAD occurrence label from automatic balloon choices; keep
