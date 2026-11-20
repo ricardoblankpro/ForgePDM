@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.24.3 — Concise balloon component choices
+
+- Remove the redundant CAD occurrence label from automatic balloon choices; keep
+  the item number, revision, BOM position and frozen description.
+
+## 0.24.2 — Descriptions in balloon component choices
+
+- Show the frozen BOM description alongside the item, revision and position when
+  choosing among overlapping components; fall back to the item name when absent.
+
 ## 0.24.1 — Projection-group balloon page validation
 
 - Recognize projected source views through their owning page's projection group

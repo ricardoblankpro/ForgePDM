@@ -6,7 +6,7 @@ This is the current handoff. Start with [README](README.md) and
 
 ## Delivery
 
-- Addon: **0.24.1**
+- Addon: **0.24.3**
 - Backend package: **0.3.3**
 - Database schema: **20**
 
@@ -64,6 +64,26 @@ An installable Addon Manager distribution source/publication is still separate.
   missing/failed/interrupted/stale runs. Known older schema backups remain readable.
 
 ## Validation and local installation
+
+2026-11-20 concise balloon choices: addon **0.24.3** is installed in both profiles
+and loaded in FreeCAD. The automatic component chooser omits the redundant CAD
+occurrence label; item number, revision, BOM Position and description remain.
+All 20 command workflow cases pass, including exact choice text and unchanged
+selected-entry identity; lint/format, documentation and package checks pass.
+The active prompt/workflow, all three open documents and authenticated session
+were preserved during the live update. Already open prompts keep their original
+contents; new prompts use the concise labels. Prior addon copies are retained
+under `var/backups/before-concise-balloon-choices`. No backend/schema change.
+
+2026-11-20 balloon choice descriptions: addon **0.24.2** is installed in both
+profiles and active in FreeCAD. Overlapping-component choices now include the
+frozen BOM description in its saved language, falling back to item name and then
+“No description”. 519 addon tests (six optional Qt modules skipped), four repository
+documentation tests and a native Qt chooser/selection check pass. Existing target
+identities are retained; there are no server/schema or native document mutations.
+All three open documents, unsaved edits, authenticated session and existing observer
+are preserved. Prior addon copies are under `var/backups/before-balloon-choice-descriptions`.
+See [validation](docs/validation/balloon-choice-descriptions-2026-11-20.json).
 
 2026-11-20 projection-group balloon fix: addon **0.24.1** is installed in both
 profiles and loaded in the current authenticated FreeCAD session. Grouped projected

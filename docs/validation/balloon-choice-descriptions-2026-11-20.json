@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-20",
+  "addon": "0.24.2",
+  "scope": "Presentation-only descriptions in the automatic balloon component chooser",
+  "addon_tests_passed": 519,
+  "optional_qt_modules_skipped": 6,
+  "repository_docs_passed": 4,
+  "native": {
+    "addon": "0.24.2",
+    "native_qt_dialog_description_and_selection_verified": true,
+    "open_documents_preserved": 3,
+    "session_preserved": true,
+    "existing_observer_preserved": true
+  },
+  "description_source": "Frozen BOM description, then item_name, then No description; no live lookup or binding identity change",
+  "profiles_match_archive": true,
+  "prior_addon_profiles": "var/backups/before-balloon-choice-descriptions/addon-profiles",
+  "backend_or_schema_changes": false,
+  "publication": "Local installation; not committed or pushed"
+}

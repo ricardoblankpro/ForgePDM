@@ -5,6 +5,10 @@ They do not certify later behavior or untested platforms. Keep original files,
 including reports reused as regressions, and never add credentials/private CAD.
 See [test tiers](../development/testing.md) and [current handoff](../../DEVELOPMENT_STATUS.md).
 
+## Balloon choice descriptions
+
+- [Frozen descriptions, target-selection regression and installed native chooser verification](balloon-choice-descriptions-2026-11-20.json)
+
 ## Projection-group balloon validation fix
 
 - [Grouped source containment, native persistence/PDF and open drawing preservation](projection-group-balloon-fix-2026-11-20.json)

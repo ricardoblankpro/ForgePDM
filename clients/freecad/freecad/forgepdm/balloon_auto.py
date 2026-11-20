@@ -85,8 +85,9 @@ def workflow(balloon):
             else choose(
                 "Overlapping geometry or split BOM entries: choose the intended component",
                 [
-                    f"{obj.Label} — {line['item_number']} Rev {line['revision_label']} — Position {line['position']}"
-                    for obj, line in options
+                    f"{line['item_number']} Rev {line['revision_label']} — Position {line['position']}"
+                    f" — {line.get('description') or line.get('item_name') or 'No description'}"
+                    for _, line in options
                 ],
                 ask_choice,
                 options,

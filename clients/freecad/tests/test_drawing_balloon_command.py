@@ -208,3 +208,49 @@ def test_automatic_workflow_revalidates_before_mutation(commands, case, monkeypa
         with pytest.raises((ValueError, commands.workspace.WorkspaceError)):
             drive(auto.workflow(case.balloon), after)
         assert not case.bindings
+
+
+@pytest.mark.parametrize(
+    "description,item_name,expected",
+    [
+        ("Chapa de aço inoxidável", "Original name", "Chapa de aço inoxidável"),
+        ("", "M8 ISO 4017", "M8 ISO 4017"),
+        ("", "", "No description"),
+    ],
+)
+def test_automatic_part_choice_includes_frozen_description_and_keeps_target_identity(
+    commands, case, monkeypatch, description, item_name, expected
+):
+    from freecad.forgepdm import balloon_auto as auto
+
+    case.document.Objects[0].TypeId = "TechDraw::DrawPage"
+    evidence = {"origin": [0, 0]}
+    monkeypatch.setattr(auto.geometry, "signature", lambda _: str(evidence))
+    monkeypatch.setattr(auto.geometry, "evidence", lambda _: evidence.copy())
+    options = [
+        (
+            NS(Name="Part" + str(i), Label="Occurrence" + str(i)),
+            dict(
+                component_revision_id="part" + str(i),
+                position=5 + i,
+                item_number="P" + str(i),
+                revision_label="A",
+                description=description,
+                item_name=item_name,
+            ),
+        )
+        for i in range(2)
+    ]
+    monkeypatch.setattr(auto.geometry, "candidates", lambda *args: options)
+    labels = []
+
+    def choose(prompt, choices, ask, candidates):
+        labels.extend(choices)
+        return 1
+
+    monkeypatch.setattr(auto, "choose", choose)
+    drive(auto.workflow(case.balloon))
+    assert all(expected in label for label in labels)
+    assert labels[1] == f"P1 Rev A — Position 6 — {expected}"
+    assert case.bindings[0][4] == "part1:6"
+    assert options[1][1]["description"] == description

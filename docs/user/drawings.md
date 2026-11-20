@@ -75,7 +75,8 @@ retargets the link; moving only the bubble preserves it.
 Ordinary orthographic/isometric and projection-group views are supported. The
 arrow must touch geometry or be inside its projected solid region, within 0.25 mm
 on paper. Overlapping/occluded components and split BOM entries require a chooser;
-ForgePDM does not guess which component is intended. Multiple compatible tables
+ForgePDM does not guess which component is intended. Each choice also shows the
+frozen BOM description (or item name when absent), using the table's saved language. Multiple compatible tables
 require a table choice unless the balloon already has a compatible target.
 
 Unmanaged geometry or a component absent from the frozen BOM cannot be assigned.
