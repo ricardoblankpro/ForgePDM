@@ -6,7 +6,7 @@ This is the current handoff. Start with [README](README.md) and
 
 ## Delivery
 
-- Addon: **0.26.0**
+- Addon: **0.27.0**
 - Backend package: **0.3.3**
 - Database schema: **20**
 
@@ -64,6 +64,30 @@ An installable Addon Manager distribution source/publication is still separate.
   missing/failed/interrupted/stale runs. Known older schema backups remain readable.
 
 ## Validation and local installation
+
+2026-11-20 complete component insertion: addon **0.27.0** is installed in both
+profiles and loaded in FreeCAD; the browser insertion callback is verified. It adds the browser's
+**Insert into Assembly** action for exact uploaded P/A snapshots. A destination-owned
+native link representation includes the source Assembly and external Fasteners as
+one rigid occurrence, without moving source objects. Parent BOM/tree/balloon identity
+resolves to the source assembly; member links retain exact CAD dependencies. Compatible
+component replacement preserves member names and joint paths. Save/upload and BOM
+review remain explicit. Backend **0.3.3** / schema **20** are unchanged. See
+[workflow](docs/user/freecad.md#insert-components-from-the-browser) and
+[ADR-032](docs/decisions/ADR-032-complete-rigid-component-insertion.md).
+
+591 addon tests (seven optional Qt modules skipped), 39 real Qt tests and 19 isolated
+native FreeCAD checks cover complete geometry/placements, repeated occurrences,
+BOM identity, undo/redo, save/reopen, archive references, damaged representation
+rejection, native grounded/fixed joints, replacement and rendered PDF output.
+Native fixtures use a separate process/profile/X display and copied configuration;
+no production upload/check-in/publication or engineering-document edits are performed.
+Native FreeCAD logs include DAG/still-touched warnings around joint recomputation;
+resolved joint paths and replacement rollback checks remain enforced. An isolated
+fixture experiment deleting projected views crashed that test process; that sequence
+was removed and the user's running FreeCAD was unaffected. Real HTTP transfer of a
+new parent and flexible subassemblies remain outside this acceptance. Prior addon
+profiles are retained in `var/backups/before-complete-component-insertion`.
 
 2026-11-20 stable balloon evidence: addon **0.26.0** is installed in both profiles
 and active in FreeCAD. New automatic bindings use version 3/profile

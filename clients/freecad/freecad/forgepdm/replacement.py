@@ -124,6 +124,8 @@ def apply(
         eligible = {obj.Name for obj in target_objects(target_document)}
         if any(name not in eligible for name in target_names.values()):
             raise WorkspaceError("Choose a whole replacement object, not an internal feature")
+    from . import insertion
+
     plan = []
     for name in selected:
         ref = by_name.get(name)
@@ -196,6 +198,7 @@ def apply(
                 raise WorkspaceError("Internal component link cycle")
             visited.add(current.Name)
             current = current.LinkedObject
+        current = insertion.source(document.getObject(name)) or current
         source_documents.add(current.Document.Name)
     if any(reference[2] in source_documents for reference in before):
         raise WorkspaceError(
@@ -204,6 +207,20 @@ def apply(
     _check_errors(document)
     document.openTransaction("Replace component")
     try:
+        adapted = []
+        for name, target, placement in plan:
+            obj = document.getObject(name)
+            if insertion.representation(obj) is not None:
+                insertion.check_cycle(document, target.Document)
+                old = insertion.representation(obj)
+                if target.TypeId == "Assembly::AssemblyObject":
+                    target = insertion.retarget(old, target.Document)
+                    target.Visibility = False
+                if target is not old:
+                    adapted.append((old, list(old.Group)))
+            # Keep the native occurrence stable; membership is swapped atomically.
+            index = next(i for i, row in enumerate(plan) if row[0] == name)
+            plan[index] = (name, target, placement)
         for name, target, placement in plan:
             obj = document.getObject(name)
             if obj.TypeId == "Assembly::AssemblyLink":
@@ -232,6 +249,10 @@ def apply(
                     "Replacement altered an unselected occurrence or component placement"
                 )
         _check_errors(document)
+        for old, members in adapted:
+            document.removeObject(old.Name)
+            for member in members:
+                document.removeObject(member.Name)
         document.commitTransaction()
     except BaseException:
         document.abortTransaction()

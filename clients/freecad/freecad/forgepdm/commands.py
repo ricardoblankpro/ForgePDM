@@ -2241,8 +2241,98 @@ class DownloadCommand(Command):
             _configured_workspace(client),
             lambda: _choose_workspace(client, force=True),
             lambda selection: run(_open_selected_configuration(client, selection)),
+            lambda selection: run(_insert_selected_configuration(client, selection)),
         )
         yield from ()
+
+
+def _insert_selected_configuration(client, selection):
+    from . import insertion
+
+    document = _require_document()
+    metadata = _require_metadata(document)
+    name, rid, path = document.Name, metadata.RevisionId, document.FileName
+    actor = (Session.user or {}).get("id")
+    parent = insertion.assembly(document)
+    if not selection["item"]["number"].startswith(("P", "A")):
+        raise workspace.WorkspaceError("Insert a part or assembly item")
+    if not metadata.ItemNumber.startswith("A"):
+        raise workspace.WorkspaceError("Select a managed assembly as the insertion destination")
+    if selection.get("actor_id") != actor or Session.client is not client:
+        raise workspace.WorkspaceError("The browser session changed")
+    yield from _editable(client, metadata)
+    lease = yield from _authorize_tree_labels(client, document)
+    baseline = tuple(o.Name for o in document.Objects)
+    configuration, opened, complete = None, None, False
+    try:
+        configuration = yield Request(
+            "Retrieving exact component snapshot…",
+            client.retrieve_configuration,
+            (
+                selection["workspace"],
+                selection["revision"]["id"],
+                selection["dataset"]["id"],
+                selection["file"]["id"],
+            ),
+        )
+        opened = cad.open_configuration(configuration, _set_metadata)
+        source = opened["root"]
+        part = None
+        if selection["item"]["number"].startswith("P"):
+            targets = insertion.part_targets(source)
+            if not targets:
+                raise workspace.WorkspaceError("This part has no supported root geometry")
+            choice = (
+                targets[0].Name
+                if len(targets) == 1
+                else ask_choice(
+                    "Insert Component",
+                    "Choose the part object",
+                    [o.Name for o in targets],
+                    targets[0].Name,
+                )
+            )
+            if choice is None:
+                return
+            part = source.getObject(choice)
+        insertion.check_cycle(document, source)
+        yield Request(
+            "Recording verified component snapshot…", client.finish_configuration, (configuration,)
+        )
+        yield from _editable(client, metadata)
+        current = yield from _authorize_tree_labels(client, document)
+        if (
+            Session.client is not client
+            or (Session.user or {}).get("id") != actor
+            or _guard_document(name, rid) is not document
+            or document.FileName != path
+            or tuple(o.Name for o in document.Objects) != baseline
+            or parent is not insertion.assembly(document)
+            or (lease["id"], lease["version"]) != (current["id"], current["version"])
+        ):
+            raise workspace.WorkspaceError("The destination or checkout changed; retry insertion")
+        FreeCAD.setActiveDocument(name)
+        link = insertion.insert(
+            document,
+            source,
+            selection["item"]["number"] + "-" + selection["revision"]["label"],
+            part,
+        )
+        complete = True
+        FreeCADGui.Selection.clearSelection()
+        FreeCADGui.Selection.addSelection(link)
+        _record_recent(client, selection)
+        _open_status(
+            "Component inserted. Position it or add joints, then save/upload and review the BOM separately."
+        )
+    finally:
+        if not complete:
+            if opened is not None:
+                cad.close_owned(opened["owned"])
+            if configuration is not None:
+                workspace.incomplete(configuration)
+        if name in FreeCAD.listDocuments():
+            FreeCAD.setActiveDocument(name)
 
 
 def _open_selected_configuration(client, selection):

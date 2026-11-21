@@ -14,7 +14,9 @@ def current_session(client, actor):
 
 
 class BrowserDock(QtWidgets.QDockWidget):
-    def __init__(self, parent, client, actor, root, choose_workspace, open_selection):
+    def __init__(
+        self, parent, client, actor, root, choose_workspace, open_selection, insert_selection=None
+    ):
         super().__init__("ForgePDM Browser", parent)
         self.setObjectName("ForgePDMBrowserDock")
         self.client, self.actor = client, actor
@@ -35,6 +37,7 @@ class BrowserDock(QtWidgets.QDockWidget):
             choose_workspace,
             actor_id=actor,
             on_open=opening,
+            on_insert=insert_selection,
             session_valid=lambda: current_session(client, actor),
         )
         self.setWidget(self.view)
@@ -68,13 +71,17 @@ def forget(dock):
         _dock = None
 
 
-def show_browser(parent, client, actor, root, choose_workspace, open_selection):
+def show_browser(
+    parent, client, actor, root, choose_workspace, open_selection, insert_selection=None
+):
     global _dock
     if _dock is not None and not current_session(_dock.client, _dock.actor):
         previous, _dock = _dock, None
         previous.dispose()
     if _dock is None:
-        _dock = BrowserDock(parent, client, actor, root, choose_workspace, open_selection)
+        _dock = BrowserDock(
+            parent, client, actor, root, choose_workspace, open_selection, insert_selection
+        )
     else:
         _dock.view.root = root
         _dock.view.workspace.setText(root or "Choose a workspace once")

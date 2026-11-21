@@ -241,3 +241,14 @@ fixture permission/checkout/workspace transport, verifies the actual native
 TechDraw balloon command, arrow movements, projection coordinates, overlapping
 candidates, native persistence and PDF output. Chooser results are supplied by
 the fixture; no production CAD, HTTP publication or server BOM mutation occurs.
+
+### Complete component insertion
+
+`component_insertion_gui.run(App, Gui, CONFIGURATION, CASE_DIR)` requires an empty,
+signed-out FreeCAD process with a temporary profile and copied configuration under
+`/tmp`. Use a separate X display. Its fixture includes an Assembly with three external
+Fasteners, managed part dependencies and a TechDraw template. It exercises complete
+native geometry/placements, repeated occurrences, BOM and balloon identity, undo/redo,
+rigid movement, native joints, PDF export, archive references, save/reopen, damaged
+representation rejection, compatible replacement and part insertion. Inspect the
+rendered PDF; a nonempty file is insufficient. No production HTTP mutations occur.

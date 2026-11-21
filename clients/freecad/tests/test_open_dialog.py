@@ -215,3 +215,32 @@ def test_stale_preview_cannot_replace_selected_snapshot(case):
         assert dialog.preview.pixmap().toImage().pixelColor(0, 0).name() == "#ff0000"
     finally:
         release.set()
+
+
+def test_insert_dispatches_exact_selected_snapshot_without_opening(case):
+    _, _, dialog, wait, _ = case
+    wait(lambda: dialog.open_button.isEnabled())
+    calls = []
+    dialog.on_open = lambda selection: pytest.fail("Insertion invoked Open")
+    dialog.on_insert = lambda selection: calls.append(selection)
+    dialog.revision.setCurrentIndex(1)
+    wait(lambda: dialog.open_button.isEnabled())
+    dialog.snapshot.setCurrentIndex(1)
+    dialog.request_open(inserting=True)
+    assert len(calls) == 1
+    assert calls[0]["revision"]["id"] == "A"
+    assert calls[0]["file"]["id"] == "Aold"
+    dialog.on_open = None
+
+
+def test_insert_rejects_stale_browser_session(case):
+    _, _, dialog, wait, _ = case
+    wait(lambda: dialog.open_button.isEnabled())
+    calls = []
+    dialog.on_open = lambda _: None
+    dialog.on_insert = lambda selection: calls.append(selection)
+    dialog.session_valid = lambda: False
+    dialog.request_open(inserting=True)
+    assert calls == []
+    assert "session changed" in dialog.status.text()
+    dialog.on_open = None

@@ -115,6 +115,25 @@ Different-item replacement requires explicit object mapping. Inspect geometry an
 joints afterward, then save/upload and review the engineering BOM separately.
 A newer-revision notice never changes a pin automatically.
 
+## Insert components from the browser
+
+Activate the destination assembly, then choose a P or A item, revision and uploaded
+snapshot in the ForgePDM browser and click **Insert into Assembly**. The destination
+must be a managed Working copy with your live checkout. Parts with several root
+objects prompt for the object to insert.
+
+Subassemblies insert as rigid units including supported Fasteners objects outside
+the source Assembly container. Source fasteners and their attachments stay where
+they are. The selected occurrence starts at the destination origin; position it
+or add native Assembly joints. Each click inserts one occurrence, undoable as one
+transaction. Generated representation objects are implementation details; edit the
+occurrence rather than its member links. Use addon 0.27.0 or later for these files.
+
+Insertion uses the chosen uploaded snapshot, including its pinned dependencies.
+Unsaved source edits are not inserted. Save/upload the destination explicitly and
+review its engineering BOM separately; the parent counts one subassembly occurrence,
+while its fasteners remain in the subassembly BOM.
+
 ## Assembly support and tree display
 
 Supported managed graphs include whole-object external `App::Link` references

@@ -120,3 +120,9 @@ links each delivered increment to its exact reports.
 
 Mutation acceptance uses disposable records and CAD files. The installed database
 keeps all legacy source languages unconfirmed; none was guessed or translated.
+
+## Complete rigid component insertion
+
+[2026-11-20 native evidence](component-insertion-2026-11-20.json) records isolated
+part/subassembly insertion, external Fasteners, native joints, compatible replacement,
+BOM identity, save/reopen, exact references and visually checked PDF output.

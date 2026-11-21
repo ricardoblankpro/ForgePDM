@@ -17,7 +17,9 @@ def revision(obj):
     if association:
         return association["revision_id"]
     if obj.TypeId in ("App::Link", "Assembly::AssemblyLink"):
-        target = obj.getLinkedObject(True)
+        from . import insertion
+
+        target = insertion.source(obj) or obj.getLinkedObject(True)
         if target and target.Document is not obj.Document:
             metadata = target.Document.getObject("ForgePDM_Metadata")
             if metadata:

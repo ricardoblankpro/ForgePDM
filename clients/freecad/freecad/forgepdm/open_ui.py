@@ -24,11 +24,13 @@ class OpenDialog(QtWidgets.QDialog):
         actor_id=None,
         library=None,
         on_open=None,
+        on_insert=None,
         session_valid=None,
     ):
         super().__init__(parent)
         self.client, self.choose_workspace = client, choose_workspace
         self.actor_id, self.on_open = actor_id, on_open
+        self.on_insert = on_insert
         self.session_valid = session_valid or (lambda: True)
         self.library = library
         if self.library is None and actor_id:
@@ -178,6 +180,12 @@ class OpenDialog(QtWidgets.QDialog):
         self.open_button.setObjectName("forgepdm_open_button")
         self.open_button.setEnabled(False)
         close = QtWidgets.QPushButton("Hide" if on_open else "Cancel")
+        self.insert_button = QtWidgets.QPushButton("Insert into Assembly")
+        self.insert_button.setObjectName("forgepdm_insert_button")
+        self.insert_button.setVisible(on_insert is not None)
+        self.insert_button.setEnabled(False)
+        self.insert_button.clicked.connect(lambda: self.request_open(inserting=True))
+        buttons.addWidget(self.insert_button)
         buttons.addWidget(self.open_button)
         buttons.addWidget(close)
         layout.addLayout(buttons)
@@ -540,6 +548,9 @@ class OpenDialog(QtWidgets.QDialog):
     def ready(self, *_):
         available = bool(self.snapshot.currentData()) and self.item is not None
         self.open_button.setEnabled(available)
+        self.insert_button.setEnabled(
+            available and self.on_insert is not None and self.item["number"].startswith(("P", "A"))
+        )
         self.status.setText(
             "Press Enter or double-click an item to open."
             if available
@@ -599,8 +610,10 @@ class OpenDialog(QtWidgets.QDialog):
         except Exception as error:
             self.status.setText(str(error))
 
-    def request_open(self):
+    def request_open(self, _checked=False, *, inserting=False):
         if self.finishing:
+            return
+        if not self.open_button.isEnabled() and inserting:
             return
         if not self.open_button.isEnabled():
             self.open_when_ready = True
@@ -629,7 +642,8 @@ class OpenDialog(QtWidgets.QDialog):
             try:
                 if not self.session_valid():
                     raise RuntimeError("The session changed; reopen the ForgePDM browser.")
-                job = self.on_open(self.selection)
+                callback = self.on_insert if inserting else self.on_open
+                job = callback(self.selection)
                 if job is not None:
                     self.open_job = job
                     self.setEnabled(False)

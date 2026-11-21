@@ -1,0 +1,61 @@
+{
+  "checks": [
+    "Complete native shape includes external fasteners",
+    "Member placements match the original assembly and fasteners",
+    "Representation resolves source identity",
+    "Balloon identity resolves subassembly revision",
+    "Direct BOM counts one assembly",
+    "Undo removes occurrence and representation",
+    "Repeated occurrences count twice without flattening",
+    "Occurrences own distinct representations",
+    "Rigid movement retains complete geometry",
+    "Native grounded and fixed joints accept inserted occurrences",
+    "Native PDF exports the complete linked representation",
+    "Whole-object references retain all source members",
+    "Saved archive retains every managed external reference",
+    "Save and reopen preserve complete occurrences and BOM",
+    "Damaged representation blocks BOM extraction",
+    "Native replacement retains occurrence and complete members",
+    "Part insertion uses a direct native external link",
+    "Parts and subassemblies retain separate direct BOM entries",
+    "Source snapshot bytes preserved"
+  ],
+  "freecad": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "source_mutated": false,
+  "server_mutations": false,
+  "date": "2026-11-20",
+  "addon": "0.27.0",
+  "backend": "0.3.3 (unchanged)",
+  "schema": 20,
+  "addon_tests": 591,
+  "qt_tests": 39,
+  "native_isolation": {
+    "separate_process": true,
+    "separate_display": true,
+    "temporary_profile": true,
+    "copied_configuration": true
+  },
+  "pdf_visually_checked": true,
+  "limitations": [
+    "Linux FreeCAD 1.1.4 only",
+    "No real HTTP upload of a new parent was performed",
+    "Native joint recomputation emitted DAG/still-touched warnings; paths remained resolved",
+    "An isolated fixture experiment deleting projected views crashed the test process; that sequence was removed; the user session was unaffected"
+  ],
+  "installation": {
+    "both_profiles_match_archive": true,
+    "running_version": "0.27.0",
+    "browser_insertion_callback_verified": true,
+    "open_documents_preserved": 4,
+    "authenticated_session_preserved": true
+  }
+}

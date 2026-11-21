@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.27.0 — Insert complete rigid components
+
+- Add Insert into Assembly in the browser for exact uploaded parts and assemblies.
+- Include external Fasteners with a native rigid representation, preserving source
+  layout, attachments and bytes. Count one assembly occurrence in the parent BOM.
+- Resolve component identity for tree labels and balloons, and rebuild representations
+  during guarded component replacement. Keep save/upload and BOM review explicit.
+
 ## 0.26.0 — Stable automatic-balloon geometry evidence
 
 - Fingerprint supported OCCT geometry with versioned numeric normalization and

@@ -125,6 +125,9 @@ def repair_saved_link_paths(document):
 
 
 def capture(document):
+    from . import insertion
+
+    insertion.internal_names(document)
     references = []
     for obj in document.Objects:
         if obj.TypeId not in ("App::Link", "Assembly::AssemblyLink"):
@@ -267,6 +270,9 @@ def _builtin_bom_context(document):
             generated.update(_subassembly_generated_members(document, member))
     if generated & (components | ignored):
         raise WorkspaceError("Generated subassembly members overlap direct assembly members")
+    from . import insertion
+
+    ignored.update(insertion.internal_names(document))
     ignored.update(generated)
     for member in members:
         if (
@@ -301,7 +307,11 @@ def capture_bom(document):
     assemblies are single components; their documents are never flattened.
     Selection of engineering components happens in the review dialog.
     """
+    from . import insertion
+
+    internal = insertion.internal_names(document)
     ignored, assembly_components = _builtin_bom_context(document)
+    ignored.update(internal)
     result = []
     for obj in document.Objects:
         if (
@@ -334,7 +344,7 @@ def capture_bom(document):
                 "Component link '{}' is outside the built-in Assembly's direct members. "
                 "Nested local groups require a dedicated BOM adapter.".format(obj.Name)
             )
-        current, visited = obj, set()
+        current, visited = insertion.source(obj) or obj, set()
         while current.Document is document and current.TypeId in (
             "App::Link",
             "Assembly::AssemblyLink",

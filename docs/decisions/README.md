@@ -44,3 +44,5 @@ remain compatible. ADR-019 completes write fencing/revision recovery. ADR-022
 extends the original direct drawing report to shared views. ADR-023 records
 documentation and artifact organization. Never interpret an old phase status
 as a current release gate without checking the current handoff.
+
+- [ADR-032: Complete rigid component insertion](ADR-032-complete-rigid-component-insertion.md)

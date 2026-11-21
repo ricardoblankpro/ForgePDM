@@ -173,13 +173,20 @@ def _projected_labels(document, metadata):
 
 
 def _records(document, metadata, projected):
+    from . import insertion
+
+    internal = insertion.internal_names(document)
     scope = _scopes(document)
     records, skipped = [], []
     server = getattr(metadata, "ServerUrl", "")
     for obj in document.Objects:
-        if obj.Name in projected or obj.TypeId not in ("App::Link", "Assembly::AssemblyLink"):
+        if (
+            obj.Name in internal
+            or obj.Name in projected
+            or obj.TypeId not in ("App::Link", "Assembly::AssemblyLink")
+        ):
             continue
-        current, visited = obj, set()
+        current, visited = insertion.source(obj) or obj, set()
         while current.Document is document and current.TypeId in (
             "App::Link",
             "Assembly::AssemblyLink",
