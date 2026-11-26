@@ -108,6 +108,13 @@ def _save_document(document):
             "Cannot save to '{}'. Choose a writable location using File > Save As.".format(path)
         )
     try:
+        if (
+            tree_observer.can_edit(document)
+            and len([o for o in document.Objects if o.TypeId == "Assembly::AssemblyObject"]) == 1
+        ):
+            from . import insertion
+
+            insertion.assign_member_ids(document)
         document.recompute()
         cad.settle_techdraw(document)
         if save_as:
@@ -127,6 +134,33 @@ def _save_document(document):
     saved_path = os.path.abspath(document.FileName)
     if not os.path.isfile(saved_path):
         raise RuntimeError("FreeCAD did not create the saved file: '{}'".format(saved_path))
+    if getattr(document, "HasPendingTransaction", False) and tree_observer.can_edit(document):
+        control = getattr(FreeCADGui, "Control", None)
+        if control is None or not control.activeDialog():
+            document.commitTransaction()
+    if tree_observer.can_edit(document):
+        metadata = _require_metadata(document)
+        server = getattr(metadata, "ServerUrl", "") or Session.client.base_url
+        value = workspace.working_path(saved_path, server)
+        if value is not None:
+            entry = value["entry"]
+            if (
+                entry.get("item_id", metadata.ItemId) != metadata.ItemId
+                or entry.get("revision_id", metadata.RevisionId) != metadata.RevisionId
+            ):
+                raise workspace.WorkspaceError(
+                    "Working-copy identity differs from the saved document"
+                )
+            with workspace.locked(value["root"], server):
+                entry.update(
+                    item_id=metadata.ItemId,
+                    revision_id=metadata.RevisionId,
+                    item_number=metadata.ItemNumber,
+                    revision_label=metadata.RevisionLabel,
+                    saved_hash=workspace.digest(saved_path)[0],
+                    workspace_record_version=2,
+                )
+                workspace._atomic_json(value["directory"] / workspace.MANIFEST, value["ledger"])
     # App.Document.save() leaves Gui.Document.Modified set in FreeCAD 1.1.
     # Clear it only after successful synchronous save and file verification.
     if hasattr(FreeCADGui, "getDocument"):
@@ -342,8 +376,13 @@ def _upload_native(client, document, path, references):
     return result
 
 
-def _authorize_tree_labels(client, document):
+def _authorize_tree_labels(client, document, allow_staging=False):
     metadata = _require_metadata(document)
+    value = workspace.working_path(document.FileName, client.base_url)
+    if value is not None and value["entry"].get("publication_staging") and not allow_staging:
+        raise workspace.WorkspaceError(
+            "This document is a publication copy. Activate the original editable working document."
+        )
     name, revision_id = document.Name, metadata.RevisionId
     checkout = yield Request("Checking tree-label checkout…", client.get_checkout, (revision_id,))
     document = _guard_document(name, revision_id)
@@ -928,6 +967,15 @@ class CheckoutCommand(Command):
         document = _require_document()
         metadata = _require_metadata(document)
         name, revision_id = document.Name, metadata.RevisionId
+        existing = (
+            workspace.working_path(document.FileName, client.base_url)
+            if document.FileName
+            else None
+        )
+        if existing is not None and existing["entry"].get("publication_staging"):
+            raise workspace.WorkspaceError(
+                "Activate the original editing document; this copy belongs to publication recovery"
+            )
         result = yield Request(
             "Acquiring checkout…",
             client.acquire_checkout,
@@ -936,13 +984,22 @@ class CheckoutCommand(Command):
             cancellable=False,
         )
         document = _guard_document(name, revision_id)
-        path = yield from _ensure_working(client, document)
-        if path is None:
-            information(
-                "ForgePDM",
-                "Checkout acquired; working-copy selection was canceled. No CAD file was overwritten.",
+        if workspace.working_path(document.FileName, client.base_url) is None:
+            if cad.document_modified(document):
+                raise workspace.WorkspaceError(
+                    "Checkout acquired. Preserve unsaved edits before opening a separate working copy."
+                )
+            references = cad.capture(document)
+            path = yield Request(
+                "Preparing separate editable document…",
+                client.fork_working,
+                (document.FileName, references),
             )
-            return
+            document = FreeCAD.openDocument(path)
+            FreeCAD.setActiveDocument(document.Name)
+            document.Label = metadata.ItemNumber + "-" + metadata.RevisionLabel
+        else:
+            path = _save_document(document)
         tree_observer.allow_edit(document, result, client, Session.user)
         if tree_labels.refresh(document)["changed"]:
             _save_document(document)
@@ -1528,6 +1585,7 @@ class ManageComponentCommand(ReplaceRevisionCommand):
 
     def action(self):
         choices = {
+            "Update saved local changes of the same revision": UpdateSavedComponentsCommand,
             "Update snapshot of the same revision": UpdateSelectedComponentsCommand,
             "Adopt a newer revision of the same item": ReplaceRevisionCommand,
             "Replace with a different item": ReplaceComponentCommand,
@@ -2240,7 +2298,7 @@ class DownloadCommand(Command):
             actor,
             _configured_workspace(client),
             lambda: _choose_workspace(client, force=True),
-            lambda selection: run(_open_selected_configuration(client, selection)),
+            lambda selection: run(_browser_managed_operation(client, selection)),
             lambda selection: run(_insert_selected_configuration(client, selection)),
         )
         yield from ()
@@ -2732,4 +2790,834 @@ class LinkPhysicalMaterialCommand(Command):
         information(
             "ForgePDM",
             "Physical material linked. Existing part revisions keep their previous assignment; select this material again to adopt the link.",
+        )
+
+
+class UpdateSavedComponentsCommand(Command):
+    icon_name = "update-saved"
+    menu_text = "Update Components from Saved Local Changes…"
+    tooltip = "Review a saved local component generation without uploading it first"
+    needs_document = True
+    number_series = ("A",)
+
+    def action(self):
+        from . import insertion, managed_session, replacement
+
+        client = Session.require_client()
+        document = _require_document()
+        metadata = _require_metadata(document)
+        yield from _editable(client, metadata)
+        yield from _authorize_tree_labels(client, document)
+        _save_document(document)
+        baseline = cad.capture_bom(document)
+        selected = {o.Name for o in FreeCADGui.Selection.getSelection() if o.Document is document}
+        groups = {}
+        for ref in baseline:
+            if ref.get("property_name", "LinkedObject") == "LinkedObject":
+                groups.setdefault((ref["target_item_id"], ref["target_revision_id"]), []).append(
+                    ref
+                )
+        choices = [
+            rows
+            for rows in groups.values()
+            if not selected or any(r["object_name"] in selected for r in rows)
+        ]
+        if not choices:
+            raise workspace.WorkspaceError("Select a direct managed component occurrence")
+        if len(choices) > 1:
+            labels = [rows[0]["component_label"] for rows in choices]
+            choice = ask_choice("Update Components", "Choose a component", labels)
+            if choice is None:
+                return
+            matching = choices[labels.index(choice)]
+        else:
+            matching = choices[0]
+        rows = [
+            dict(ref, occurrence_label=document.getObject(ref["object_name"]).Label)
+            for ref in matching
+        ]
+        names = select_replacement_occurrences(rows, {ref["object_name"] for ref in matching})
+        if not names:
+            return
+        if set(names) - {ref["object_name"] for ref in matching}:
+            raise workspace.WorkspaceError(
+                "Selected occurrences changed; review the component again"
+            )
+        source_revision = matching[0]["target_revision_id"]
+        candidates = []
+        for doc in FreeCAD.listDocuments().values():
+            m = doc.getObject(METADATA_OBJECT)
+            if (
+                m is not None
+                and m.RevisionId == source_revision
+                and workspace.working_path(doc.FileName, client.base_url) is not None
+                and not workspace.working_path(doc.FileName, client.base_url)["entry"].get(
+                    "publication_staging"
+                )
+            ):
+                candidates.append(doc)
+        if not candidates:
+            raise workspace.WorkspaceError(
+                "Open the component for editing and save it locally first, or use Update from Server"
+            )
+        if len(candidates) > 1:
+            labels = [doc.FileName for doc in candidates]
+            choice = ask_choice("Update Components", "Choose the saved working copy", labels)
+            if choice is None:
+                return
+            source = candidates[labels.index(choice)]
+        else:
+            source = candidates[0]
+        if cad.document_modified(source):
+            raise workspace.WorkspaceError("Save the component locally before adopting its changes")
+        yield from _editable(client, _require_metadata(source))
+        yield from _authorize_tree_labels(client, source)
+        if not insertion.member_ids_current(source):
+            _save_document(source)
+        graph = cad.capture_graph(source)
+        source_path = os.path.abspath(source.FileName)
+        stamp = workspace.digest(source_path)[0]
+        labels = [document.getObject(name).Label for name in names]
+        if (
+            ask_choice(
+                "Update Components",
+                "Adopt saved local changes for: " + ", ".join(labels),
+                ["Apply", "Cancel"],
+            )
+            != "Apply"
+        ):
+            return
+        configuration = yield Request(
+            "Freezing saved local dependency graph…",
+            managed_session.freeze,
+            (client.base_url, graph, source_path),
+        )
+        opened = cad.open_configuration(configuration, _set_metadata)
+        applied = False
+        try:
+            yield Request(
+                "Recording immutable local generation…",
+                client.finish_configuration,
+                (configuration,),
+            )
+            yield from _authorize_tree_labels(client, document)
+            if (
+                cad.document_modified(source)
+                or workspace.digest(source_path)[0] != stamp
+                or cad.capture_bom(document) != baseline
+            ):
+                raise workspace.WorkspaceError("Source or assembly changed during review; retry")
+            target = opened["root"]
+            revision = dict(id=source_revision, item_id=matching[0]["target_item_id"])
+            replacement.apply(
+                document,
+                baseline,
+                names,
+                target,
+                revision,
+                target_generation=configuration["ledger"]["root_file_id"],
+            )
+            applied = True
+            FreeCAD.setActiveDocument(document.Name)
+            information(
+                "ForgePDM",
+                "Saved local component changes adopted. Save the assembly and use Upload Assembly Graph to publish dependencies.",
+            )
+        finally:
+            if not applied:
+                cad.close_owned(opened["owned"])
+
+
+class ReconcileRepresentationCommand(Command):
+    icon_name = "reconcile-component"
+    menu_text = "Reconcile Component Representation…"
+    tooltip = "Review missing representation members against a verified saved source"
+    needs_document = True
+    number_series = ("A",)
+
+    def action(self):
+        from . import insertion, replacement
+
+        client = Session.require_client()
+        document = _require_document()
+        yield from _editable(client, _require_metadata(document))
+        yield from _authorize_tree_labels(client, document)
+        groups = []
+        for obj in document.Objects:
+            group = insertion.representation(obj)
+            if group is not None and group not in groups:
+                groups.append(group)
+        if not groups:
+            raise workspace.WorkspaceError("No managed component representations found")
+        before = replacement._joint_references(document)
+        plans = []
+        frozen_sources = {}
+        for group in groups:
+            import json
+
+            evidence = json.loads(getattr(group, insertion.MARKER))
+            if (
+                evidence.get("version") not in (1, 2)
+                or [o.Name for o in group.Group] != evidence["members"]
+            ):
+                raise workspace.WorkspaceError(
+                    "Representation metadata is damaged; preserve it for manual recovery"
+                )
+            target = group.Group[0].LinkedObject
+            if target is None or target.TypeId != "Assembly::AssemblyObject":
+                raise workspace.WorkspaceError(
+                    "Source Assembly identity is missing; recover its recorded snapshot first"
+                )
+            source = target.Document
+            source_metadata = _require_metadata(source)
+            expected_identity = [source_metadata.ItemId, source_metadata.RevisionId]
+            if evidence.get("version") == 2:
+                if [
+                    evidence["source"]["item_id"],
+                    evidence["source"]["revision_id"],
+                ] != expected_identity:
+                    raise workspace.WorkspaceError(
+                        "Recorded source identity differs; restore the verified source before reconciliation"
+                    )
+            else:
+                owners = [o for o in document.Objects if getattr(o, "LinkedObject", None) is group]
+                if not owners or any(
+                    json.loads(getattr(o, "ForgePDMOccurrenceKey", "[]"))[-2:] != expected_identity
+                    for o in owners
+                ):
+                    raise workspace.WorkspaceError(
+                        "Legacy occurrence identity is missing or inconsistent; recover its verified saved configuration"
+                    )
+            # This recovery is bounded to a verified uploaded source, including working copies.
+            verified = yield Request(
+                "Verifying saved source snapshot…",
+                client.validate_references,
+                (
+                    [
+                        dict(
+                            target_path=source.FileName,
+                            target_item_id=_require_metadata(source).ItemId,
+                            target_revision_id=_require_metadata(source).RevisionId,
+                            target_object_name=target.Name,
+                            object_name=group.Name,
+                            property_name="LinkedObject",
+                        )
+                    ],
+                ),
+            )
+            pin = verified[0]
+            key = (pin["target_revision_id"], pin["target_dataset_id"], pin["target_file_id"])
+            if key not in frozen_sources:
+                root = str(workspace.binding(document.FileName, client.base_url, False)["root"])
+                configuration = yield Request(
+                    "Retrieving the verified recovery snapshot…",
+                    client.retrieve_configuration,
+                    (root, *key),
+                )
+                opened = cad.open_configuration(configuration, _set_metadata)
+                yield Request(
+                    "Recording immutable recovery source…",
+                    client.finish_configuration,
+                    (configuration,),
+                )
+                frozen_sources[key] = opened["root"]
+            frozen = frozen_sources[key]
+            plans.append(
+                (
+                    group,
+                    frozen,
+                    workspace.digest(frozen.FileName)[0],
+                    getattr(group, insertion.MARKER),
+                )
+            )
+        if (
+            ask_choice(
+                "Reconcile Representation",
+                "Rebuild {} representations from their verified sources, preserving occurrences and joints?".format(
+                    len(plans)
+                ),
+                ["Reconcile", "Cancel"],
+            )
+            != "Reconcile"
+        ):
+            return
+        yield from _authorize_tree_labels(client, document)
+        document.openTransaction("Reconcile component representations")
+        try:
+            for group, source, source_hash, evidence_text in plans:
+                if (
+                    cad.document_modified(source)
+                    or workspace.digest(source.FileName)[0] != source_hash
+                    or getattr(group, insertion.MARKER) != evidence_text
+                ):
+                    raise workspace.WorkspaceError(
+                        "Source or representation changed during review; reconciliation was not retained"
+                    )
+                insertion.retarget(group, source)
+            document.recompute()
+            if replacement._joint_references(document) != before:
+                raise workspace.WorkspaceError(
+                    "Joint references changed; reconciliation was rolled back"
+                )
+            replacement._check_errors(document)
+            cad.capture_bom(document)
+            document.commitTransaction()
+        except BaseException:
+            document.abortTransaction()
+            document.recompute()
+            raise
+        information(
+            "ForgePDM",
+            "Representations reconciled. Inspect geometry and joints before saving/uploading.",
+        )
+
+
+class CancelCheckoutCommand(Command):
+    icon_name = "cancel-checkout"
+    menu_text = "Cancel Check Out…"
+    tooltip = "Preserve recovery copies, abandon unpublished edits and release your checkout"
+    needs_document = True
+
+    def action(self):
+        from . import checkout_cancel, insertion, managed_session, replacement
+
+        client = Session.require_client()
+        document = _require_document()
+        control = getattr(FreeCADGui, "Control", None)
+        if control is not None and control.activeDialog():
+            raise workspace.WorkspaceError(
+                "Finish the active CAD operation before cancelling checkout"
+            )
+        metadata = _require_metadata(document)
+        actor = (Session.user or {}).get("id")
+        name, revision_id = document.Name, metadata.RevisionId
+        path = document.FileName
+        revision = yield Request(
+            "Checking cancellation identity…", client.get_revision, (revision_id,)
+        )
+        if revision["item_id"] != metadata.ItemId:
+            raise workspace.WorkspaceError(
+                "The working document identity differs from the server revision"
+            )
+        working = workspace.working_path(path, client.base_url)
+        if working is not None and working["entry"].get("publication_staging"):
+            raise workspace.WorkspaceError(
+                "Select the original editable working copy for cancellation"
+            )
+        if working is None:
+            raise workspace.WorkspaceError(
+                "Select the editable working copy before cancelling its checkout"
+            )
+        intent = yield Request(
+            "Reviewing checkout cancellation…",
+            checkout_cancel.prepare,
+            (client, path, metadata.RevisionId, (Session.user or {}).get("id")),
+        )
+        affected = []
+        for parent in FreeCAD.listDocuments().values():
+            if parent is document:
+                continue
+            related = False
+            for candidate in parent.Objects:
+                if candidate.TypeId not in ("App::Link", "Assembly::AssemblyLink"):
+                    continue
+                pointed = candidate.LinkedObject
+                if pointed is None or isinstance(pointed, tuple) or pointed.Document is parent:
+                    continue
+                if pointed.Document is document:
+                    related = True
+                    break
+                try:
+                    if managed_session.unpublished_origin(
+                        pointed.Document.FileName, client.base_url, path
+                    ):
+                        related = True
+                        break
+                except workspace.WorkspaceError:
+                    continue
+            if not related:
+                continue
+            names = []
+            internal = insertion.internal_names(parent, validate=False)
+            for obj in parent.Objects:
+                if obj.Name in internal or obj.TypeId not in (
+                    "App::Link",
+                    "Assembly::AssemblyLink",
+                ):
+                    continue
+                target = (
+                    insertion.identity_source(obj)
+                    if insertion.representation(obj) is not None
+                    else obj.LinkedObject
+                )
+                if target is None or target.Document is parent:
+                    continue
+                target_doc = target.Document
+                if target_doc is document or managed_session.unpublished_origin(
+                    target_doc.FileName, client.base_url, path
+                ):
+                    names.append(obj.Name)
+            if names:
+                yield from _editable(client, _require_metadata(parent))
+                yield from _authorize_tree_labels(client, parent)
+                affected.append((parent, names))
+        summary = "Abandon unpublished edits to {} and restore {} affected parent assembly(s)? Uploaded history is retained. Recovery: {}".format(
+            document.Label, len(affected), intent["recovery"]
+        )
+        if (
+            ask_choice("Cancel Check Out", summary, ["Cancel Check Out", "Keep editing"])
+            != "Cancel Check Out"
+        ):
+            return
+        if not intent["payload"]["file_id"] and affected:
+            raise workspace.WorkspaceError(
+                "This revision has no published snapshot. Resolve dependent parents before cancellation"
+            )
+        originals = [document] + [parent for parent, names in affected]
+        for original in originals:
+            from uuid import uuid4
+
+            original.saveCopy(
+                str(Path(intent["recovery"]) / (original.Name + "-" + uuid4().hex + ".FCStd"))
+            )
+        target = None
+        if intent["payload"]["file_id"]:
+            root = str(workspace.binding(path, client.base_url, False)["root"])
+            config = yield Request(
+                "Retrieving cancellation restoration snapshot…",
+                client.retrieve_configuration,
+                (
+                    root,
+                    metadata.RevisionId,
+                    intent["payload"]["dataset_id"],
+                    intent["payload"]["file_id"],
+                ),
+            )
+            opened = cad.open_configuration(config, _set_metadata)
+            target = opened["root"]
+            yield Request(
+                "Recording restoration configuration…", client.finish_configuration, (config,)
+            )
+        restoration_plans = []
+        for parent, names in affected:
+            yield from _authorize_tree_labels(client, parent)
+            if parent.HasPendingTransaction:
+                raise workspace.WorkspaceError(
+                    "Finish the current parent CAD operation before cancellation"
+                )
+            restoration_plans.append(
+                (parent, names, cad.capture_bom(parent, allow_incomplete=True))
+            )
+        begun = []
+        try:
+            for parent, names, refs in restoration_plans:
+                parent.openTransaction("Restore cancelled component")
+                begun.append(parent)
+                replacement.apply(
+                    parent,
+                    refs,
+                    names,
+                    target,
+                    dict(id=metadata.RevisionId, item_id=metadata.ItemId),
+                    restoration=True,
+                    within_transaction=True,
+                )
+            for parent in begun:
+                parent.commitTransaction()
+        except BaseException:
+            for parent in reversed(begun):
+                parent.abortTransaction()
+                parent.recompute()
+            raise
+        intent = yield Request(
+            "Recording prepared restoration…",
+            checkout_cancel.record,
+            (client, path, intent, "restored"),
+        )
+        yield Request(
+            "Cancelling the exact reviewed checkout…",
+            checkout_cancel.release,
+            (client, intent),
+            mutates=True,
+            cancellable=False,
+        )
+        current_checkout = yield Request(
+            "Checking cancellation completion…",
+            client.get_checkout,
+            (revision_id,),
+            cancellable=False,
+        )
+        if current_checkout is not None:
+            yield Request(
+                "Recording original cancellation completion…",
+                checkout_cancel.record,
+                (client, path, intent, "complete"),
+                cancellable=False,
+            )
+            information(
+                "ForgePDM",
+                "The original checkout was cancelled. A newer checkout exists; its working document and edits were retained.",
+            )
+            return
+        tree_observer.revoke_revision(metadata.RevisionId)
+        intent = yield Request(
+            "Recording cancellation result…",
+            checkout_cancel.record,
+            (client, path, intent, "released"),
+            cancellable=False,
+        )
+        _guard_managed_session(client, actor)
+        document = _guard_document(name, revision_id)
+        # Retain edits made while the server operation was in flight, too.
+        from uuid import uuid4
+
+        document.saveCopy(str(Path(intent["recovery"]) / ("final-" + uuid4().hex + ".FCStd")))
+        for other in FreeCAD.listDocuments().values():
+            if other is document:
+                continue
+            if any(
+                getattr(getattr(obj, "LinkedObject", None), "Document", None) is document
+                for obj in other.Objects
+            ):
+                raise workspace.WorkspaceError(
+                    "Checkout cancelled; new dependent links keep the original document open. Recover cancellation after reviewing them."
+                )
+        FreeCAD.closeDocument(document.Name)
+        if target is not None:
+            FreeCAD.setActiveDocument(target.Name)
+        yield Request(
+            "Completing local cancellation…",
+            checkout_cancel.record,
+            (client, path, intent, "complete"),
+            cancellable=False,
+        )
+        information(
+            "ForgePDM",
+            "Checkout cancelled. Uploaded snapshots remain intact. Recovery copies: "
+            + intent["recovery"],
+        )
+
+
+class UploadAssemblyGraphCommand(Command):
+    icon_name = "upload-graph"
+    menu_text = "Upload Assembly Graph…"
+    tooltip = "Publish the selected assembly and saved dependencies in child-first order"
+    needs_document = True
+    checkin = False
+
+    def action(self):
+        from . import managed_session
+
+        client = Session.require_client()
+        document = _require_document()
+        yield from _editable(client, _require_metadata(document))
+        yield from _authorize_tree_labels(client, document)
+        if (
+            ask_choice(
+                "Save and Publish Assembly Graph",
+                "Save the selected assembly locally and review its dependency graph?",
+                ["Continue", "Cancel"],
+            )
+            != "Continue"
+        ):
+            return
+        import json
+
+        root_path = os.path.abspath(document.FileName)
+        graph_journal = (
+            workspace.binding(root_path, client.base_url, False)["directory"]
+            / "graph-publication.json"
+        )
+        recovering = (
+            graph_journal.exists()
+            and json.loads(graph_journal.read_text()).get("state") != "complete"
+        )
+        nodes = {}
+        if not recovering:
+            for dependency in cad.dependency_documents(document):
+                if cad.document_modified(dependency) or dependency is document:
+                    yield from _editable(client, _require_metadata(dependency))
+                    yield from _authorize_tree_labels(client, dependency)
+                    _save_document(dependency)
+            nodes = cad.capture_graph(document)
+            subtree_publication = yield Request(
+                "Checking saved dependency states…",
+                managed_session.publication_requirements,
+                (client, nodes, root_path),
+            )
+            for saved_path in managed_session.publication_order(nodes, root_path):
+                node = nodes[saved_path]
+                if not subtree_publication[saved_path]:
+                    continue
+                lease = yield Request(
+                    "Checking dependency checkout…",
+                    client.get_checkout,
+                    (node["identity"]["revision_id"],),
+                )
+                if not lease:
+                    if (
+                        ask_choice(
+                            "Dependency Checkout",
+                            "Acquire checkout for "
+                            + node["identity"]["item_number"]
+                            + " to publish its saved changes?",
+                            ["Acquire checkout", "Cancel"],
+                        )
+                        != "Acquire checkout"
+                    ):
+                        return
+                    yield Request(
+                        "Acquiring dependency checkout…",
+                        client.acquire_checkout,
+                        (node["identity"]["revision_id"],),
+                        mutates=True,
+                        cancellable=False,
+                    )
+        plan = yield Request(
+            "Preparing dependency publication review…",
+            managed_session.prepare_publication,
+            (client, nodes, root_path, (Session.user or {}).get("id"), self.checkin),
+        )
+        labels = [
+            plan["nodes"][path]["identity"]["item_number"]
+            for path in plan["order"]
+            if plan["steps"][path]["needs_publication"]
+        ]
+        if (
+            ask_choice(
+                "Check In Assembly Graph" if self.checkin else "Upload Assembly Graph",
+                "Publish in this order: " + ", ".join(labels),
+                ["Publish", "Cancel"],
+            )
+            != "Publish"
+        ):
+            return
+        for path in plan["order"]:
+            step = plan["steps"][path]
+            if step["state"] == "complete":
+                continue
+            if step.get("alias_of"):
+                yield Request(
+                    "Reusing the verified shared dependency…",
+                    managed_session.complete_alias,
+                    (client, plan, path),
+                )
+                continue
+            if step["state"] == "published":
+                yield from _open_published_graph_step(client, plan, path)
+                continue
+            if not step["needs_publication"]:
+                step.update(published_path=path, state="complete")
+                continue
+            staged = yield Request(
+                "Preparing exact saved document…",
+                managed_session.stage_publication,
+                (client, plan, path),
+            )
+            existing = next(
+                (d for d in FreeCAD.listDocuments().values() if d.FileName == staged), None
+            )
+            doc = existing or FreeCAD.openDocument(staged)
+            if existing is not None and cad.document_modified(doc):
+                raise workspace.WorkspaceError(
+                    "Staged publication copy has unsaved edits; preserve and inspect it before recovery"
+                )
+            yield from _authorize_tree_labels(client, doc, allow_staging=True)
+            _save_document(doc)
+            refs = cad.capture(doc)
+            expected_targets = {
+                r["object_name"]: plan["steps"][r["target_path"]]["published_path"]
+                for r in plan["nodes"][path]["references"]
+            }
+            if any(
+                os.path.abspath(ref["target_path"])
+                != os.path.abspath(expected_targets.get(ref["object_name"], ""))
+                for ref in refs
+            ):
+                raise workspace.WorkspaceError(
+                    "Native references differ from the reviewed publication graph"
+                )
+            preview = thumbnail_render.optional(doc)
+            yield Request(
+                "Publishing " + plan["nodes"][path]["identity"]["item_number"] + "…",
+                managed_session.publish_step,
+                (client, plan, path, refs, preview),
+                mutates=True,
+                cancellable=False,
+            )
+            tree_observer.revoke_document(doc)
+            if self.checkin:
+                tree_observer.revoke_revision(plan["nodes"][path]["identity"]["revision_id"])
+            yield from _open_published_graph_step(client, plan, path)
+        yield Request(
+            "Recording completed assembly publication…", managed_session.acknowledge_graph, (plan,)
+        )
+        FreeCAD.setActiveDocument(document.Name)
+        information(
+            "ForgePDM",
+            "Assembly graph published. Original editing documents and local generations were retained. Review engineering BOM synchronization separately.",
+        )
+
+
+class CheckInAssemblyGraphCommand(UploadAssemblyGraphCommand):
+    icon_name = "checkin-graph"
+    menu_text = "Check In Assembly Graph…"
+    checkin = True
+
+
+class OpenForEditingCommand(CheckoutCommand):
+    icon_name = "open-editing"
+    menu_text = "Open for Editing…"
+    tooltip = "Prepare a separate working copy and review available same-revision component updates"
+
+    def action(self):
+        yield from super().action()
+        document = _require_document()
+        client = Session.require_client()
+        if workspace.working_path(document.FileName, client.base_url) is None:
+            return
+        _save_document(document)
+        if not _require_metadata(document).ItemNumber.startswith("A"):
+            return
+        refs = cad.capture_bom(document)
+        revisions = list(dict.fromkeys(r["target_revision_id"] for r in refs))
+        if not revisions:
+            return
+        response = yield Request(
+            "Checking component updates…", client.revision_status, (revisions,)
+        )
+        available = []
+        for status in response["items"]:
+            latest = status.get("latest_snapshot")
+            if not latest:
+                continue
+            matching = [r for r in refs if r["target_revision_id"] == status["revision_id"]]
+            if not matching:
+                continue
+            entry = workspace.binding(matching[0]["target_path"], client.base_url, False)["entry"]
+            if (entry.get("dataset_id"), entry.get("file_id")) != (
+                latest["dataset_id"],
+                latest["file_id"],
+            ):
+                available.append((status, matching))
+        if (
+            not available
+            or ask_choice(
+                "Component Updates",
+                "Newer uploads are available for: "
+                + ", ".join(s["item_number"] for s, rows in available),
+                ["Review updates", "Keep saved configuration"],
+            )
+            != "Review updates"
+        ):
+            return
+        for status, matching in available:
+            FreeCAD.setActiveDocument(document.Name)
+            FreeCADGui.Selection.clearSelection()
+            for ref in matching:
+                FreeCADGui.Selection.addSelection(document.getObject(ref["object_name"]))
+            yield from UpdateSelectedComponentsCommand().action()
+            _save_document(document)
+
+
+def _browser_managed_operation(client, selection):
+    if selection.get("intent") == "cancel_checkout":
+        import json
+
+        revision_id = selection["revision"]["id"]
+        candidates = [
+            d
+            for d in FreeCAD.listDocuments().values()
+            if d.getObject(METADATA_OBJECT) is not None
+            and _metadata(d).RevisionId == revision_id
+            and workspace.working_path(d.FileName, client.base_url) is not None
+            and not workspace.working_path(d.FileName, client.base_url)["entry"].get(
+                "publication_staging"
+            )
+        ]
+        if not candidates:
+            paths = []
+            for ledger_path in (Path(selection["workspace"]) / "working").glob(
+                "*/" + workspace.MANIFEST
+            ):
+                if ledger_path.is_symlink():
+                    continue
+                ledger = json.loads(ledger_path.read_text())
+                if ledger.get("server_url") != client.base_url:
+                    continue
+                for entry in ledger["documents"]:
+                    if entry.get("publication_staging"):
+                        continue
+                    candidate_path = workspace._safe_path(ledger_path.parent, entry["path"])
+                    candidate_revision = entry.get("revision_id")
+                    if not candidate_revision:
+                        from . import fcstd
+
+                        try:
+                            tree, _ = fcstd.inspect(candidate_path)
+                            node = tree.find(
+                                "./ObjectData/Object[@name='ForgePDM_Metadata']/Properties/Property[@name='RevisionId']/String"
+                            )
+                            candidate_revision = node.get("value") if node is not None else None
+                        except (OSError, ValueError, fcstd.CADIntegrityError):
+                            continue
+                    if candidate_revision == revision_id:
+                        paths.append(str(candidate_path))
+            if not paths:
+                raise workspace.WorkspaceError(
+                    "No managed working copy was found. Open the existing working copy before cancellation."
+                )
+            chosen = (
+                paths[0]
+                if len(paths) == 1
+                else ask_choice(
+                    "Cancel Check Out", "Choose the working copy to preserve and cancel", paths
+                )
+            )
+            if chosen is None:
+                return
+            candidates = [FreeCAD.openDocument(chosen)]
+        selected = candidates[0] if len(candidates) == 1 else None
+        if selected is None:
+            paths = [d.FileName for d in candidates]
+            chosen = ask_choice("Cancel Check Out", "Choose the working copy", paths)
+            if chosen is None:
+                return
+            selected = candidates[paths.index(chosen)]
+        FreeCAD.setActiveDocument(selected.Name)
+        yield from CancelCheckoutCommand().action()
+        return
+    yield from _open_selected_configuration(client, selection)
+    if selection.get("intent") == "edit":
+        yield from OpenForEditingCommand().action()
+
+
+def _open_published_graph_step(client, plan, path):
+    from . import managed_session
+
+    dataset = plan["steps"][path]["result"]["dataset"]
+    root = str(workspace.binding(plan["root"], client.base_url, False)["root"])
+    config = yield Request(
+        "Opening the exact published dependency…",
+        client.retrieve_configuration,
+        (
+            root,
+            plan["nodes"][path]["identity"]["revision_id"],
+            dataset["id"],
+            dataset["files"][0]["id"],
+        ),
+    )
+    opened = cad.open_configuration(config, _set_metadata)
+    yield Request("Recording published dependency…", client.finish_configuration, (config,))
+    yield Request(
+        "Recording graph dependency result…",
+        managed_session.record_published_configuration,
+        (client, plan, path, opened["root"].FileName),
+    )
+
+
+def _guard_managed_session(client, actor):
+    if Session.client is not client or (Session.user or {}).get("id") != actor:
+        raise workspace.WorkspaceError(
+            "The session changed; recover the original operation after signing in again"
         )

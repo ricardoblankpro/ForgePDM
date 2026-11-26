@@ -241,3 +241,37 @@ def test_local_description_edits_are_preserved_but_geometry_edits_allow_translat
     target["dirty"] = False
     snapshot["remote"]["assembly-A"]["description_token"] = "new-source"
     assert pdm_status.description_text(target, snapshot, "pt-BR") == "Conjunto"
+
+
+def test_local_generation_status_uses_published_baseline_and_shows_unpublished_changes(
+    monkeypatch, tmp_path
+):
+    from freecad.forgepdm import workspace
+
+    path = tmp_path / "generation.FCStd"
+    path.write_bytes(b"saved native generation")
+    entry = dict(
+        item_id="item",
+        revision_id="A",
+        dataset_id=None,
+        file_id="generation",
+        local_generation_id="generation",
+        working_hash=workspace.digest(path)[0],
+        path=path.name,
+        published_source=dict(dataset_id="latest", file_id="file-new"),
+    )
+    monkeypatch.setattr(workspace, "binding", lambda *a, **k: dict(entry=entry, directory=tmp_path))
+    client = SimpleNamespace(
+        base_url="http://fixture",
+        _checkpoint=lambda: None,
+        revision_status=lambda ids: dict(items=[remote()], checked_at="checked"),
+    )
+    target = dict(key="component", path=str(path), item_id="item", revision_id="A", dirty=False)
+    for uploaded in (True, False):
+        entry["origin_uploaded"] = uploaded
+        state = pdm_status.fetch(client, [target], {})["local"]["component"]
+        assert state["pin"] == ("latest", "file-new")
+        assert state["dirty"] is (not uploaded)
+        result = pdm_status.describe(remote(), state, "checked")
+        assert ("local" in kinds(result)) is (not uploaded)
+        assert "Saved local component generation" in result["tooltip"]

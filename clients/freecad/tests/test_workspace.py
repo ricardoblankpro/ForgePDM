@@ -512,3 +512,19 @@ def test_revision_copy_preserves_source_and_rewrites_only_copy_paths(tmp_path):
     with pytest.raises(FileExistsError):
         workspace.copy_revision_source(source, destination, refs)
     assert source.read_bytes() == before
+
+
+def test_checkout_fork_preserves_baseline_without_overwriting_source(tmp_path):
+    client = Client()
+    revision, dataset, file_id = client.add(native())
+    config = workspace.retrieve(client, tmp_path, revision, dataset, file_id)
+    workspace.finish(client, config)
+    source = Path(config["directory"]) / config["ledger"]["documents"][0]["path"]
+    before = source.read_bytes()
+    destination = workspace.fork_working(client.base_url, str(source), [])
+    bound = workspace.binding(destination, client.base_url)
+    assert bound["entry"]["baseline"]["file_id"] == file_id
+    assert bound["entry"]["dataset_id"] == dataset
+    assert workspace.working_path(destination, client.base_url) is not None
+    assert workspace.digest(destination)[0] == bound["entry"]["working_hash"]
+    assert source.read_bytes() == before

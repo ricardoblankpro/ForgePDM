@@ -543,3 +543,57 @@ def test_atomic_assembly_api_manifest_and_malformed_json(backend, monkeypatch, t
             f"/api/v1/datasets/{response.json()['dataset']['id']}/manifest", headers=headers
         )
         assert manifest.json()["references"] == [target]
+
+
+def test_atomic_upload_keeps_checkout_and_is_replayable(backend):
+    item = create_item(backend)
+    args = intent(backend, item, keep_checkout=True)
+    result = service(backend).check_in(**args)
+    checkout = backend.revisions.current_checkout(args["user"], item.current_revision_id)
+    assert checkout.id == args["expected_checkout_id"]
+    assert checkout.version == args["expected_checkout_version"]
+    args["source"] = io.BytesIO(DATA)
+    assert service(backend).check_in(**args) == result
+    assert counts(backend) == (1, 1, 1, 1)
+    args["keep_checkout"] = False
+    with pytest.raises(Conflict, match="different content or intent"):
+        service(backend).check_in(**args)
+
+
+def test_atomic_save_api_retains_checkout_and_rejects_intent_switch(backend, monkeypatch, tmp_path):
+    monkeypatch.setenv("FORGEPDM_FILE_ROOT", str(tmp_path / "api-files"))
+    from forgepdm.main import create_app
+
+    item = create_item(backend)
+    args = intent(backend, item)
+    token, _, _ = backend.auth.login("editor", TEST_PASSWORD)
+    headers = {"Authorization": "Bearer " + token}
+    fields = {
+        k: str(args[k])
+        for k in (
+            "operation_id",
+            "expected_checkout_id",
+            "expected_checkout_version",
+            "content_hash",
+            "byte_size",
+        )
+    }
+    with TestClient(create_app(backend.database.path)) as client:
+        route = f"/api/v1/revisions/{item.current_revision_id}"
+
+        def upload(suffix):
+            return client.post(
+                route + "/" + suffix,
+                headers=headers,
+                data=fields,
+                files={"file": ("model.FCStd", DATA, "application/octet-stream")},
+            )
+
+        response = upload("save-native-with-references")
+        assert response.status_code == 200, response.text
+        assert (
+            backend.revisions.current_checkout(args["user"], item.current_revision_id).id
+            == args["expected_checkout_id"]
+        )
+        assert upload("save-native-with-references").json() == response.json()
+        assert upload("checkin-native-with-references").status_code == 409

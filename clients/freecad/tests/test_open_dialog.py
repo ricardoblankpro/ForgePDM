@@ -244,3 +244,34 @@ def test_insert_rejects_stale_browser_session(case):
     assert calls == []
     assert "session changed" in dialog.status.text()
     dialog.on_open = None
+
+
+@pytest.mark.parametrize(
+    "intent,options", [("edit", dict(editing=True)), ("cancel_checkout", dict(cancelling=True))]
+)
+def test_managed_actions_preserve_selected_snapshot_and_intent(case, intent, options):
+    _, _, dialog, wait, _ = case
+    wait(lambda: dialog.open_button.isEnabled())
+    calls = []
+    dialog.on_open = lambda selection: calls.append(selection)
+    dialog.revision.setCurrentIndex(1)
+    wait(lambda: dialog.open_button.isEnabled())
+    dialog.snapshot.setCurrentIndex(1)
+    dialog.request_open(**options)
+    assert calls[0]["intent"] == intent
+    assert calls[0]["revision"]["id"] == "A" and calls[0]["file"]["id"] == "Aold"
+    dialog.on_open = None
+
+
+def test_cancellation_does_not_require_an_uploaded_snapshot(case):
+    _, _, dialog, wait, _ = case
+    wait(lambda: dialog.open_button.isEnabled())
+    calls = []
+    dialog.on_open = lambda selection: calls.append(selection)
+    dialog.snapshot.clear()
+    dialog.ready()
+    assert not dialog.open_button.isEnabled()
+    assert dialog.cancel_checkout_button.isEnabled()
+    dialog.request_open(cancelling=True)
+    assert calls[0]["intent"] == "cancel_checkout" and calls[0]["file"] is None
+    dialog.on_open = None

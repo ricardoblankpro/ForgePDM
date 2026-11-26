@@ -46,3 +46,4 @@ documentation and artifact organization. Never interpret an old phase status
 as a current release gate without checking the current handoff.
 
 - [ADR-032: Complete rigid component insertion](ADR-032-complete-rigid-component-insertion.md)
+- [ADR-033: Managed editing sessions and recoverable cancellation](ADR-033-managed-editing-sessions.md)

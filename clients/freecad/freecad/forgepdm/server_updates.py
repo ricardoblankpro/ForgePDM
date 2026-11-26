@@ -59,8 +59,28 @@ def inspect(client, path, item_id, revision_id):
     }
 
 
+def component_baseline(client, path, item_id, revision_id):
+    value = workspace.binding(path, client.base_url, False)
+    entry = value["entry"]
+    if (entry.get("item_id"), entry.get("revision_id")) != (item_id, revision_id):
+        raise workspace.WorkspaceError(
+            "Working-copy provenance is missing; reopen its verified source configuration"
+        )
+    journal = value["directory"] / part_checkin.JOURNAL
+    if journal.exists() and (
+        journal.is_symlink() or json.loads(journal.read_text()).get("state") != "acknowledged"
+    ):
+        raise workspace.WorkspaceError("Resolve the pending Check In before updating components")
+    return dict(
+        root=str(value["root"]),
+        dataset_id=entry.get("dataset_id"),
+        file_id=entry.get("file_id"),
+        hash=workspace.digest(path, client._checkpoint)[0],
+    )
+
+
 def prepare_components(client, path, item_id, revision_id, references):
-    original = baseline(client, path, item_id, revision_id)
+    original = component_baseline(client, path, item_id, revision_id)
     identities = {(ref["target_item_id"], ref["target_revision_id"]) for ref in references}
     if len(identities) != 1:
         raise workspace.WorkspaceError("Update one component item/revision at a time")

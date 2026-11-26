@@ -252,3 +252,30 @@ native geometry/placements, repeated occurrences, BOM and balloon identity, undo
 rigid movement, native joints, PDF export, archive references, save/reopen, damaged
 representation rejection, compatible replacement and part insertion. Inspect the
 rendered PDF; a nonempty file is insufficient. No production HTTP mutations occur.
+
+### Managed editing sessions
+
+`managed_sessions_gui.run(App, Gui, directory)` runs only in an empty, signed-out
+FreeCAD process with a temporary profile and disposable `/tmp` directory. It uses
+native fastener-shaped fixture members, repeated occurrences and native joints to
+exercise representation v2, local-generation isolation, deletion reconciliation,
+recovery copies and restoration of a deleted constrained member.
+
+For HTTP acceptance, prepare a fresh fixture outside FreeCAD:
+
+```sh
+uv run --group dev --locked python tools/prepare_managed_session_fixture.py /tmp/forgepdm-managed-http-case
+FORGEPDM_DATABASE=/tmp/forgepdm-managed-http-case/forgepdm.sqlite3 FORGEPDM_FILE_ROOT=/tmp/forgepdm-managed-http-case/files uv run uvicorn forgepdm.main:app --app-dir src --host 127.0.0.1 --port 8015
+```
+
+In a separate empty FreeCAD process/profile/display, load the resulting fixture
+JSON and execute `managed_sessions_http_gui.workflow(App, Gui, client, fixture,
+directory, username, password, checks)` through `WorkflowJob`. Use the fixture's
+`editor` user and test password defined in `tests/conftest.py`; keep its token in
+memory. The driver owns event-loop polling, evidence output and process exit.
+The harness rejects normal profiles, existing documents, production login and
+the default production port. It exercises actual HTTP upload, local synchronization,
+cancellation with affected parents, re-checkout isolation, child-first check-in,
+exact configuration retrieval and cancellation after publication. These fixture
+members isolate the graph contract; real Fasteners geometry is covered separately
+by copied-document acceptance. Do not run either harness through the user's MCP.

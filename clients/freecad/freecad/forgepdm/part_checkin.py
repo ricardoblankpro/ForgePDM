@@ -57,11 +57,12 @@ def _guard_current(value, operation):
         raise ws.WorkspaceError("Pending preview intent changed; journal was preserved")
     for field in (
         "operation_id",
+        "keep_checkout",
         "content_hash",
         "expected_checkout_id",
         "expected_checkout_version",
     ):
-        if current.get(field) != operation[field]:
+        if current.get(field) != operation.get(field):
             raise ws.WorkspaceError(
                 "A newer local check-in operation exists; the previous result remains on the server"
             )
@@ -176,7 +177,9 @@ def resume(client, path, revision_id, item_id, actor_id):
     return _resolve(client, value, operation) if operation else None
 
 
-def checkin(client, path, revision_id, item_id, actor_id, references=(), preview=None):
+def checkin(
+    client, path, revision_id, item_id, actor_id, references=(), preview=None, keep_checkout=False
+):
     result = resume(client, path, revision_id, item_id, actor_id)
     if result is not None:
         return result
@@ -191,6 +194,15 @@ def checkin(client, path, revision_id, item_id, actor_id, references=(), preview
             and operation["state"] == "acknowledged"
             and (operation["expected_checkout_id"], operation["expected_checkout_version"])
             != (checkout["id"], checkout["version"])
+        ):
+            operation = None
+        if (
+            operation is not None
+            and operation["state"] == "acknowledged"
+            and (
+                bool(operation.get("keep_checkout")) != keep_checkout
+                or ws.digest(path)[0] != operation["content_hash"]
+            )
         ):
             operation = None
         if operation is None:
@@ -222,6 +234,8 @@ def checkin(client, path, revision_id, item_id, actor_id, references=(), preview
                 byte_size=saved["byte_size"],
                 snapshot_path=Path(saved["path"]).relative_to(value["root"]).as_posix(),
             )
+            if keep_checkout:
+                operation["keep_checkout"] = True
             if thumbnail:
                 operation["thumbnail"] = thumbnail
             if preview is not None:

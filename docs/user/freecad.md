@@ -101,19 +101,65 @@ saved snapshot must still pass reference validation; unresolved components or
 genuine target changes require inspection. A failed upload can leave an existing
 item or checkout, so continue with that item rather than creating a duplicate.
 
-## Revise or update a component
+## Managed editing, component updates and cancellation
 
-**Create Next Revision** requires a change note and opens a separate Working
-revision. The original document and existing assembly links retain their exact
-revision/snapshot pins. New revisions copy their descriptions and stored BOM.
+**Open for Editing** opens a separate managed working document and acquires or
+renews your checkout. The original saved configuration and other assemblies keep
+their references. Checkout retains the source snapshot baseline, so no preliminary
+parent upload is needed before component updates. The editing action offers newer
+uploads of the same component revisions; you can keep the saved configuration.
+**Open** continues to retrieve the selected saved configuration without checkout.
 
-**Update from Server** reviews a newer uploaded snapshot of the same revision
-and opens a separate configuration. It does not adopt a newer revision or discard
-local edits. **Manage Component…** offers three distinct reviewed actions:
-update the same-revision snapshot, adopt a newer revision, or replace the item.
-Different-item replacement requires explicit object mapping. Inspect geometry and
-joints afterward, then save/upload and review the engineering BOM separately.
-A newer-revision notice never changes a pin automatically.
+Edit a child and save it locally. In the parent, select its occurrence and choose
+**Manage Component… → Update saved local changes of the same revision**. Choose
+the saved working copy if several exist. The child needs your live checkout.
+The occurrence chooser selects all matching direct occurrences of that item/revision
+by default; deselect any you want to retain before confirming the review. The child
+need not be uploaded first. Unsaved source changes are excluded: save them before review.
+Adoption freezes a separate local generation, so further child editing does not
+change the parent until another update. These generations survive restart.
+
+Use **Update Selected Components from Server…** to adopt a newer uploaded snapshot
+of the same revision. **Create Next Revision** creates a separate revision;
+**Manage Component…** also offers explicit newer-revision adoption and item
+replacement. Different-item replacement retains explicit object mapping.
+
+Deleted or added source fasteners are structure changes. New representations
+record member identities independently of live links. If an older assembly reports
+missing members, use **Reconcile Component Representation…**. It verifies the
+saved uploaded source and recorded occurrence identity, then rebuilds the members
+without recreating the occurrences. Missing source identity, ambiguous legacy
+records or unresolved joints stop recovery. A joint attached to deleted geometry
+must be repaired or removed explicitly; unrelated joints and placements remain.
+
+**Upload Assembly Graph…** and **Check In Assembly Graph…** review the active
+assembly and its dependencies. Changed editable documents are saved child-first;
+missing checkouts require explicit acquisition. Upload retains checkouts; Check In
+releases each published document's checkout. Frozen local generations are published
+before their parents and receive real server pins. Existing editing documents are
+retained, including newer changes made after publication was prepared. Preview
+capture remains optional. Review engineering BOM synchronization separately.
+
+A graph operation freezes its original saved inputs before publishing. Retry the
+same graph command after an interruption to recover its original operation.
+Completed children remain published if a later document fails; this is not one
+server transaction across the whole assembly. Resolve multiple distinct saved
+configurations of the same revision before coordinated publication.
+
+**Cancel Check Out…**, available from the document menu and browser, abandons
+unpublished local changes and releases your exact checkout. Select the working
+copy when several exist. The review names affected open parents and retains
+recovery copies of saved and unsaved documents under the workspace's
+`.forgepdm/recovery/`. Affected parents return to the reviewed uploaded snapshot;
+unrelated edits remain. Incompatible joints or missing parent edit rights stop
+restoration. Interrupted publication must be recovered first. For a revision with
+no uploaded snapshot, cancellation preserves its local recovery copy and leaves
+the server item/revision intact.
+
+Cancellation never removes uploaded history. Changes already uploaded remain
+published; reverting them is a separate engineering action. Keep recovery bundles
+and graph-operation snapshots with workspace backups; automatic pruning is not
+provided. See [server recovery](../operations/server.md#recovery).
 
 ## Insert components from the browser
 
@@ -127,7 +173,7 @@ the source Assembly container. Source fasteners and their attachments stay where
 they are. The selected occurrence starts at the destination origin; position it
 or add native Assembly joints. Each click inserts one occurrence, undoable as one
 transaction. Generated representation objects are implementation details; edit the
-occurrence rather than its member links. Use addon 0.27.0 or later for these files.
+occurrence rather than its member links. Use addon 0.27.0 or later for version-1 representations. Files updated to version 2 require addon 0.28.0 or later.
 
 Insertion uses the chosen uploaded snapshot, including its pinned dependencies.
 Unsaved source edits are not inserted. Save/upload the destination explicitly and

@@ -34,9 +34,14 @@ def fetch(client, targets, hash_cache):
                 raise workspace.WorkspaceError(
                     "Local identity is not bound to an uploaded snapshot"
                 )
+            snapshot_entry = entry
+            if entry.get("local_generation_id"):
+                snapshot_entry = entry.get("published_source", {})
+                value["local_generation"] = entry["local_generation_id"]
+                value["dirty"] |= not entry.get("origin_uploaded", False)
             if (
-                not entry.get("dataset_id")
-                or not entry.get("file_id")
+                not snapshot_entry.get("dataset_id")
+                or not snapshot_entry.get("file_id")
                 or not entry.get("working_hash")
             ):
                 raise workspace.WorkspaceError("Local snapshot has not been uploaded")
@@ -47,7 +52,7 @@ def fetch(client, targets, hash_cache):
             if digest is None:
                 digest = workspace.digest(path, client._checkpoint)[0]
                 hash_cache[stamp] = digest
-            value["pin"] = (entry["dataset_id"], entry["file_id"])
+            value["pin"] = (snapshot_entry["dataset_id"], snapshot_entry["file_id"])
             value["dirty"] |= digest != entry["working_hash"]
             value["problem"] = None
         except (workspace.WorkspaceError, OSError, ValueError, KeyError, TypeError):
@@ -165,6 +170,10 @@ def describe(remote, local, checked_at, *, now=None, stale=None):
             details.append("Local changes are not included in the recorded uploaded snapshot.")
         if not badges:
             add("unknown", "Working · current" if latest and pin else "Working")
+    if (local or {}).get("local_generation"):
+        details.append(
+            "Saved local component generation. Use assembly graph publication for unpublished changes."
+        )
     if checked_at:
         details.append("Last server check: " + checked_at)
     if stale:

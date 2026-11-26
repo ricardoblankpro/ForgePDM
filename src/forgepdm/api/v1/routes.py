@@ -121,6 +121,12 @@ class CheckoutTokenRequest(BaseModel):
     expected_checkout_version: int = Field(ge=1)
 
 
+class CancelCheckoutRequest(CheckoutTokenRequest):
+    operation_id: UUID
+    dataset_id: UUID | None = None
+    file_id: UUID | None = None
+
+
 class CheckInRequest(CheckoutTokenRequest):
     change_note: str = Field(default="", max_length=2000)
 
@@ -462,6 +468,44 @@ def get_checkout(
     return _checkout_response(checkout)
 
 
+@router.get("/revisions/{revision_id}/checkout/cancel-operations/{operation_id}")
+def cancellation_status(
+    revision_id: UUID,
+    operation_id: UUID,
+    user: User = Depends(current_user),
+    revisions: RevisionService = Depends(get_revision_service),
+):
+    try:
+        return revisions.cancellation_status(user, str(revision_id), str(operation_id))
+    except (NotFound, Forbidden) as error:
+        raise HTTPException(404, "item revision not found") from error
+
+
+@router.post("/revisions/{revision_id}/checkout/cancel")
+def cancel_checkout(
+    revision_id: UUID,
+    payload: CancelCheckoutRequest,
+    user: User = Depends(current_user),
+    revisions: RevisionService = Depends(get_revision_service),
+):
+    try:
+        return revisions.cancel_checkout(
+            user,
+            str(revision_id),
+            str(payload.operation_id),
+            str(payload.expected_checkout_id),
+            payload.expected_checkout_version,
+            str(payload.dataset_id) if payload.dataset_id else None,
+            str(payload.file_id) if payload.file_id else None,
+        )
+    except NotFound as error:
+        raise HTTPException(404, str(error)) from error
+    except Forbidden as error:
+        raise HTTPException(403, str(error)) from error
+    except Conflict as error:
+        raise HTTPException(409, str(error)) from error
+
+
 @router.post("/revisions/{revision_id}/checkout/release")
 def release_checkout(
     revision_id: UUID,
@@ -482,6 +526,7 @@ def release_checkout(
     return _checkout_response(checkout)
 
 
+@router.post("/revisions/{revision_id}/save-native-with-references")
 @router.post("/revisions/{revision_id}/checkin-native-with-references")
 @router.post("/revisions/{revision_id}/checkin-native")
 def atomic_native_checkin(
@@ -514,6 +559,7 @@ def atomic_native_checkin(
             source=file.file,
             change_note=change_note,
             references=references,
+            keep_checkout=request.url.path.endswith("/save-native-with-references"),
         )
     except NotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error

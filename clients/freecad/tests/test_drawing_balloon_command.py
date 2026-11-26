@@ -69,7 +69,7 @@ def case(commands, monkeypatch):
     monkeypatch.setattr(commands, "_guard_document", lambda *args: document)
     monkeypatch.setattr(commands, "_open_status", lambda *args: None)
     monkeypatch.setattr(commands.workspace, "binding", lambda *args, **kwargs: {})
-    monkeypatch.setattr(commands.workspace, "working_path", lambda *args: "working.FCStd")
+    monkeypatch.setattr(commands.workspace, "working_path", lambda *args: {"entry": {}})
     gui_document = NS(getInEdit=lambda: False)
     monkeypatch.setattr(commands.FreeCADGui, "getDocument", lambda _: gui_document, raising=False)
     monkeypatch.setattr(

@@ -271,3 +271,14 @@ def test_edit_during_transfer_aborts_before_open(commands, context, monkeypatch)
     commands.UpdateFromServerCommand().Activated()
     assert "Local document changed" in commands._test_errors[0]
     assert incomplete == [{"new": True}]
+
+
+def test_component_update_uses_saved_local_parent_without_preliminary_upload(context):
+    updates, client, path, entry, _ = context
+    original = updates.component_baseline(client, path, "item", "rev")
+    path.write_bytes(b"saved parent changes")
+    current = updates.component_baseline(client, path, "item", "rev")
+    assert current["hash"] != original["hash"]
+    assert current["file_id"] == original["file_id"]
+    with pytest.raises(updates.workspace.WorkspaceError, match="not been uploaded"):
+        updates.baseline(client, path, "item", "rev")

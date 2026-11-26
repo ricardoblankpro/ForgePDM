@@ -72,6 +72,7 @@ class CheckInService:
         source,
         change_note="",
         references=None,
+        keep_checkout=False,
     ):
         operation_id = str(UUID(operation_id))
         revision_id = str(UUID(revision_id))
@@ -99,6 +100,8 @@ class CheckInService:
         }
         if references:
             intent["references"] = references
+        if keep_checkout:
+            intent["keep_checkout"] = True
         fingerprint = hashlib.sha256(
             json.dumps(intent, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()
@@ -208,10 +211,11 @@ class CheckInService:
                 "UPDATE item_revisions SET change_note=CASE WHEN ?='' THEN change_note ELSE ? END, modified_at=? WHERE id=?",
                 (change_note, change_note, timestamp, revision_id),
             )
-            connection.execute(
-                "UPDATE checkouts SET released_at=?,release_reason='checked in',version=version+1 WHERE id=?",
-                (timestamp, checkout.id),
-            )
+            if not keep_checkout:
+                connection.execute(
+                    "UPDATE checkouts SET released_at=?,release_reason='checked in',version=version+1 WHERE id=?",
+                    (timestamp, checkout.id),
+                )
             for event, entity, identifier, details in [
                 (
                     "dataset.file_attached",
@@ -231,7 +235,7 @@ class CheckInService:
                     {"source_file_id": file_id, "references": len(references)},
                 ),
                 (
-                    "revision.checked_in",
+                    "revision.uploaded" if keep_checkout else "revision.checked_in",
                     "ItemRevision",
                     revision_id,
                     {

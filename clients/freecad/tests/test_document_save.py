@@ -232,7 +232,7 @@ def test_tree_refresh_checks_checkout_before_changing_labels(commands, monkeypat
     monkeypatch.setattr(commands, "_guard_document", lambda *args: document)
     monkeypatch.setattr(commands.Session, "require_client", lambda: client)
     monkeypatch.setattr(commands.Session, "user", {"id": "user"})
-    monkeypatch.setattr(commands.workspace, "working_path", lambda *args: object())
+    monkeypatch.setattr(commands.workspace, "working_path", lambda *args: {"entry": {}})
     monkeypatch.setattr(
         commands.tree_labels, "refresh", lambda doc: pytest.fail("unauthorized label mutation")
     )
@@ -633,3 +633,27 @@ def test_open_exact_snapshot_activates_dirty_document_without_retrieval(
         workflow.send({})
     assert activated == [source.Name]
     assert source.saved == [] and source.recomputes == 0
+
+
+@pytest.mark.parametrize("active", [False, True])
+def test_cancel_handles_native_active_dialog_boolean(commands, monkeypatch, active):
+    from freecad.forgepdm.jobs import Request
+
+    client = SimpleNamespace(get_revision=lambda revision: None)
+    document = SimpleNamespace(Name="model", FileName="/workspace/model.FCStd")
+    metadata = SimpleNamespace(RevisionId="revision", ItemId="item")
+    monkeypatch.setattr(commands.Session, "require_client", lambda: client)
+    monkeypatch.setattr(commands, "_require_document", lambda: document)
+    monkeypatch.setattr(commands, "_require_metadata", lambda d: metadata)
+    monkeypatch.setattr(
+        commands.FreeCADGui, "Control", SimpleNamespace(activeDialog=lambda: active), raising=False
+    )
+    action = commands.CancelCheckoutCommand().action()
+    if active:
+        with pytest.raises(
+            commands.workspace.WorkspaceError, match="Finish the active CAD operation"
+        ):
+            next(action)
+    else:
+        assert isinstance(next(action), Request)
+        action.close()

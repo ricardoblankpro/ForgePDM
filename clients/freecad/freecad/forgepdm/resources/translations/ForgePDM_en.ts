@@ -1,4 +1,3 @@
-<?xml version='1.0' encoding='utf-8'?>
 <TS version="2.1" language="en" sourcelanguage="en">
   <context>
     <name>ForgePDM</name>
@@ -250,9 +249,65 @@
       <source>Set the local workspace once for this server and account</source>
       <translation>Set the local workspace once for this server and account</translation>
     </message>
-    <message><source>Drawing BOM…</source><translation>Drawing BOM…</translation></message>
-    <message><source>Insert or update a direct, indented or flattened engineering BOM on a TechDraw page</source><translation>Insert or update a direct, indented or flattened engineering BOM on a TechDraw page</translation></message>
-    <message><source>Check BOM Balloons…</source><translation>Check BOM Balloons…</translation></message>
-    <message><source>Highlight broken BOM balloon links on the drawing and review their problems</source><translation>Highlight broken BOM balloon links on the drawing and review their problems</translation></message>
+    <message>
+      <source>Drawing BOM…</source>
+      <translation>Drawing BOM…</translation>
+    </message>
+    <message>
+      <source>Insert or update a direct, indented or flattened engineering BOM on a TechDraw page</source>
+      <translation>Insert or update a direct, indented or flattened engineering BOM on a TechDraw page</translation>
+    </message>
+    <message>
+      <source>Check BOM Balloons…</source>
+      <translation>Check BOM Balloons…</translation>
+    </message>
+    <message>
+      <source>Highlight broken BOM balloon links on the drawing and review their problems</source>
+      <translation>Highlight broken BOM balloon links on the drawing and review their problems</translation>
+    </message>
+    <message>
+      <source>Update Components from Saved Local Changes…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Review a saved local component generation without uploading it first</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Reconcile Component Representation…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Review missing representation members against a verified saved source</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Cancel Check Out…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Preserve recovery copies, abandon unpublished edits and release your checkout</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Upload Assembly Graph…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Publish the selected assembly and saved dependencies in child-first order</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Check In Assembly Graph…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Open for Editing…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Prepare a separate working copy and review available same-revision component updates</source>
+      <translation type="unfinished" />
+    </message>
   </context>
 </TS>

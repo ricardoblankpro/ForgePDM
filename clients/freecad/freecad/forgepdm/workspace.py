@@ -205,7 +205,9 @@ def binding(path, server=None, require_uploaded=True):
                     for key in ("item_id", "revision_id", "dataset_id", "file_id", "working_hash")
                 ):
                     raise WorkspaceError(
-                        "Upload the component from this workspace before using it in an assembly"
+                        "Managed file '{}' has no uploaded baseline. Upload it or reopen its verified source configuration.".format(
+                            path
+                        )
                     )
                 return {"root": root, "directory": directory, "ledger": ledger, "entry": entry}
         raise WorkspaceError("The document is not registered in its workspace ledger")
@@ -232,8 +234,19 @@ def bind_references(client, references):
     result = []
     for reference in references:
         client._checkpoint()
-        value = binding(reference["target_path"], client.base_url)
+        value = binding(reference["target_path"], client.base_url, require_uploaded=False)
         entry = value["entry"]
+        published = entry
+        if entry.get("local_generation_id"):
+            published = entry.get("published_source", {}) if entry.get("origin_uploaded") else {}
+        if (
+            not published.get("dataset_id")
+            or not published.get("file_id")
+            or not entry.get("working_hash")
+        ):
+            raise WorkspaceError(
+                "A dependency has no published snapshot. Use Upload Assembly Graph to publish children first."
+            )
         current, _size = digest(reference["target_path"], client._checkpoint)
         if current != entry["working_hash"]:
             raise WorkspaceError(
@@ -255,8 +268,8 @@ def bind_references(client, references):
                 ),
                 "target_object_name": reference["target_object_name"],
                 "target_revision_id": entry["revision_id"],
-                "target_dataset_id": entry["dataset_id"],
-                "target_file_id": entry["file_id"],
+                "target_dataset_id": published["dataset_id"],
+                "target_file_id": published["file_id"],
                 "target_path": reference["target_path"],
             }
         )
@@ -538,3 +551,27 @@ def incomplete(configuration):
     if ledger["state"] != "complete":
         ledger["state"] = "incomplete"
         _atomic_json(directory / MANIFEST, ledger)
+
+
+def fork_working(server, source, references):
+    """Fork a verified configuration while retaining its exact uploaded provenance."""
+    origin = binding(source, server)
+    entry = origin["entry"]
+    if digest(source)[0] != entry["working_hash"]:
+        raise WorkspaceError(
+            "Save or preserve local edits before preparing a separate working copy"
+        )
+    destination = prepare_working(server, origin["root"])
+    copy_revision_source(source, destination, references)
+    value = binding(destination, server, require_uploaded=False)
+    with locked(value["root"], server):
+        ledger = value["ledger"]
+        record = dict(entry, path="model.FCStd", working_hash=digest(destination)[0])
+        record["baseline"] = {
+            key: entry[key]
+            for key in ("item_id", "revision_id", "dataset_id", "file_id", "working_hash")
+        }
+        record["workspace_record_version"] = 2
+        ledger["documents"] = [record]
+        _atomic_json(value["directory"] / MANIFEST, ledger)
+    return destination

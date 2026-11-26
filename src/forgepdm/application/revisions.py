@@ -150,6 +150,68 @@ class RevisionService:
             ).fetchone()
             return _checkout(row)
 
+    def cancellation_status(self, user, revision_id, operation_id):
+        with self.database.connection() as connection:
+            self.authorization.require_read_revision(user, revision_id, connection)
+            row = connection.execute(
+                "SELECT result_json FROM checkout_cancel_operations WHERE actor_id=? AND operation_id=? AND revision_id=?",
+                (user.id, operation_id, revision_id),
+            ).fetchone()
+            return json.loads(row["result_json"]) if row else None
+
+    def cancel_checkout(
+        self, user, revision_id, operation_id, checkout_id, version, dataset_id=None, file_id=None
+    ):
+        operation_id = str(UUID(operation_id))
+        intent = json.dumps([revision_id, checkout_id, version, dataset_id, file_id])
+        now = _now().isoformat()
+        with self.database.transaction() as connection:
+            self.authorization.require_edit_revision(user, revision_id, connection)
+            previous = connection.execute(
+                "SELECT intent_json,result_json FROM checkout_cancel_operations WHERE actor_id=? AND operation_id=?",
+                (user.id, operation_id),
+            ).fetchone()
+            if previous:
+                if previous["intent_json"] != intent:
+                    raise Conflict("Cancellation operation was already used for a different intent")
+                return json.loads(previous["result_json"])
+            self.require_checkout_token(user, revision_id, checkout_id, version, connection)
+            latest = connection.execute(
+                "SELECT d.id AS dataset_id,f.id AS file_id FROM datasets d "
+                "JOIN dataset_files df ON df.dataset_id=d.id JOIN files f ON f.id=df.file_id "
+                "WHERE d.revision_id=? AND d.dataset_type='native_cad' "
+                "ORDER BY d.created_at DESC,d.id DESC,f.id DESC LIMIT 1",
+                (revision_id,),
+            ).fetchone()
+            target = (latest["dataset_id"], latest["file_id"]) if latest else (None, None)
+            if target != (dataset_id, file_id):
+                raise Conflict("Published snapshot changed; review cancellation again")
+            connection.execute(
+                "UPDATE checkouts SET released_at=?,release_reason='cancelled',version=version+1 WHERE id=?",
+                (now, checkout_id),
+            )
+            result = dict(
+                operation_id=operation_id,
+                revision_id=revision_id,
+                checkout_id=checkout_id,
+                dataset_id=dataset_id,
+                file_id=file_id,
+            )
+            connection.execute(
+                "INSERT INTO checkout_cancel_operations VALUES (?,?,?,?,?,?)",
+                (operation_id, user.id, revision_id, intent, json.dumps(result), now),
+            )
+            self._audit(
+                connection,
+                user.id,
+                "checkout.cancelled",
+                "ItemRevision",
+                revision_id,
+                _now(),
+                result,
+            )
+            return result
+
     def require_checkout_owner(self, user: User, revision_id: str, connection=None) -> Checkout:
         if connection is None:
             with self.database.connection() as opened:

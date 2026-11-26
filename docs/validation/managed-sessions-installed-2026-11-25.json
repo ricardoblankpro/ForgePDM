@@ -1,0 +1,105 @@
+{
+  "date": "2026-11-25",
+  "addon_version": "0.28.0",
+  "backend_version": "0.3.4",
+  "schema_version": 21,
+  "completes": "managed-sessions-2026-11-24.json",
+  "automated_checks": {
+    "backend_passed": 562,
+    "addon_passed": 608,
+    "addon_optional_qt_modules_skipped": 7,
+    "real_qt_passed": 33,
+    "lint": "passed",
+    "format": "passed",
+    "documentation_links_and_metadata": "passed",
+    "manifest_and_archive_links": "passed"
+  },
+  "native_http": {
+    "checks": [
+      "HTTP atomic source upload retains checkout",
+      "editing original leaves uploaded parent occurrence stable",
+      "saved local deletion updates both occurrences without upload",
+      "cancel restores unpublished parent occurrences before releasing child",
+      "checkout isolates edits from restored parent",
+      "local synchronization works after cancellation and new checkout",
+      "child-first graph checkin releases child checkout",
+      "child-first graph checkin releases parent checkout",
+      "HTTP retrieval reconstructs two exact updated occurrences",
+      "cancel leaves published parent intact without parent checkout",
+      "cancel releases the reviewed new source checkout",
+      "cancel restores source read-only snapshot"
+    ],
+    "freecad": [
+      "1",
+      "1",
+      "4",
+      "20260928 (Git shallow)",
+      "Unknown",
+      "2026/09/28 13:46:34",
+      "(HEAD detached at 4fd3bf320)",
+      "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+    ],
+    "production_mutations": false
+  },
+  "installation": {
+    "addon_profiles": [
+      "FreeCAD/v1-1/Mod/ForgePDM",
+      "FreeCAD/Mod/ForgePDM"
+    ],
+    "loaded_in_existing_authenticated_session": true,
+    "current_command_callbacks_registered": 32,
+    "backend_openapi_version_verified": "0.3.4",
+    "database_integrity": "ok",
+    "foreign_key_violations": 0,
+    "migration_existing_business_tables_preserved": 41,
+    "final_database_changes_since_backup": [
+      "schema_version",
+      "audit_events",
+      "auth_sessions",
+      "checkouts"
+    ],
+    "all_dataset_and_file_records_preserved": true,
+    "pre_upgrade_backup": "var/backups/before-managed-session-install-2026-11-25",
+    "prior_session_backup": "var/backups/before-managed-session-2026-11-24"
+  },
+  "working_copy_update": {
+    "occurrences": 2,
+    "member_counts_before": {
+      "Component": 5,
+      "Component001": 5
+    },
+    "member_counts_after": {
+      "Component": 4,
+      "Component001": 4
+    },
+    "joints_preserved": true,
+    "placement_max_delta_mm": 0.0,
+    "source_file_ids": {
+      "Component": "069ae50c-85a7-4afa-b6c4-a68ae52f8ada",
+      "Component001": "069ae50c-85a7-4afa-b6c4-a68ae52f8ada"
+    },
+    "modified": true,
+    "checkout_retained": true,
+    "authenticated_session_preserved": true,
+    "existing_docs_preserved": true,
+    "upload_performed": false,
+    "checkin_performed": false
+  },
+  "working_copy_update_notes": [
+    "Revalidated lifecycle, edit permission and owned live checkout before saving and replacing.",
+    "Both selected A000003 occurrences in the current A000004 working document adopt the exact latest uploaded same-revision snapshot.",
+    "Strict native source/BOM capture and joint-reference validation pass after replacement.",
+    "The parent remains checked out and unsaved for user inspection. No production upload, check-in, revision creation or BOM synchronization was performed.",
+    "Existing source FCStd bytes are unchanged. Only the parent working file was saved before replacement; the updated state remains in memory.",
+    "Backup saveCopy marked two formerly clean linked documents modified; their original flags were restored after verifying unchanged paths and untouched objects.",
+    "Current workspace and live-document recovery copies are retained under var/backups/before-managed-assembly-repair-2026-11-25."
+  ],
+  "limitations": [
+    "Linux FreeCAD 1.1.4 only; other platforms remain unverified.",
+    "HTTP acceptance uses synthetic native fastener-shaped geometry and a disposable backend. Earlier copied-engineering checks cover real Fasteners and native joints.",
+    "Source TechDraw/PDF changes and flexible assemblies are outside this acceptance.",
+    "Graph publication is recoverable per document, not one server transaction for the entire graph.",
+    "Genuinely distinct configurations of the same revision require explicit resolution; equivalent shared dependencies are reused.",
+    "The initial final-acceptance run caught a FreeCAD activeDialog boolean guard error. The guard was fixed, regression-tested and the fresh complete native/HTTP run passed."
+  ]
+}

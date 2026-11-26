@@ -6,9 +6,9 @@ This is the current handoff. Start with [README](README.md) and
 
 ## Delivery
 
-- Addon: **0.27.0**
-- Backend package: **0.3.3**
-- Database schema: **20**
+- Addon: **0.28.0**
+- Backend package: **0.3.4**
+- Database schema: **21**
 
 Versions are independent. The backend/server is AGPL-3.0-or-later and the
 Workbench LGPL-2.1-or-later; approved licensing/contact boundaries remain unchanged.
@@ -62,6 +62,50 @@ An installable Addon Manager distribution source/publication is still separate.
 - Online SQLite/blob backups, full hash/FK/schema verification, new-directory
   restore, isolated drills and hourly/daily Linux user timers. Status exposes
   missing/failed/interrupted/stale runs. Known older schema backups remain readable.
+
+## Managed editing delivery — 2026-11-24
+
+Source delivery adds isolated checkout with retained provenance, same-revision
+saved-local-generation adoption, representation v2 with member identities,
+explicit orphan-member reconciliation, Open for Editing update offers,
+recoverable fenced Cancel Check Out, and child-first assembly graph publication.
+Graph upload uses a new replayable native-save endpoint that retains checkout;
+existing native check-in continues to release it. Schema 21 records cancellation
+operations. See [ADR-033](docs/decisions/ADR-033-managed-editing-sessions.md).
+
+Local saved generations are immutable configurations, never server dataset IDs.
+Publication freezes its original graph before transfer; completed children remain
+published if a later step fails. Newer editing state is retained. Multiple distinct
+configurations of one revision in a publication graph currently require explicit
+resolution; flexible assemblies remain outside this delivery. Legacy empty
+working records cannot manufacture provenance; reopen a verified configuration
+or explicitly publish the current graph. BOM synchronization remains reviewed.
+
+Addon **0.28.0** is installed in both local profiles and loaded in the authenticated
+FreeCAD session; backend **0.3.4** runs locally with schema **21**. The pre-upgrade
+database/blob backup and prior addon installations are retained under
+`var/backups/before-managed-session-install-2026-11-25`. Migration preserved all
+41 existing business tables; final comparison differs only in schema, audit,
+authentication and the user's new checkout. SQLite integrity and foreign keys pass.
+
+Final checks on 2026-11-25: **562 backend tests, 608 addon tests (seven optional
+Qt modules skipped), 33 real Qt tests and 12 isolated native/HTTP checks pass**.
+The native workflow covers local structural updates, parent restoration on cancel,
+recheckout, child-first check-in and exact uploaded retrieval. Earlier native
+geometry/joint and copied-Fasteners evidence remains in the dated 2026-11-24 report.
+Lint/format, documentation, manifest and archive checks pass. Native acceptance
+remains limited to Linux FreeCAD 1.1.4; flexible assemblies and source drawing/PDF
+changes are outside this increment's acceptance.
+
+After revalidating Working/edit/owned-live-checkout guards, both A000003 occurrences
+in the user's current A000004 working copy were updated to the latest same-revision
+uploaded snapshot. Each representation now has four members instead of five;
+native joint paths and placements are unchanged. Original source-file bytes and
+open documents/session are preserved. The repaired parent remains checked out and
+unsaved for inspection; no production upload, check-in or BOM synchronization was
+performed. A complete workspace and live-document backup is retained under
+`var/backups/before-managed-assembly-repair-2026-11-25`. See
+[completion evidence](docs/validation/managed-sessions-installed-2026-11-25.json).
 
 ## Validation and local installation
 

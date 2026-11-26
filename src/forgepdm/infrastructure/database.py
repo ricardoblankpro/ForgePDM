@@ -437,6 +437,17 @@ INSERT INTO localized_source_versions SELECT s.id,1,'und',r.description,NULL,dat
         20,
         "CREATE TABLE description_consolidation (revision_id TEXT PRIMARY KEY REFERENCES item_revisions(id), previous_json TEXT, origin TEXT NOT NULL);",
     ),
+    (
+        21,
+        """
+CREATE TABLE checkout_cancel_operations (
+ operation_id TEXT NOT NULL, actor_id TEXT NOT NULL REFERENCES users(id),
+ revision_id TEXT NOT NULL REFERENCES item_revisions(id), intent_json TEXT NOT NULL,
+ result_json TEXT NOT NULL, created_at TEXT NOT NULL,
+ PRIMARY KEY(actor_id, operation_id)
+);
+""",
+    ),
 )
 
 

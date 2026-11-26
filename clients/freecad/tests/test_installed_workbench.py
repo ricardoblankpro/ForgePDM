@@ -68,7 +68,7 @@ wb.Initialize()
 wb.Initialize()
 expected = [
     'ForgePDM_Login', 'ForgePDM_Logout', 'ForgePDM_ConfigureWorkspace', 'ForgePDM_RegisterStandardPart', 'ForgePDM_ChangeStandardPartAssociation', 'ForgePDM_Upload', 'ForgePDM_Checkout',
-    'ForgePDM_CheckIn', 'ForgePDM_Release', 'ForgePDM_NewRevision',
+    'ForgePDM_OpenForEditing', 'ForgePDM_CancelCheckout', 'ForgePDM_UpdateSavedComponents', 'ForgePDM_ReconcileRepresentation', 'ForgePDM_CheckIn', 'ForgePDM_UploadAssemblyGraph', 'ForgePDM_CheckInAssemblyGraph', 'ForgePDM_Release', 'ForgePDM_NewRevision',
     'ForgePDM_Download', 'ForgePDM_UpdateFromServer', 'ForgePDM_UpdateSelectedComponents', 'ForgePDM_PublishDrawings', 'ForgePDM_RefreshPDMStatus', 'ForgePDM_ShowBOM', 'ForgePDM_DrawingBOM', 'ForgePDM_LinkBOMBalloon', 'ForgePDM_CheckBOMBalloonLinks', 'ForgePDM_AssignMaterials', 'ForgePDM_RegisterRawMaterial', 'ForgePDM_LinkPhysicalMaterial',
     'ForgePDM_RefreshTreeLabels', 'ForgePDM_ReplaceRevision', 'ForgePDM_ReplaceComponent', 'ForgePDM_ManageComponent',
 ]
@@ -79,7 +79,7 @@ assert wb.toolbar == ['ForgePDM_' + name for name in [
 assert set(wb.menus) == {'Session', 'Documents', 'Components', 'Lifecycle',
                          'BOM and publishing', 'Catalog and materials', 'Maintenance'}
 visible = [name for group in wb.menus.values() for name in group]
-assert len(visible) == len(set(visible)) == 23
+assert len(visible) == len(set(visible)) == 29
 assert set(visible) == set(expected) - {'ForgePDM_ReplaceRevision',
     'ForgePDM_ReplaceComponent', 'ForgePDM_UpdateSelectedComponents'}
 assert wb.GetClassName() == 'Gui::PythonWorkbench'

@@ -187,6 +187,18 @@ class OpenDialog(QtWidgets.QDialog):
         self.insert_button.clicked.connect(lambda: self.request_open(inserting=True))
         buttons.addWidget(self.insert_button)
         buttons.addWidget(self.open_button)
+        self.edit_button = QtWidgets.QPushButton("Open for Editing")
+        self.edit_button.setObjectName("forgepdm_edit_button")
+        self.edit_button.setVisible(on_open is not None)
+        self.edit_button.setEnabled(False)
+        self.edit_button.clicked.connect(lambda: self.request_open(editing=True))
+        self.cancel_checkout_button = QtWidgets.QPushButton("Cancel Check Out…")
+        self.cancel_checkout_button.setObjectName("forgepdm_cancel_checkout_button")
+        self.cancel_checkout_button.setVisible(on_open is not None)
+        self.cancel_checkout_button.setEnabled(False)
+        self.cancel_checkout_button.clicked.connect(lambda: self.request_open(cancelling=True))
+        buttons.addWidget(self.edit_button)
+        buttons.addWidget(self.cancel_checkout_button)
         buttons.addWidget(close)
         layout.addLayout(buttons)
         for button in self.findChildren(QtWidgets.QPushButton):
@@ -548,6 +560,12 @@ class OpenDialog(QtWidgets.QDialog):
     def ready(self, *_):
         available = bool(self.snapshot.currentData()) and self.item is not None
         self.open_button.setEnabled(available)
+        self.edit_button.setEnabled(available and self.on_open is not None)
+        self.cancel_checkout_button.setEnabled(
+            self.item is not None
+            and self.revision.currentData() is not None
+            and self.on_open is not None
+        )
         self.insert_button.setEnabled(
             available and self.on_insert is not None and self.item["number"].startswith(("P", "A"))
         )
@@ -610,12 +628,12 @@ class OpenDialog(QtWidgets.QDialog):
         except Exception as error:
             self.status.setText(str(error))
 
-    def request_open(self, _checked=False, *, inserting=False):
+    def request_open(self, _checked=False, *, inserting=False, editing=False, cancelling=False):
         if self.finishing:
             return
         if not self.open_button.isEnabled() and inserting:
             return
-        if not self.open_button.isEnabled():
+        if not self.open_button.isEnabled() and not cancelling:
             self.open_when_ready = True
             return
         self.open_when_ready = False
@@ -628,7 +646,7 @@ class OpenDialog(QtWidgets.QDialog):
         except Exception as error:
             self.status.setText(str(error))
             return
-        dataset, record = self.snapshot.currentData()
+        dataset, record = self.snapshot.currentData() or (None, None)
         self.selection = {
             "item": self.item,
             "revision": self.revision.currentData(),
@@ -636,6 +654,8 @@ class OpenDialog(QtWidgets.QDialog):
             "file": record,
             "workspace": root,
         }
+        if editing or cancelling:
+            self.selection["intent"] = "cancel_checkout" if cancelling else "edit"
         if self.actor_id:
             self.selection["actor_id"] = self.actor_id
         if self.on_open is not None:

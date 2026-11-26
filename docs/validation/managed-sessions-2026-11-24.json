@@ -1,0 +1,91 @@
+{
+  "date": "2026-11-24",
+  "addon_version": "0.28.0",
+  "backend_version": "0.3.4",
+  "schema_version": 21,
+  "native_synthetic": {
+    "checks": [
+      "v2 complete source identity",
+      "native joints resolve through representation members",
+      "deleted member diagnosed without losing source",
+      "deleted member reconciles in two occurrences",
+      "surviving members retain names",
+      "BOM retains two subassembly occurrences",
+      "parent saved with complete representations",
+      "saved local generation opens with complete native geometry",
+      "editable changes do not leak into local generation",
+      "saved local generation updates both occurrences without upload",
+      "native joints survive deletion and local generation update",
+      "recovery saveCopy preserves live path and modified state",
+      "cancellation restores a deleted constrained member using recorded identity"
+    ],
+    "freecad": [
+      "1",
+      "1",
+      "4",
+      "20260928 (Git shallow)",
+      "Unknown",
+      "2026/09/28 13:46:34",
+      "(HEAD detached at 4fd3bf320)",
+      "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+    ],
+    "production_mutations": false,
+    "server_mutations": false
+  },
+  "native_http": {
+    "checks": [
+      "HTTP atomic source upload retains checkout",
+      "editing original leaves uploaded parent occurrence stable",
+      "saved local deletion updates both occurrences without upload",
+      "cancel restores unpublished parent occurrences before releasing child",
+      "checkout isolates edits from restored parent",
+      "local synchronization works after cancellation and new checkout",
+      "child-first graph checkin releases child checkout",
+      "child-first graph checkin releases parent checkout",
+      "HTTP retrieval reconstructs two exact updated occurrences",
+      "cancel leaves published parent intact without parent checkout",
+      "cancel releases the reviewed new source checkout",
+      "cancel restores source read-only snapshot"
+    ],
+    "freecad": [
+      "1",
+      "1",
+      "4",
+      "20260928 (Git shallow)",
+      "Unknown",
+      "2026/09/28 13:46:34",
+      "(HEAD detached at 4fd3bf320)",
+      "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+    ],
+    "production_mutations": false
+  },
+  "copied_engineering_fixture": {
+    "scope": "cached saved source geometry; source TechDraw recomputation excluded",
+    "checks": [
+      "actual copied Fasteners restore",
+      "actual orphan members reconciled",
+      "actual native joint references preserved",
+      "actual placements preserved",
+      "actual two-occurrence BOM preserved",
+      "actual source detached to separate immutable document"
+    ],
+    "freecad": [
+      "1",
+      "1",
+      "4",
+      "20260928 (Git shallow)",
+      "Unknown",
+      "2026/09/28 13:46:34",
+      "(HEAD detached at 4fd3bf320)",
+      "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+    ]
+  },
+  "validation_notes": [
+    "Native fixtures run on a separate X display and temporary profile.",
+    "HTTP acceptance uses a disposable backend and synthetic native fastener-shaped geometry; no production HTTP mutations.",
+    "Copied engineering acceptance uses real Fasteners and existing native joint paths; source TechDraw updating was disabled only in test copies.",
+    "Native logs include DAG/still-touched warnings; geometry, joint references and rollback/restoration assertions remain enforced."
+  ],
+  "installation": "pending",
+  "working_copy_repair": "pending"
+}

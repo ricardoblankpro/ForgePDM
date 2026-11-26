@@ -223,7 +223,7 @@ def _subassembly_generated_members(document, link):
     return generated
 
 
-def _builtin_bom_context(document):
+def _builtin_bom_context(document, allow_incomplete=False):
     assemblies = [obj for obj in document.Objects if obj.TypeId == "Assembly::AssemblyObject"]
     if not assemblies:
         return set(), None
@@ -272,7 +272,7 @@ def _builtin_bom_context(document):
         raise WorkspaceError("Generated subassembly members overlap direct assembly members")
     from . import insertion
 
-    ignored.update(insertion.internal_names(document))
+    ignored.update(insertion.internal_names(document, validate=not allow_incomplete))
     ignored.update(generated)
     for member in members:
         if (
@@ -300,7 +300,7 @@ def validate_fastener_membership(document, obj):
             raise WorkspaceError("Fasteners in nested local groups require a dedicated BOM adapter")
 
 
-def capture_bom(document):
+def capture_bom(document, allow_incomplete=False):
     """Capture candidate direct occurrences; internal links resolve to external pins.
 
     Plain groups/parts organize occurrences in this document. Linked external
@@ -309,8 +309,8 @@ def capture_bom(document):
     """
     from . import insertion
 
-    internal = insertion.internal_names(document)
-    ignored, assembly_components = _builtin_bom_context(document)
+    internal = insertion.internal_names(document, validate=not allow_incomplete)
+    ignored, assembly_components = _builtin_bom_context(document, allow_incomplete=allow_incomplete)
     ignored.update(internal)
     result = []
     for obj in document.Objects:
@@ -344,7 +344,10 @@ def capture_bom(document):
                 "Component link '{}' is outside the built-in Assembly's direct members. "
                 "Nested local groups require a dedicated BOM adapter.".format(obj.Name)
             )
-        current, visited = insertion.source(obj) or obj, set()
+        current, visited = (
+            (insertion.identity_source(obj) if allow_incomplete else insertion.source(obj)) or obj,
+            set(),
+        )
         while current.Document is document and current.TypeId in (
             "App::Link",
             "Assembly::AssemblyLink",
@@ -372,7 +375,7 @@ def capture_bom(document):
                     getattr(target_document, "Label", target_document.FileName)
                 )
             )
-        if document_modified(target_document):
+        if document_modified(target_document) and not allow_incomplete:
             component = getattr(metadata, "ItemNumber", "") or target_document.FileName
             revision = getattr(metadata, "RevisionLabel", "")
             raise WorkspaceError(
@@ -591,3 +594,73 @@ def close_owned(documents):
         except (NameError, ReferenceError):
             continue
     return retained
+
+
+def capture_graph(document):
+    """Capture saved documents on the GUI thread; workers receive plain records."""
+    nodes = {}
+
+    def visit(doc):
+        path = os.path.abspath(doc.FileName)
+        if path in nodes:
+            return
+        if document_modified(doc):
+            raise WorkspaceError(
+                "Save '{}' locally before synchronizing its configuration".format(doc.Label)
+            )
+        metadata = doc.getObject("ForgePDM_Metadata")
+        if metadata is None:
+            raise WorkspaceError("All dependencies must have managed identity")
+        refs = capture(doc)
+        nodes[path] = dict(
+            identity=dict(
+                item_id=metadata.ItemId,
+                revision_id=metadata.RevisionId,
+                item_number=metadata.ItemNumber,
+                revision_label=metadata.RevisionLabel,
+            ),
+            references=refs,
+            standard_occurrences=fasteners.capture(doc),
+        )
+        for obj in doc.Objects:
+            target = getattr(obj, "LinkedObject", None)
+            if target is not None and not isinstance(target, tuple) and target.Document is not doc:
+                visit(target.Document)
+        for obj in fasteners.objects(doc):
+            attached = fasteners.attachment(obj)
+            if attached and attached[0].Document is not doc:
+                visit(attached[0].Document)
+
+    visit(document)
+    return nodes
+
+
+def dependency_documents(document):
+    """Return live documents child-first without saving or resolving new versions."""
+    ordered, active, done = [], set(), set()
+
+    def visit(doc):
+        if doc.Name in active:
+            raise WorkspaceError("CAD dependency cycle")
+        if doc.Name in done:
+            return
+        active.add(doc.Name)
+        for obj in doc.Objects:
+            if obj.TypeId in ("App::Link", "Assembly::AssemblyLink"):
+                target = obj.LinkedObject
+                if (
+                    target is not None
+                    and not isinstance(target, tuple)
+                    and target.Document is not doc
+                ):
+                    visit(target.Document)
+        for obj in fasteners.objects(doc):
+            attached = fasteners.attachment(obj)
+            if attached and attached[0].Document is not doc:
+                visit(attached[0].Document)
+        active.remove(doc.Name)
+        done.add(doc.Name)
+        ordered.append(doc)
+
+    visit(document)
+    return ordered

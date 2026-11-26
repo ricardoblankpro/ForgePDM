@@ -258,7 +258,7 @@ class ForgePDMClient:
         from . import server_updates
 
         return {
-            "baseline": server_updates.baseline(self, path, item_id, revision_id),
+            "baseline": server_updates.component_baseline(self, path, item_id, revision_id),
             "pins": self.validate_references(references),
         }
 
@@ -730,6 +730,8 @@ class ForgePDMClient:
         suffix = (
             "checkin-native-with-references" if operation.get("references") else "checkin-native"
         )
+        if operation.get("keep_checkout"):
+            suffix = "save-native-with-references"
         try:
             return self._multipart_file(
                 "/api/v1/revisions/{}/{}".format(self._quote(operation["revision_id"]), suffix),
@@ -854,6 +856,24 @@ class ForgePDMClient:
     def acquire_checkout(self, revision_id):
         return self._json_request(
             "POST", "/api/v1/revisions/{}/checkout".format(self._quote(revision_id))
+        )
+
+    def fork_working(self, source, references):
+        from . import workspace
+
+        return workspace.fork_working(self.base_url, source, references)
+
+    def cancel_checkout(self, revision_id, payload):
+        return self._json_request(
+            "POST", "/api/v1/revisions/{}/checkout/cancel".format(self._quote(revision_id)), payload
+        )
+
+    def cancellation_status(self, revision_id, operation_id):
+        return self._json_request(
+            "GET",
+            "/api/v1/revisions/{}/checkout/cancel-operations/{}".format(
+                self._quote(revision_id), self._quote(operation_id)
+            ),
         )
 
     def renew_checkout(self, revision_id):

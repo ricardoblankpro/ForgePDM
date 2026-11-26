@@ -6,7 +6,7 @@ from .workspace import WorkspaceError
 LINK_TYPES = ("App::Link", "Assembly::AssemblyLink")
 
 
-def _joint_references(document):
+def _joint_references(document, validate=True):
     result = []
     for obj in document.Objects:
         proxy = type(getattr(obj, "Proxy", None))
@@ -28,7 +28,7 @@ def _joint_references(document):
                 if target is None:
                     raise WorkspaceError("Unresolved joint reference: {}.{}".format(obj.Name, name))
                 for path in subnames:
-                    if "?" in path or (path and target.getSubObject(path) is None):
+                    if "?" in path or (validate and path and target.getSubObject(path) is None):
                         raise WorkspaceError(
                             "Unresolved joint geometry: {}.{}".format(obj.Name, name)
                         )
@@ -79,6 +79,9 @@ def apply(
     revision,
     target_names=None,
     target_snapshot=None,
+    target_generation=None,
+    restoration=False,
+    within_transaction=False,
 ):
     """Replace only reviewed direct occurrences. Never save, upload or edit a BOM."""
     metadata = target_document.getObject("ForgePDM_Metadata")
@@ -90,6 +93,20 @@ def apply(
         or metadata.ServerUrl != parent_metadata.ServerUrl
     ):
         raise WorkspaceError("Replacement document does not match the chosen item/revision/server")
+    if target_generation is not None:
+        from . import workspace
+
+        entry = workspace.binding(
+            target_document.FileName, metadata.ServerUrl, require_uploaded=False
+        )["entry"]
+        if (
+            entry.get("local_generation_id") != target_generation
+            or target_names is not None
+            or target_snapshot is not None
+        ):
+            raise WorkspaceError(
+                "Local generation identity does not match the reviewed configuration"
+            )
     selected = list(selected_names)
     if not selected or len(selected) != len(set(selected)):
         raise WorkspaceError("Choose distinct component occurrences to replace")
@@ -143,7 +160,12 @@ def apply(
             ):
                 raise WorkspaceError("The selected occurrence already uses that snapshot")
         elif (
-            ref["target_revision_id"] == revision["id"] and target_name == ref["target_object_name"]
+            target_generation is None
+            and not restoration
+            and (
+                ref["target_revision_id"] == revision["id"]
+                and target_name == ref["target_object_name"]
+            )
         ):
             raise WorkspaceError("The selected occurrence already uses that revision and object")
         obj = document.getObject(name)
@@ -182,13 +204,13 @@ def apply(
                 raise WorkspaceError("Internal component link cycle")
             visited.add(current.Name)
             current = current.LinkedObject
-    if document.HasPendingTransaction:
+    if document.HasPendingTransaction and not within_transaction:
         raise WorkspaceError("Finish the current FreeCAD operation before replacing a revision")
     occurrences_before = {
         name: (document.getObject(name).LinkedObject, document.getObject(name).Placement)
         for name in by_name
     }
-    before = _joint_references(document)
+    before = _joint_references(document, validate=not restoration)
     source_documents = set()
     for name, target, placement in plan:
         current = document.getObject(name).LinkedObject
@@ -198,14 +220,20 @@ def apply(
                 raise WorkspaceError("Internal component link cycle")
             visited.add(current.Name)
             current = current.LinkedObject
-        current = insertion.source(document.getObject(name)) or current
+        current = (
+            insertion.identity_source(document.getObject(name))
+            if restoration
+            else insertion.source(document.getObject(name))
+        ) or current
         source_documents.add(current.Document.Name)
     if any(reference[2] in source_documents for reference in before):
         raise WorkspaceError(
             "Joint references must use assembly occurrences, not external source objects"
         )
-    _check_errors(document)
-    document.openTransaction("Replace component")
+    if not restoration:
+        _check_errors(document)
+    if not within_transaction:
+        document.openTransaction("Replace component")
     try:
         adapted = []
         for name, target, placement in plan:
@@ -253,9 +281,11 @@ def apply(
             document.removeObject(old.Name)
             for member in members:
                 document.removeObject(member.Name)
-        document.commitTransaction()
+        if not within_transaction:
+            document.commitTransaction()
     except BaseException:
-        document.abortTransaction()
-        document.recompute()
+        if not within_transaction:
+            document.abortTransaction()
+            document.recompute()
         raise
     return len(plan)

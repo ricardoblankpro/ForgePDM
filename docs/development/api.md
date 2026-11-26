@@ -98,3 +98,23 @@ retaining canonical fields. Search includes approved translations in any languag
 translated row text; omitted language preserves the original report contract.
 See [review and snapshot semantics](../user/localization.md) and
 [ADR-026](../decisions/ADR-026-versioned-item-description-localization.md).
+
+## Managed session publication and cancellation
+
+`POST /api/v1/revisions/{id}/save-native-with-references` accepts the existing
+atomic native check-in multipart contract but retains the exact checkout. The
+save/check-in distinction participates in operation intent fingerprints; replay
+cannot change it. Existing check-in routes retain their release behavior.
+
+`POST /api/v1/revisions/{id}/checkout/cancel` accepts `operation_id`,
+`expected_checkout_id`, `expected_checkout_version`, and nullable `dataset_id` /
+`file_id` for the reviewed latest native snapshot. It atomically checks current
+edit access, owned live lease, exact version and current snapshot before recording
+cancellation and releasing checkout. Both snapshot fields must match the latest
+native upload, or both be null when none exists. Changed intent or stale state
+returns 409. Uploaded files and revision history are retained.
+
+`GET /api/v1/revisions/{id}/checkout/cancel-operations/{operation_id}` returns the
+original actor-scoped result, or null for an unknown operation. Replaying a
+completed cancellation returns its original result without affecting newer leases.
+The client must retain local recovery data until restoration is complete.

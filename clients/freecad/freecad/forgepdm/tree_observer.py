@@ -10,6 +10,10 @@ _observer = None
 _leases = {}
 
 
+def revoke_document(document):
+    _leases.pop(document.Name, None)
+
+
 def revoke_revision(revision_id):
     for name, lease in list(_leases.items()):
         if lease[2] == revision_id:

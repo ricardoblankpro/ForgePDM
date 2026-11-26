@@ -123,7 +123,7 @@ def test_backup_restore_includes_image_bytes_and_accepts_pre_thumbnail_schema(ba
     _, _, file = upload(b)
     service(b).attach(b.users["editor"], file.id, file.content_hash, png())
     report = backups.create_backup(b.database, b.storage, tmp_path / "backups")
-    assert report["file_records"] == 2 and report["schema_version"] == 20
+    assert report["file_records"] == 2 and report["schema_version"] == 21
     restored = tmp_path / "restored"
     backups.restore_backup(
         report["backup"], restored, live_database=b.database.path, live_storage=b.storage.root
@@ -136,6 +136,8 @@ def test_backup_restore_includes_image_bytes_and_accepts_pre_thumbnail_schema(ba
     )
     assert restored_service.get(b.users["viewer"], file.id)[0].is_file()
     with b.database.transaction() as c:
+        c.execute("DROP TABLE checkout_cancel_operations")
+        c.execute("DELETE FROM schema_version WHERE version=21")
         c.execute("DROP TABLE description_consolidation")
         c.execute("DELETE FROM schema_version WHERE version=20")
         c.execute("DROP TABLE localized_translation_versions")

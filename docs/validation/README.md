@@ -126,3 +126,8 @@ keeps all legacy source languages unconfirmed; none was guessed or translated.
 [2026-11-20 native evidence](component-insertion-2026-11-20.json) records isolated
 part/subassembly insertion, external Fasteners, native joints, compatible replacement,
 BOM identity, save/reopen, exact references and visually checked PDF output.
+
+## Managed editing sessions
+
+- [Checkout isolation, local generations, structural reconciliation, native HTTP graph publication and cancellation](managed-sessions-2026-11-24.json)
+- [Final checks, installed upgrade and authorized A000004 working-copy update](managed-sessions-installed-2026-11-25.json)

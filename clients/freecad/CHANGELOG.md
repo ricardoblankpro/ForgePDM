@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.28.0 — Managed editing sessions
+
+- Preserve checkout provenance and incoming references with separate editable documents.
+- Adopt saved local component generations and reconcile deleted Fasteners members.
+- Add reviewed Cancel Check Out with recovery copies and fenced replay.
+- Publish assembly dependencies child-first with durable graph recovery.
+- Add browser Open for Editing and cancellation actions.
+
 ## 0.27.0 — Insert complete rigid components
 
 - Add Insert into Assembly in the browser for exact uploaded parts and assemblies.
